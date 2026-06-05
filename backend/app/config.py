@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     DATABASE_URL: str = "postgresql://localhost:5432/groupwork"
-    JWT_SECRET: str = "change-me-in-production"
+    JWT_SECRET: str
     JWT_ACCESS_TTL: int = 900
     JWT_REFRESH_TTL: int = 604800
     AWS_S3_BUCKET: str = ""

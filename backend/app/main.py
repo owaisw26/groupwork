@@ -1,3 +1,4 @@
+import asyncio
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,9 +17,10 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_pool()
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, init_pool)
     yield
-    close_pool()
+    await loop.run_in_executor(None, close_pool)
 
 
 def create_app() -> FastAPI:
@@ -32,8 +34,8 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Accept", "X-CSRF-Token", "Authorization"],
     )
     app.add_middleware(SlowAPIMiddleware)
 
