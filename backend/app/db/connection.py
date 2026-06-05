@@ -1,7 +1,6 @@
 from contextlib import contextmanager
 from typing import Generator
 
-import psycopg2
 from psycopg2 import pool
 from psycopg2.extensions import connection
 
