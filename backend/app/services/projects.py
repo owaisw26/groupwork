@@ -3,6 +3,7 @@ import string
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
+import psycopg2
 from fastapi import HTTPException, status
 from psycopg2.extensions import connection
 
@@ -14,6 +15,22 @@ JOIN_CODE_TTL_DAYS = 7
 
 def generate_join_code() -> str:
     return "".join(secrets.choice(JOIN_CODE_CHARS) for _ in range(6))
+
+
+def _create_unique_join_code(conn: connection) -> str:
+    for _ in range(10):
+        code = generate_join_code()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM projects WHERE join_code = %s AND deleted_at IS NULL",
+                (code,),
+            )
+            if not cur.fetchone():
+                return code
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail="Unable to generate join code",
+    )
 
 
 def _join_code_expiry() -> datetime:
@@ -70,18 +87,24 @@ def create_project(
     due_date,
     max_members: int,
 ) -> dict:
-    join_code = generate_join_code()
-    project = project_queries.create_project(
-        conn,
-        name=name,
-        description=description,
-        course=course,
-        due_date=due_date,
-        owner_id=user["id"],
-        join_code=join_code,
-        join_code_expires_at=_join_code_expiry(),
-        max_members=max_members,
-    )
+    join_code = _create_unique_join_code(conn)
+    try:
+        project = project_queries.create_project(
+            conn,
+            name=name,
+            description=description,
+            course=course,
+            due_date=due_date,
+            owner_id=user["id"],
+            join_code=join_code,
+            join_code_expires_at=_join_code_expiry(),
+            max_members=max_members,
+        )
+    except psycopg2.IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Unable to create project",
+        ) from None
     project_queries.add_member(conn, project["id"], user["id"])
     _log_activity(conn, project["id"], user["id"], "project_created", "project", project["id"])
     return _public_project(project, member_count=1)
@@ -105,6 +128,13 @@ def update_project(
     **fields,
 ) -> dict:
     _require_owner(conn, project_id, user_id)
+    if fields.get("max_members") is not None:
+        member_count = project_queries.get_member_count(conn, project_id)
+        if fields["max_members"] < member_count:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Max members cannot be less than current member count",
+            )
     updated = project_queries.update_project(conn, project_id, **fields)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
@@ -123,7 +153,7 @@ def regenerate_join_code(conn: connection, project_id: str | UUID, user_id: str 
     updated = project_queries.regenerate_join_code(
         conn,
         project_id,
-        join_code=generate_join_code(),
+        join_code=_create_unique_join_code(conn),
         join_code_expires_at=_join_code_expiry(),
     )
     if not updated:
