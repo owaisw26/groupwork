@@ -33,6 +33,13 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
       - name: Install dependencies
         working-directory: backend
         run: pip install -r requirements.txt
@@ -71,6 +78,12 @@ jobs:
         working-directory: frontend
         run: npm run lint
 
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
       - name: Run tests
         working-directory: frontend
+        env:
+          CI: true
         run: npm test
