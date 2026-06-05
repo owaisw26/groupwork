@@ -94,11 +94,14 @@ export const refreshToken = createAsyncThunk(
 
 export const fetchCurrentUser = createAsyncThunk(
   'auth/fetchCurrentUser',
-  async (_, { rejectWithValue }) => {
+  async (signal: AbortSignal | undefined, { rejectWithValue }) => {
     try {
-      const response = await api.get<User>('/users/me')
+      const response = await api.get<User>('/users/me', { signal })
       return response.data
     } catch (error) {
+      if (signal?.aborted) {
+        throw error
+      }
       return rejectWithValue(getErrorMessage(error))
     }
   },
@@ -144,6 +147,9 @@ const authSlice = createSlice({
         state.isLoading = false
         state.error = null
       })
+      .addCase(logout.rejected, (state, action) => {
+        state.error = action.payload as string
+      })
       .addCase(refreshToken.fulfilled, (state, action) => {
         state.user = action.payload
         state.isAuthenticated = true
@@ -161,7 +167,11 @@ const authSlice = createSlice({
         state.isAuthenticated = true
         state.isLoading = false
       })
-      .addCase(fetchCurrentUser.rejected, (state) => {
+      .addCase(fetchCurrentUser.rejected, (state, action) => {
+        if (action.meta.aborted) {
+          state.isLoading = false
+          return
+        }
         state.user = null
         state.isAuthenticated = false
         state.isLoading = false

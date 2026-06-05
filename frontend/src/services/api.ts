@@ -31,10 +31,6 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null
 }
 
-function hasRefreshCookie(): boolean {
-  return /(?:^|;\s*)refresh_token=/.test(document.cookie)
-}
-
 function shouldSkipRefresh(url: string): boolean {
   return AUTH_NO_REFRESH_PATHS.some((path) => url.includes(path))
 }
@@ -77,10 +73,6 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
       if (shouldSkipRefresh(requestUrl)) {
-        return Promise.reject(error)
-      }
-
-      if (requestUrl.includes('/users/me') && !hasRefreshCookie()) {
         return Promise.reject(error)
       }
 

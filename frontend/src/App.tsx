@@ -1,6 +1,6 @@
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material'
 import { useEffect } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import AppShell from './components/layout/AppShell'
 import ProtectedRoute from './components/ProtectedRoute'
 import DashboardPage from './pages/DashboardPage'
@@ -18,15 +18,36 @@ import { useAppDispatch, useAppSelector } from './store/hooks'
 import { fetchCurrentUser } from './store/authSlice'
 import theme from './theme'
 
+const PUBLIC_PATHS = new Set([
+  '/login',
+  '/register',
+  '/forgot-password',
+])
+
+function isPublicPath(pathname: string): boolean {
+  if (PUBLIC_PATHS.has(pathname)) {
+    return true
+  }
+  return (
+    pathname.startsWith('/reset-password/') || pathname.startsWith('/verify-email/')
+  )
+}
+
 function AppRoutes() {
   const dispatch = useAppDispatch()
-  const { isAuthenticated, isLoading } = useAppSelector((state) => state.auth)
+  const location = useLocation()
+  const { isAuthenticated, isLoading, user } = useAppSelector((state) => state.auth)
 
   useEffect(() => {
-    dispatch(fetchCurrentUser())
+    const controller = new AbortController()
+    dispatch(fetchCurrentUser(controller.signal))
+    return () => controller.abort()
   }, [dispatch])
 
-  if (isLoading) {
+  const authRedirectPath =
+    isAuthenticated && user && !user.has_completed_onboarding ? '/onboarding' : '/dashboard'
+
+  if (isLoading && !isPublicPath(location.pathname)) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
         <CircularProgress />
@@ -36,8 +57,14 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <LoginPage />} />
-      <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <RegisterPage />} />
+      <Route
+        path="/login"
+        element={isAuthenticated ? <Navigate to={authRedirectPath} replace /> : <LoginPage />}
+      />
+      <Route
+        path="/register"
+        element={isAuthenticated ? <Navigate to={authRedirectPath} replace /> : <RegisterPage />}
+      />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route path="/verify-email/:token" element={<VerifyEmailPage />} />

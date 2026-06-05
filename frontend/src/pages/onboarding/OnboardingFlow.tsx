@@ -14,7 +14,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/api'
 import { useAppDispatch } from '../../store/hooks'
-import { fetchCurrentUser } from '../../store/authSlice'
+import { fetchCurrentUser, type User } from '../../store/authSlice'
 
 const steps = ['Welcome', 'Join a project', 'Invite members']
 
@@ -32,8 +32,16 @@ export default function OnboardingFlow() {
     setError(null)
     setIsSubmitting(true)
     try {
-      await api.put('/users/me', { has_completed_onboarding: true })
-      await dispatch(fetchCurrentUser())
+      const response = await api.put<User>('/users/me', { has_completed_onboarding: true })
+      const result = await dispatch(fetchCurrentUser(undefined))
+      if (!fetchCurrentUser.fulfilled.match(result)) {
+        setError('Unable to complete onboarding. Please try again.')
+        return
+      }
+      if (!result.payload.has_completed_onboarding && !response.data.has_completed_onboarding) {
+        setError('Unable to complete onboarding. Please try again.')
+        return
+      }
       navigate('/dashboard')
     } catch {
       setError('Unable to complete onboarding. Please try again.')
