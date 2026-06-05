@@ -45,6 +45,30 @@ def get_refresh_token(conn: connection, token_hash: str) -> dict[str, Any] | Non
     }
 
 
+def try_consume_refresh_token(conn: connection, token_hash: str) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE refresh_tokens
+            SET revoked = TRUE
+            WHERE token_hash = %s AND revoked = FALSE AND expires_at > NOW()
+            RETURNING id, user_id, token_hash, expires_at, created_at
+            """,
+            (token_hash,),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    return {
+        "id": row[0],
+        "user_id": row[1],
+        "token_hash": row[2],
+        "expires_at": row[3],
+        "created_at": row[4],
+        "revoked": True,
+    }
+
+
 def revoke_refresh_token(conn: connection, token_hash: str) -> None:
     with conn.cursor() as cur:
         cur.execute(
@@ -165,9 +189,15 @@ def get_password_reset(conn: connection, token_hash: str) -> dict[str, Any] | No
     }
 
 
-def mark_password_reset_used(conn: connection, reset_id: str | UUID) -> None:
+def mark_password_reset_used(conn: connection, reset_id: str | UUID) -> bool:
     with conn.cursor() as cur:
         cur.execute(
-            "UPDATE password_resets SET used_at = NOW() WHERE id = %s",
+            """
+            UPDATE password_resets
+            SET used_at = NOW()
+            WHERE id = %s AND used_at IS NULL
+            RETURNING id
+            """,
             (str(reset_id),),
         )
+        return cur.fetchone() is not None

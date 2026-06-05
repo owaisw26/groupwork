@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -5,6 +7,8 @@ from slowapi.errors import RateLimitExceeded
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.config import get_settings
+
+logger = logging.getLogger("groupwork.errors")
 
 HTTP_STATUS_TO_CODE = {
     400: "BAD_REQUEST",
@@ -100,6 +104,15 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception):
         settings = get_settings()
+        request_id = _get_request_id(request)
+        logger.exception(
+            "Unhandled exception",
+            extra={
+                "request_id": request_id,
+                "path": request.url.path,
+                "method": request.method,
+            },
+        )
         message = "An internal error occurred"
         details = None
         if not settings.is_production:

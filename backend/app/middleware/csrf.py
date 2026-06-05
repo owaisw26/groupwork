@@ -1,3 +1,5 @@
+import secrets
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -21,7 +23,11 @@ class CSRFMiddleware(BaseHTTPMiddleware):
             if request.url.path not in CSRF_EXEMPT_PATHS:
                 cookie_token = request.cookies.get(CSRF_COOKIE)
                 header_token = request.headers.get("X-CSRF-Token")
-                if not cookie_token or not header_token or cookie_token != header_token:
+                if (
+                    not cookie_token
+                    or not header_token
+                    or not secrets.compare_digest(cookie_token, header_token)
+                ):
                     return JSONResponse(
                         status_code=403,
                         content={

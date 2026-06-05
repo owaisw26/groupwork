@@ -76,7 +76,7 @@ describe('authSlice', () => {
 
   it('fetchCurrentUser sets authenticated when session exists', async () => {
     vi.mocked(api.get).mockResolvedValueOnce({ data: mockUser })
-    const action = await fetchCurrentUser()(vi.fn(), () => ({}) as never, undefined)
+    const action = await fetchCurrentUser(undefined)(vi.fn(), () => ({}) as never, undefined)
     const state = authReducer(initialState, action)
     expect(state.isAuthenticated).toBe(true)
     expect(state.user?.full_name).toBe('Test User')

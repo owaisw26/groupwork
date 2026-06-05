@@ -3,7 +3,7 @@ from psycopg2.extensions import connection
 
 from app.db.connection import get_connection
 from app.middleware.auth import ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE
-from app.middleware.rate_limit import AUTH_RATE_LIMIT, limiter
+from app.middleware.rate_limit import AUTH_RATE_LIMIT, REFRESH_RATE_LIMIT, limiter
 from app.models.auth import (
     ForgotPasswordRequest,
     LoginRequest,
@@ -59,8 +59,27 @@ def _clear_auth_cookies(response: Response) -> None:
     from app.config import get_settings
 
     settings = get_settings()
-    for name in (ACCESS_COOKIE, REFRESH_COOKIE, CSRF_COOKIE):
-        response.delete_cookie(name, path="/", secure=settings.COOKIE_SECURE, samesite="strict")
+    response.delete_cookie(
+        ACCESS_COOKIE,
+        path="/",
+        secure=settings.COOKIE_SECURE,
+        samesite="strict",
+        httponly=True,
+    )
+    response.delete_cookie(
+        REFRESH_COOKIE,
+        path="/",
+        secure=settings.COOKIE_SECURE,
+        samesite="strict",
+        httponly=True,
+    )
+    response.delete_cookie(
+        CSRF_COOKIE,
+        path="/",
+        secure=settings.COOKIE_SECURE,
+        samesite="strict",
+        httponly=False,
+    )
 
 
 def _get_db() -> connection:
@@ -80,7 +99,12 @@ def register(request: Request, body: RegisterRequest, conn: connection = Depends
 
 
 @router.post("/verify-email")
-def verify_email(body: VerifyEmailRequest, conn: connection = Depends(_get_db)):
+@limiter.limit(AUTH_RATE_LIMIT)
+def verify_email(
+    request: Request,
+    body: VerifyEmailRequest,
+    conn: connection = Depends(_get_db),
+):
     return auth_service.verify_email(conn, body.token)
 
 
@@ -107,6 +131,7 @@ def login(
 
 
 @router.post("/refresh")
+@limiter.limit(REFRESH_RATE_LIMIT)
 def refresh(request: Request, response: Response, conn: connection = Depends(_get_db)):
     refresh_token = request.cookies.get(REFRESH_COOKIE)
     if not refresh_token:
@@ -117,7 +142,9 @@ def refresh(request: Request, response: Response, conn: connection = Depends(_ge
             detail="Invalid refresh token",
         )
 
-    access_token, csrf_token = auth_service.refresh_session(conn, refresh_token)
+    access_token, new_refresh_token, csrf_token = auth_service.refresh_session(
+        conn, refresh_token
+    )
     from app.config import get_settings
 
     settings = get_settings()
@@ -128,6 +155,15 @@ def refresh(request: Request, response: Response, conn: connection = Depends(_ge
         secure=settings.COOKIE_SECURE,
         samesite="strict",
         max_age=settings.JWT_ACCESS_TTL,
+        path="/",
+    )
+    response.set_cookie(
+        REFRESH_COOKIE,
+        new_refresh_token,
+        httponly=True,
+        secure=settings.COOKIE_SECURE,
+        samesite="strict",
+        max_age=settings.JWT_REFRESH_TTL,
         path="/",
     )
     response.set_cookie(
@@ -144,7 +180,11 @@ def refresh(request: Request, response: Response, conn: connection = Depends(_ge
 
 @router.post("/logout")
 def logout(request: Request, response: Response, conn: connection = Depends(_get_db)):
-    auth_service.logout_user(conn, request.cookies.get(REFRESH_COOKIE))
+    auth_service.logout_user(
+        conn,
+        request.cookies.get(REFRESH_COOKIE),
+        request.cookies.get(ACCESS_COOKIE),
+    )
     _clear_auth_cookies(response)
     return {"status": "ok"}
 
@@ -161,6 +201,11 @@ def forgot_password(
 
 
 @router.post("/reset-password")
-def reset_password(body: ResetPasswordRequest, conn: connection = Depends(_get_db)):
+@limiter.limit(AUTH_RATE_LIMIT)
+def reset_password(
+    request: Request,
+    body: ResetPasswordRequest,
+    conn: connection = Depends(_get_db),
+):
     auth_service.reset_password(conn, token=body.token, password=body.password)
     return {"status": "ok"}

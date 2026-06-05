@@ -55,7 +55,7 @@ def test_unverified_user_cannot_access_protected_route(auth_client, db_conn):
 
     from app.utils.security import create_access_token
 
-    auth_client.cookies.set("access_token", create_access_token(user_id))
+    auth_client.cookies.set("access_token", create_access_token(user_id, 0))
     response = auth_client.get("/api/v1/users/me")
 
     assert response.status_code == 403

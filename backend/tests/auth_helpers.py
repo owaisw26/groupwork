@@ -38,9 +38,12 @@ def login_user(
 
 def extract_token_from_email(body: str) -> str:
     match = re.search(r"token=([A-Za-z0-9_-]+)", body)
-    if not match:
-        raise ValueError("Token not found in email body")
-    return match.group(1)
+    if match:
+        return match.group(1)
+    match = re.search(r"/(?:verify-email|reset-password)/([A-Za-z0-9_-]+)", body)
+    if match:
+        return match.group(1)
+    raise ValueError("Token not found in email body")
 
 
 def auth_headers(client: TestClient) -> dict[str, str]:
