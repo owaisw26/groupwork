@@ -39,7 +39,8 @@ def db_conn() -> PgConnection:
         with conn.cursor() as cur:
             cur.execute("DROP SCHEMA public CASCADE")
             cur.execute("CREATE SCHEMA public")
-        conn.commit()
+
+    with get_connection() as conn:
         yield conn
 
     close_pool()
