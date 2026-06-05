@@ -29,6 +29,8 @@ def verify_password_constant_time(plain_password: str, hashed_password: str | No
 
 def validate_password_strength(password: str) -> list[str]:
     errors: list[str] = []
+    if len(password.encode("utf-8")) > 72:
+        errors.append("Password must be at most 72 characters")
     if len(password) < 8:
         errors.append("Password must be at least 8 characters")
     if not any(char.isupper() for char in password):

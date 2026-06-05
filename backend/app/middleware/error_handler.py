@@ -49,8 +49,18 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException):
         code = HTTP_STATUS_TO_CODE.get(exc.status_code, "HTTP_ERROR")
-        message = exc.detail if isinstance(exc.detail, str) else str(exc.detail)
-        details = exc.detail if isinstance(exc.detail, dict) else None
+        if isinstance(exc.detail, str):
+            message = exc.detail
+            details = None
+        elif isinstance(exc.detail, list):
+            message = "Validation failed"
+            details = exc.detail
+        elif isinstance(exc.detail, dict):
+            message = exc.detail.get("message", "Request failed")
+            details = exc.detail
+        else:
+            message = str(exc.detail)
+            details = None
         return _error_response(
             request,
             status_code=exc.status_code,

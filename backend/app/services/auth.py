@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+import psycopg2
 from fastapi import HTTPException, status
 from psycopg2.extensions import connection
 
@@ -42,12 +43,18 @@ def register_user(
             detail="Email already registered",
         )
 
-    user = user_queries.create_user(
-        conn,
-        email=email,
-        password_hash=hash_password(password),
-        full_name=full_name,
-    )
+    try:
+        user = user_queries.create_user(
+            conn,
+            email=email,
+            password_hash=hash_password(password),
+            full_name=full_name,
+        )
+    except psycopg2.IntegrityError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already registered",
+        ) from None
 
     raw_token = generate_token()
     token_queries.create_email_verification(
@@ -178,6 +185,12 @@ def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str]:
             detail="Invalid refresh token",
         )
 
+    if not user["email_verified"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Email not verified",
+        )
+
     access_token = create_access_token(str(user["id"]))
     csrf_token = generate_csrf_token()
     return access_token, csrf_token
@@ -194,6 +207,7 @@ def forgot_password(conn: connection, email: str) -> None:
         return
 
     raw_token = generate_token()
+    token_queries.invalidate_unused_password_resets(conn, user["id"])
     token_queries.create_password_reset(
         conn,
         user_id=user["id"],
@@ -235,5 +249,6 @@ def reset_password(conn: connection, *, token: str, password: str) -> None:
         )
 
     user_queries.update_password(conn, reset_record["user_id"], hash_password(password))
+    user_queries.reset_failed_logins(conn, reset_record["user_id"])
     token_queries.mark_password_reset_used(conn, reset_record["id"])
     token_queries.revoke_all_user_tokens(conn, reset_record["user_id"])

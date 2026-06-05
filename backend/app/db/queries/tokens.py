@@ -113,6 +113,18 @@ def mark_email_verified(conn: connection, verification_id: str | UUID) -> None:
         )
 
 
+def invalidate_unused_password_resets(conn: connection, user_id: str | UUID) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE password_resets
+            SET used_at = NOW()
+            WHERE user_id = %s AND used_at IS NULL
+            """,
+            (str(user_id),),
+        )
+
+
 def create_password_reset(
     conn: connection,
     *,

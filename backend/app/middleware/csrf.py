@@ -24,7 +24,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 if not cookie_token or not header_token or cookie_token != header_token:
                     return JSONResponse(
                         status_code=403,
-                        content={"detail": "CSRF validation failed"},
+                        content={
+                            "error": {
+                                "code": "FORBIDDEN",
+                                "message": "CSRF validation failed",
+                            }
+                        },
                     )
 
         return await call_next(request)
