@@ -26,4 +26,5 @@ class ResetPasswordRequest(BaseModel):
 
 
 class UpdateProfileRequest(BaseModel):
-    full_name: str = Field(min_length=1, max_length=255)
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    has_completed_onboarding: bool | None = None

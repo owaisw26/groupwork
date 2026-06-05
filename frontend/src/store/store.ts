@@ -1,14 +1,15 @@
-import { configureStore, createSlice } from '@reduxjs/toolkit'
-
-const appSlice = createSlice({
-  name: 'app',
-  initialState: { initialized: true },
-  reducers: {},
-})
+import { configureStore } from '@reduxjs/toolkit'
+import authReducer from './authSlice'
+import notificationsReducer from './notificationsSlice'
+import projectsReducer from './projectsSlice'
+import tasksReducer from './tasksSlice'
 
 export const store = configureStore({
   reducer: {
-    app: appSlice.reducer,
+    auth: authReducer,
+    projects: projectsReducer,
+    tasks: tasksReducer,
+    notifications: notificationsReducer,
   },
 })
 

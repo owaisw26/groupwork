@@ -1,17 +1,30 @@
 import { render, screen } from '@testing-library/react'
 import { Provider } from 'react-redux'
-import { describe, expect, it } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
+import { describe, expect, it, vi } from 'vitest'
 import App from '../App'
+import api from '../services/api'
 import { store } from '../store/store'
 
+vi.mock('../services/api', () => ({
+  default: {
+    post: vi.fn(),
+    get: vi.fn().mockRejectedValue(new Error('not authenticated')),
+    interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+  },
+}))
+
 describe('App', () => {
-  it('renders without crashing', () => {
+  it('renders without crashing', async () => {
     render(
       <Provider store={store}>
-        <App />
+        <MemoryRouter initialEntries={['/login']}>
+          <App />
+        </MemoryRouter>
       </Provider>,
     )
 
-    expect(screen.getByRole('heading', { name: 'GroupWork' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /log in to groupwork/i })).toBeInTheDocument()
+    expect(api.get).toHaveBeenCalled()
   })
 })
