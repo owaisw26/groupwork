@@ -1,5 +1,4 @@
 from tests.auth_helpers import (
-    DEFAULT_PASSWORD,
     auth_headers,
     extract_token_from_email,
     login_user,

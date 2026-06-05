@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import psycopg2
 from fastapi import HTTPException, status
+from jose import JWTError
 from psycopg2.extensions import connection
 
 from app.config import get_settings
@@ -20,7 +21,6 @@ from app.utils.security import (
     validate_password_strength,
     verify_password_constant_time,
 )
-from jose import JWTError
 
 LOCKOUT_THRESHOLD = 5
 LOCKOUT_MINUTES = 15
