@@ -20,7 +20,7 @@ import NotificationDropdown from './NotificationDropdown'
 export default function Header() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const user = useAppSelector((state) => state.auth.user)
+  const { user, error: authError } = useAppSelector((state) => state.auth)
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
 
   const handleLogout = async () => {
@@ -38,6 +38,11 @@ export default function Header() {
       sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, bgcolor: 'background.paper' }}
     >
       <Toolbar>
+        {authError && (
+          <Typography variant="body2" color="error" sx={{ mr: 2 }}>
+            {authError}
+          </Typography>
+        )}
         <Typography
           component={Link}
           to="/dashboard"

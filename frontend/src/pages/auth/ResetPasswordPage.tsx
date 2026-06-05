@@ -3,9 +3,12 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import PasswordStrengthIndicator from '../../components/PasswordStrengthIndicator'
 import api from '../../services/api'
+import { useAppDispatch } from '../../store/hooks'
+import { clearSession } from '../../store/authSlice'
 import { checkPasswordStrength } from '../../utils/passwordValidation'
 
 export default function ResetPasswordPage() {
+  const dispatch = useAppDispatch()
   const { token } = useParams()
   const navigate = useNavigate()
   const [password, setPassword] = useState('')
@@ -43,6 +46,7 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
     try {
       await api.post('/auth/reset-password', { token, password })
+      dispatch(clearSession())
       navigate('/login')
     } catch {
       setError('Invalid or expired reset token')
