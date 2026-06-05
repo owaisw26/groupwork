@@ -31,7 +31,7 @@ def test_nonexistent_email_returns_401_same_message(auth_client, email_outbox):
 
     assert wrong.status_code == 401
     assert bad_pass.status_code == 401
-    assert wrong.json()["detail"] == bad_pass.json()["detail"]
+    assert wrong.json()["error"]["message"] == bad_pass.json()["error"]["message"]
 
 
 def test_unverified_account_returns_403(auth_client):

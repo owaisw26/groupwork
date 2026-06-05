@@ -3,8 +3,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.auth import router as auth_router
@@ -13,6 +11,8 @@ from app.api.users import router as users_router
 from app.config import get_settings
 from app.db.connection import close_pool, init_pool
 from app.middleware.csrf import CSRFMiddleware
+from app.middleware.error_handler import register_exception_handlers
+from app.middleware.logging import LoggingMiddleware
 from app.middleware.rate_limit import limiter
 
 
@@ -29,7 +29,7 @@ def create_app() -> FastAPI:
 
     app = FastAPI(title="GroupWork API", version="1.0.0", lifespan=lifespan)
     app.state.limiter = limiter
-    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+    register_exception_handlers(app)
 
     app.add_middleware(
         CORSMiddleware,
@@ -40,6 +40,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(CSRFMiddleware)
     app.add_middleware(SlowAPIMiddleware)
+    app.add_middleware(LoggingMiddleware)
 
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")

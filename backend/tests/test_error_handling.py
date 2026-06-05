@@ -25,7 +25,14 @@ def test_422_validation_returns_field_details(auth_client):
     assert "X-Request-ID" in response.headers
 
 
-def test_500_returns_generic_error_without_stack_trace(auth_client, monkeypatch):
+def test_500_returns_generic_error_without_stack_trace(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+
+    from fastapi.testclient import TestClient
+
     from app.main import create_app
 
     app = create_app()
@@ -33,13 +40,6 @@ def test_500_returns_generic_error_without_stack_trace(auth_client, monkeypatch)
     @app.get("/api/v1/test-error")
     def trigger_error():
         raise RuntimeError("sensitive internal failure")
-
-    from fastapi.testclient import TestClient
-
-    monkeypatch.setenv("ENVIRONMENT", "production")
-    from app.config import get_settings
-
-    get_settings.cache_clear()
 
     with TestClient(app, raise_server_exceptions=False) as client:
         response = client.get("/api/v1/test-error")
