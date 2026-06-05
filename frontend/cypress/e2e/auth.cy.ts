@@ -1,17 +1,24 @@
 describe('Auth flow', () => {
   const email = 'e2e-user@example.com'
   const password = 'Password1'
+  const user = {
+    id: '1',
+    email,
+    full_name: 'E2E User',
+    email_verified: true,
+    has_completed_onboarding: true,
+    created_at: '2026-01-01T00:00:00Z',
+  }
 
   it('completes register, verify, login, dashboard, and logout with mocked API', () => {
+    let isLoggedIn = false
+
     cy.intercept('POST', '/api/v1/auth/register', {
       statusCode: 201,
       body: {
-        id: '1',
-        email,
-        full_name: 'E2E User',
+        ...user,
         email_verified: false,
         has_completed_onboarding: false,
-        created_at: '2026-01-01T00:00:00Z',
       },
     }).as('register')
 
@@ -20,33 +27,26 @@ describe('Auth flow', () => {
       body: { email_verified: true, email },
     }).as('verify')
 
-    cy.intercept('POST', '/api/v1/auth/login', {
-      statusCode: 200,
-      body: {
-        id: '1',
-        email,
-        full_name: 'E2E User',
-        email_verified: true,
-        has_completed_onboarding: true,
-        created_at: '2026-01-01T00:00:00Z',
-      },
+    cy.intercept('POST', '/api/v1/auth/login', (req) => {
+      isLoggedIn = true
+      req.reply({ statusCode: 200, body: user })
     }).as('login')
 
-    cy.intercept('GET', '/api/v1/users/me', {
-      statusCode: 200,
-      body: {
-        id: '1',
-        email,
-        full_name: 'E2E User',
-        email_verified: true,
-        has_completed_onboarding: true,
-        created_at: '2026-01-01T00:00:00Z',
-      },
+    cy.intercept('GET', '/api/v1/users/me', (req) => {
+      if (isLoggedIn) {
+        req.reply({ statusCode: 200, body: user })
+      } else {
+        req.reply({
+          statusCode: 401,
+          body: { error: { code: 'UNAUTHORIZED', message: 'Not authenticated' } },
+        })
+      }
     }).as('me')
 
-    cy.intercept('POST', '/api/v1/auth/logout', { statusCode: 200, body: { status: 'ok' } }).as(
-      'logout',
-    )
+    cy.intercept('POST', '/api/v1/auth/logout', (req) => {
+      isLoggedIn = false
+      req.reply({ statusCode: 200, body: { status: 'ok' } })
+    }).as('logout')
 
     cy.visit('/register')
     cy.get('input[name="full_name"]').type('E2E User')
@@ -73,5 +73,8 @@ describe('Auth flow', () => {
     cy.contains('Logout').click()
     cy.wait('@logout')
     cy.url().should('include', '/login')
+
+    cy.reload()
+    cy.contains('Log in to GroupWork')
   })
 })

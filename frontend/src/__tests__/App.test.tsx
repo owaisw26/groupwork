@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import App from '../App'
 import api from '../services/api'
-import { store } from '../store/store'
+import { createTestStore } from '../test-utils'
 
 vi.mock('../services/api', () => ({
   default: {
@@ -16,6 +16,8 @@ vi.mock('../services/api', () => ({
 
 describe('App', () => {
   it('renders without crashing', async () => {
+    const store = createTestStore()
+
     render(
       <Provider store={store}>
         <MemoryRouter initialEntries={['/login']}>

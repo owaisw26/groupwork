@@ -5,7 +5,10 @@ import pytest
 from fastapi.testclient import TestClient
 from psycopg2.extensions import connection as PgConnection
 
-os.environ.setdefault("DATABASE_URL", "postgresql://localhost:5432/groupwork_test")
+os.environ.setdefault(
+    "DATABASE_URL",
+    "postgresql://groupwork:groupwork@localhost:5432/groupwork_test",
+)
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-key-for-pytest-only")
 os.environ.setdefault("FRONTEND_URL", "http://localhost:5173")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
