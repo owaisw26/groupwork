@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
+from app.api.projects import router as projects_router
 from app.api.users import router as users_router
 from app.config import get_settings
 from app.db.connection import close_pool, init_pool
@@ -45,5 +47,7 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")
     app.include_router(users_router, prefix="/api/v1")
+    app.include_router(projects_router, prefix="/api/v1")
+    app.include_router(dashboard_router, prefix="/api/v1")
 
     return app
