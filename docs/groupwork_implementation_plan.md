@@ -76,38 +76,107 @@ isProject: false
 
 # GroupWork -- Detailed Implementation Plan
 
+## Git Workflow & Practices
+
+### Branching Strategy
+
+- **`main`** is the protected branch. Code only reaches main via a Pull Request that passes CI.
+- Every feature/module is developed on its own branch, branched from `main`.
+- Branch naming convention (type-based prefix):
+  - `feat/auth-system` -- new feature
+  - `test/auth-tests` -- test suite (pushed before implementation)
+  - `fix/csrf-validation` -- bug fix
+  - `chore/docker-compose` -- infrastructure/tooling
+  - `docs/update-prd` -- documentation
+
+### Commit Convention
+
+[Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+```
+
+Types: `feat`, `fix`, `test`, `chore`, `docs`, `refactor`, `style`, `ci`
+
+Examples of granular commits within a feature branch:
+```
+test(auth): add registration endpoint tests
+test(auth): add login endpoint tests
+test(auth): add token refresh tests
+test(auth): add password reset tests
+feat(auth): add user database queries
+feat(auth): add password hashing utilities
+feat(auth): add JWT token creation and validation
+feat(auth): add auth service layer
+feat(auth): add auth API routes
+feat(auth): add CSRF middleware
+fix(auth): resolve timing attack on password comparison
+```
+
+### Merge Strategy
+
+- **Merge commit** (preserves full granular commit history on main).
+- Every merge goes through a **GitHub Pull Request**, even for solo development.
+- PR is only mergeable when CI pipeline passes (branch protection rule on main).
+
+### CI Pipeline (Set Up in Phase 1)
+
+GitHub Actions workflow `.github/workflows/ci.yml` runs on every push and PR:
+- **Backend**: ruff lint + pytest (with test PostgreSQL via Docker service)
+- **Frontend**: eslint + React Testing Library tests
+
+When tests are pushed in Step 2 (failing), CI will show red. After implementation in Step 7, CI goes green. PR is then mergeable.
+
+---
+
 ## Agent Workflow (Applied Per Module)
 
 Every module within each phase follows this cycle:
 
 ```mermaid
 flowchart LR
-    WriteTests[1. Write Tests] --> PushTests[2. Push Tests]
-    PushTests --> WriteImpl[3. Write Implementation]
-    WriteImpl --> BugHunt[4. Subagents Find Bugs]
-    BugHunt --> BuilderFix[5. Builder Agents Fix]
-    BuilderFix --> Review{6. Review}
+    CreateBranch[0. Create Branch] --> WriteTests[1. Write Tests]
+    WriteTests --> CommitTests[2. Commit + Push Tests]
+    CommitTests --> CIRed[CI Runs - Red]
+    CIRed --> WriteImpl[3. Write Implementation]
+    WriteImpl --> CommitImpl[4. Commit Implementation]
+    CommitImpl --> BugHunt[5. Subagents Find Bugs]
+    BugHunt --> BuilderFix[6. Builder Agents Fix]
+    BuilderFix --> Review{7. Review}
     Review -->|"Issues found"| BugHunt
-    Review -->|"Clean"| PushCode[7. Push Code]
+    Review -->|"Clean"| PushFinal[8. Push + PR]
+    PushFinal --> CIGreen[CI Runs - Green]
+    CIGreen --> MergeMain[9. Merge to Main]
 ```
 
+- **Step 0 -- Create Branch**: Create a feature branch from main (e.g., `feat/auth-system`).
 - **Step 1 -- Write Tests**: Write pytest tests (backend) and/or RTL/Cypress tests (frontend) that define the expected behavior from the PRD. Tests should initially all fail (red phase of TDD).
-- **Step 2 -- Push Tests**: Commit and push the failing test suite to a feature branch. This locks in the spec before implementation.
-- **Step 3 -- Write Implementation**: Write the actual code to make the tests pass. Backend (routes, DB queries, services) and frontend (components, pages, Redux slices, API calls).
-- **Step 4 -- Subagent Bug Hunt**: Launch parallel subagents to review the implementation for: SQL injection vulnerabilities, auth bypass, broken edge cases, missing validation, race conditions, and PRD compliance.
-- **Step 5 -- Builder Agents Fix**: Forward findings to builder agents that fix each identified issue.
-- **Step 6 -- Review Loop**: Re-run bug-finding subagents on the fixes. If new issues found, loop back to step 5. If clean, proceed.
-- **Step 7 -- Push Code**: All tests pass, code is reviewed, commit and push.
+- **Step 2 -- Commit + Push Tests**: Granular commits for test files (e.g., `test(auth): add registration tests`). Push to feature branch. CI runs and shows red (expected).
+- **Step 3 -- Write Implementation**: Write the actual code to make the tests pass. Backend (routes, DB queries, services) and frontend (components, pages, Redux slices, API calls). Granular commits per logical unit (e.g., `feat(auth): add password hashing utilities`).
+- **Step 4 -- Commit Implementation**: Push all implementation commits to the feature branch.
+- **Step 5 -- Subagent Bug Hunt**: Launch parallel subagents to review the implementation for: SQL injection vulnerabilities, auth bypass, broken edge cases, missing validation, race conditions, and PRD compliance.
+- **Step 6 -- Builder Agents Fix**: Forward findings to builder agents that fix each identified issue. Each fix is a granular commit (e.g., `fix(auth): prevent timing attack on password comparison`).
+- **Step 7 -- Review Loop**: Re-run bug-finding subagents on the fixes. If new issues found, loop back to step 6. If clean, proceed.
+- **Step 8 -- Push + PR**: Ensure all tests pass locally. Push final state. Create a GitHub Pull Request with a summary of what was built.
+- **Step 9 -- Merge to Main**: CI goes green on the PR. Merge via merge commit. Delete feature branch.
 
 ---
 
 ## Phase 1: Foundation
 
-### Module 1.1: Monorepo Scaffolding & Docker Compose
+### Module 1.1: Monorepo Scaffolding, Docker Compose & CI Pipeline
+
+**Branch**: `chore/project-scaffolding`
 
 **Tests (Step 1):**
 - No unit tests for scaffolding. Validation = Docker Compose boots cleanly and backend responds on `/health`.
 - Write a smoke test: `tests/test_health.py` -- `GET /api/v1/health` returns `200 {"status": "ok"}`.
+
+**Commits for tests:**
+- `test(health): add smoke test for health endpoint`
 
 **Implementation (Step 3):**
 - Create full directory structure per PRD Section 3:
@@ -160,11 +229,30 @@ groupwork/
 - `frontend/package.json`: react, react-dom, react-router-dom, @mui/material, @mui/icons-material, @emotion/react, @emotion/styled, @reduxjs/toolkit, react-redux, axios, recharts, @dnd-kit/core, @dnd-kit/sortable.
 - `frontend/src/services/api.ts`: Axios instance with `baseURL: /api/v1`, `withCredentials: true`, response interceptor for 401 -> attempt refresh -> retry.
 
-**Bug hunt focus:** Docker networking, env var loading, connection pool leaks, CORS misconfiguration.
+- `.github/workflows/ci.yml`: GitHub Actions CI pipeline:
+  - Trigger: push to any branch + pull_request to main.
+  - Backend job: checkout -> setup Python 3.12 -> pip install -> start PostgreSQL service container -> run migrations -> `ruff check` -> `pytest`.
+  - Frontend job: checkout -> setup Node 20 -> npm install -> `eslint` -> `npm test` (React Testing Library).
+  - Both jobs run in parallel.
+
+**Commits for implementation:**
+- `chore(backend): scaffold FastAPI project structure`
+- `chore(backend): add requirements.txt with dependencies`
+- `chore(backend): add config module with environment settings`
+- `chore(backend): add database connection pool`
+- `chore(backend): add health endpoint`
+- `chore(frontend): scaffold Vite + React + MUI project`
+- `chore(frontend): add Redux store and API service`
+- `chore(docker): add docker-compose with postgres, backend, frontend`
+- `ci: add GitHub Actions CI pipeline for lint and test`
+
+**Bug hunt focus:** Docker networking, env var loading, connection pool leaks, CORS misconfiguration, CI pipeline reliability.
 
 ---
 
 ### Module 1.2: Database Schema & Migration Runner
+
+**Branch**: `feat/database-schema`
 
 **Tests (Step 1):**
 - `tests/test_migrations.py`:
@@ -200,11 +288,29 @@ groupwork/
 - `app/migrations/023_create_password_resets.sql`
 - `app/db/migrate.py`: Migration runner script. Reads `schema_migrations` table to track which files have run. Executes pending `.sql` files in filename order within a transaction. CLI entry point: `python -m app.db.migrate`.
 
+**Commits for tests:**
+- `test(db): add migration runner tests`
+- `test(db): add schema constraint tests`
+
+**Commits for implementation:**
+- `feat(db): add migration runner with schema_migrations tracking`
+- `feat(db): add users table migration`
+- `feat(db): add projects and project_members migrations`
+- `feat(db): add tasks, subtasks, and assignees migrations`
+- `feat(db): add comments, time_logs, and evidence migrations`
+- `feat(db): add meetings and attendance migrations`
+- `feat(db): add disputes and peer_reviews migrations`
+- `feat(db): add notifications and preferences migrations`
+- `feat(db): add auth token tables migration`
+- `feat(db): add task_edit_requests and activity_log migrations`
+
 **Bug hunt focus:** Missing indexes, incorrect FK constraints, migration ordering issues, idempotency.
 
 ---
 
 ### Module 1.3: Authentication System
+
+**Branch**: `feat/auth-system`
 
 **Tests (Step 1):**
 - `tests/test_auth.py` (~30 test cases):
@@ -230,11 +336,39 @@ groupwork/
 - `app/api/auth.py`: Router with all 7 auth endpoints. Sets cookies with `httponly=True, secure=True, samesite="strict"`.
 - `app/api/users.py`: `GET /api/v1/users/me`, `PUT /api/v1/users/me`.
 
+**Commits for tests:**
+- `test(auth): add registration endpoint tests`
+- `test(auth): add email verification tests`
+- `test(auth): add login endpoint tests`
+- `test(auth): add token refresh tests`
+- `test(auth): add logout tests`
+- `test(auth): add password reset tests`
+- `test(auth): add CSRF protection tests`
+- `test(auth): add SQL injection tests for auth`
+- `test(auth): add rate limiting tests`
+- `test(auth): add account lockout tests`
+
+**Commits for implementation:**
+- `feat(auth): add user database queries`
+- `feat(auth): add password hashing with bcrypt`
+- `feat(auth): add JWT token creation and validation`
+- `feat(auth): add refresh token database queries`
+- `feat(auth): add email verification token queries`
+- `feat(auth): add password reset token queries`
+- `feat(auth): add auth service layer`
+- `feat(auth): add auth API routes with cookie handling`
+- `feat(auth): add CSRF middleware`
+- `feat(auth): add rate limiting middleware with slowapi`
+- `feat(auth): add account lockout logic`
+- `feat(auth): add user profile endpoints`
+
 **Bug hunt focus:** Token leakage, timing attacks on password comparison, cookie flags, CSRF bypass vectors, password hash storage, enumeration via error messages, lockout bypass.
 
 ---
 
 ### Module 1.4: Error Handling & Middleware
+
+**Branch**: `feat/error-handling`
 
 **Tests (Step 1):**
 - `tests/test_error_handling.py`:
@@ -253,6 +387,8 @@ groupwork/
 ---
 
 ### Module 1.5: Frontend Foundation
+
+**Branch**: `feat/frontend-foundation`
 
 **Tests (Step 1):**
 - `frontend/src/__tests__/App.test.tsx`: App renders without crashing.
@@ -295,6 +431,8 @@ groupwork/
 
 ### Module 2.1: Project CRUD & Dashboard
 
+**Branch**: `feat/project-crud`
+
 **Tests (Step 1):**
 - `tests/test_projects.py` (~20 tests):
   - Create project: valid returns 201 with join_code. Missing name returns 422. Unverified user returns 403.
@@ -326,6 +464,8 @@ groupwork/
 
 ### Module 2.2: Group Formation (Invites, Join, Leave, Transfer)
 
+**Branch**: `feat/group-formation`
+
 **Tests (Step 1):**
 - `tests/test_invitations.py` (~15 tests):
   - Invite sends email (mock SES). Invite to existing user creates invitation. Invite to non-existing user creates invitation. Duplicate invite returns 409. Project full returns 400. Non-owner can still invite (all members can invite). Accept invite adds to project. Expired invite returns 400. Accept invite when project full returns 400.
@@ -348,6 +488,8 @@ groupwork/
 ---
 
 ### Module 2.3: Task Board (Kanban)
+
+**Branch**: `feat/kanban-board`
 
 **Tests (Step 1):**
 - `tests/test_tasks.py` (~25 tests):
@@ -381,6 +523,8 @@ groupwork/
 
 ### Module 2.4: Time Logging
 
+**Branch**: `feat/time-logging`
+
 **Tests (Step 1):**
 - `tests/test_time_logs.py` (~10 tests):
   - Log time: Valid entry returns 201. Non-assignee returns 403. Negative hours returns 422. Future date returns 422.
@@ -400,6 +544,8 @@ groupwork/
 
 ### Module 2.5: Global My Tasks & Search
 
+**Branch**: `feat/my-tasks-search`
+
 **Tests (Step 1):**
 - `tests/test_my_tasks.py`: Returns tasks across all projects for current user. Sortable. Cursor pagination.
 - `tests/test_search.py`: Search by title returns matching tasks. Empty query returns empty. Search scoped to user's projects only (no data leak).
@@ -418,6 +564,8 @@ groupwork/
 ## Phase 3: Accountability Layer
 
 ### Module 3.1: Evidence Upload (S3 Presigned URLs)
+
+**Branch**: `feat/evidence-upload`
 
 **Tests (Step 1):**
 - `tests/test_evidence.py` (~12 tests):
@@ -442,6 +590,8 @@ groupwork/
 
 ### Module 3.2: Peer Verification
 
+**Branch**: `feat/peer-verification`
+
 **Tests (Step 1):**
 - `tests/test_verification.py` (~10 tests):
   - Moving task to Done triggers verification state. Verify: member can verify (returns 200). Cannot verify own task (returns 403). Cannot verify twice (returns 409). Task "Verified" when majority verify. Dispute: creates dispute record, triggers notification. Non-member cannot verify (returns 403).
@@ -457,6 +607,8 @@ groupwork/
 ---
 
 ### Module 3.3: Meeting Notes & Attendance
+
+**Branch**: `feat/meeting-notes`
 
 **Tests (Step 1):**
 - `tests/test_meetings.py` (~10 tests):
@@ -478,6 +630,8 @@ groupwork/
 ---
 
 ### Module 3.4: In-App Notifications
+
+**Branch**: `feat/notifications`
 
 **Tests (Step 1):**
 - `tests/test_notifications.py` (~10 tests):
@@ -505,6 +659,8 @@ groupwork/
 
 ### Module 4.1: Dispute System
 
+**Branch**: `feat/dispute-system`
+
 **Tests (Step 1):**
 - `tests/test_disputes.py` (~12 tests):
   - File dispute: Valid returns 201. Reason required. Non-member returns 403. Multiple disputes on same task allowed.
@@ -522,6 +678,8 @@ groupwork/
 ---
 
 ### Module 4.2: End-of-Project Peer Review
+
+**Branch**: `feat/peer-review`
 
 **Tests (Step 1):**
 - `tests/test_peer_review.py` (~10 tests):
@@ -541,6 +699,8 @@ groupwork/
 
 ### Module 4.3: Contribution Report & PDF Generation
 
+**Branch**: `feat/contribution-report`
+
 **Tests (Step 1):**
 - `tests/test_report.py` (~8 tests):
   - Report preview: Returns correct aggregated data (task summary, time breakdown, peer scores, disputes, attendance). Only available when project is in report/archived state. Non-member returns 403.
@@ -559,6 +719,8 @@ groupwork/
 ---
 
 ### Module 4.4: Project Lifecycle & Soft Delete
+
+**Branch**: `feat/project-lifecycle`
 
 **Tests (Step 1):**
 - `tests/test_lifecycle.py` (~10 tests):
@@ -580,6 +742,8 @@ groupwork/
 
 ### Module 4.5: Email Notifications (SES)
 
+**Branch**: `feat/email-notifications`
+
 **Tests (Step 1):**
 - `tests/test_email_notifications.py` (~8 tests):
   - Each notification type sends correct email template (mock SES). Email respects user preferences. Failed email send doesn't crash the request (graceful degradation). Unsubscribe link in emails works.
@@ -595,6 +759,8 @@ groupwork/
 ## Phase 5: Production Readiness
 
 ### Module 5.1: AWS Infrastructure
+
+**Branch**: `feat/aws-infrastructure`
 
 **Tests (Step 1):**
 - Infrastructure tests: Terraform plan validates. Health check endpoint accessible via API Gateway. RDS connection works from ECS. S3 upload/download works with IAM role. CloudWatch receives logs.
@@ -613,14 +779,17 @@ groupwork/
 
 ---
 
-### Module 5.2: CI/CD Pipeline
+### Module 5.2: CI/CD Deployment Pipeline
+
+**Branch**: `feat/cd-pipeline`
+
+Note: The basic CI pipeline (lint + test) was set up in Phase 1, Module 1.1. This module adds the CD (continuous deployment) part.
 
 **Tests (Step 1):**
-- Pipeline test: Push to feature branch triggers lint + test. Push to main triggers full build + deploy.
+- Pipeline test: Push to main triggers full build + deploy. Deployment health check passes.
 
 **Implementation (Step 3):**
-- `.github/workflows/ci.yml`: On push/PR. Jobs: lint-backend (ruff), lint-frontend (eslint), test-backend (pytest with test DB), test-frontend (RTL + Cypress). Matrix for parallel execution.
-- `.github/workflows/deploy.yml`: On push to main. Jobs: build backend Docker -> push to ECR, build frontend Docker -> push to ECR, update ECS service (rolling deployment).
+- `.github/workflows/deploy.yml`: On push to main (after merge). Jobs: build backend Docker -> push to ECR, build frontend Docker -> push to ECR, update ECS service (rolling deployment).
 - `backend/Dockerfile`: Multi-stage build. Python 3.12-slim base. Install system deps for weasyprint. Copy requirements.txt -> pip install -> copy app. Run with uvicorn.
 - `frontend/Dockerfile`: Multi-stage. Node 20 -> npm install -> npm run build -> nginx:alpine to serve static files.
 
@@ -629,6 +798,8 @@ groupwork/
 ---
 
 ### Module 5.3: Security Hardening & SQL Injection Test Suite
+
+**Branch**: `feat/security-hardening`
 
 **Tests (Step 1):**
 - `tests/test_sql_injection.py` (~20 tests): For every endpoint that takes user input, attempt SQL injection payloads: `'; DROP TABLE users; --`, `' OR '1'='1`, `'; UPDATE users SET password_hash='x' WHERE '1'='1`, UNION-based injection, blind injection via timing. Verify none cause errors or data leaks.
@@ -645,6 +816,8 @@ groupwork/
 ---
 
 ### Module 5.4: Monitoring & Logging
+
+**Branch**: `feat/monitoring-logging`
 
 **Tests (Step 1):**
 - `tests/test_logging.py`: Every request generates a structured JSON log with request_id, method, path, status, duration.
