@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit'
+import type React from 'react'
 import { render, type RenderOptions } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { MemoryRouter } from 'react-router-dom'
@@ -7,7 +8,7 @@ import notificationsReducer from './store/notificationsSlice'
 import projectsReducer from './store/projectsSlice'
 import tasksReducer from './store/tasksSlice'
 
-export function createTestStore(preloadedState?: Partial<RootState>) {
+export function createTestStore() {
   return configureStore({
     reducer: {
       auth: authReducer,
@@ -15,21 +16,17 @@ export function createTestStore(preloadedState?: Partial<RootState>) {
       tasks: tasksReducer,
       notifications: notificationsReducer,
     },
-    preloadedState: preloadedState as RootState,
   })
 }
-
-type RootState = ReturnType<ReturnType<typeof createTestStore>['getState']>
 
 export function renderWithProviders(
   ui: React.ReactElement,
   {
     route = '/',
-    preloadedState,
     ...renderOptions
-  }: { route?: string; preloadedState?: Partial<RootState> } & Omit<RenderOptions, 'wrapper'> = {},
+  }: { route?: string } & Omit<RenderOptions, 'wrapper'> = {},
 ) {
-  const store = createTestStore(preloadedState)
+  const store = createTestStore()
   function Wrapper({ children }: { children: React.ReactNode }) {
     return (
       <Provider store={store}>
