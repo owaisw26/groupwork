@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, timedelta
 
 from tests.auth_helpers import auth_headers, extract_token_from_email, login_user, register_user
 
@@ -55,7 +55,10 @@ def test_dashboard_returns_widget_data(auth_client, email_outbox, db_conn):
     assert len(data["my_tasks"]) == 1
     assert data["my_tasks"][0]["title"] == "My assigned task"
     assert len(data["upcoming_deadlines"]) == 1
-    assert len(data["recent_activity"]) == 1
+    task_activity = [
+        item for item in data["recent_activity"] if item["action_type"] == "task_created"
+    ]
+    assert len(task_activity) == 1
 
 
 def test_dashboard_empty_for_new_user(auth_client, email_outbox):

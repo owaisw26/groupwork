@@ -1,5 +1,3 @@
-from datetime import date, datetime, timedelta, timezone
-
 from tests.auth_helpers import (
     auth_headers,
     extract_token_from_email,
@@ -70,7 +68,8 @@ def test_list_projects_returns_only_member_projects(auth_client, email_outbox):
     other_headers = _verified_user(auth_client, email_outbox, email="other@example.com")
     _create_project(auth_client, other_headers, name="Other Project")
 
-    response = auth_client.get("/api/v1/projects", headers=owner_headers)
+    login_user(auth_client, email="owner@example.com")
+    response = auth_client.get("/api/v1/projects", headers=auth_headers(auth_client))
 
     assert response.status_code == 200
     names = {project["name"] for project in response.json()}

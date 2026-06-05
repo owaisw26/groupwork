@@ -40,12 +40,20 @@ function renderDashboard() {
 
 describe('DashboardPage', () => {
   beforeEach(() => {
-    vi.mocked(api.get).mockResolvedValue({
-      data: {
-        my_tasks: [],
-        upcoming_deadlines: [],
-        recent_activity: [],
-      },
+    vi.mocked(api.get).mockImplementation((url: string) => {
+      if (url === '/dashboard') {
+        return Promise.resolve({
+          data: {
+            my_tasks: [],
+            upcoming_deadlines: [],
+            recent_activity: [],
+          },
+        })
+      }
+      if (url === '/projects') {
+        return Promise.resolve({ data: [] })
+      }
+      return Promise.reject(new Error(`Unexpected GET ${url}`))
     })
   })
 
