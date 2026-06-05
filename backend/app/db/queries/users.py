@@ -72,16 +72,39 @@ def update_password(conn: connection, user_id: str | UUID, password_hash: str) -
         )
 
 
-def update_full_name(conn: connection, user_id: str | UUID, full_name: str) -> dict[str, Any]:
+def update_profile(
+    conn: connection,
+    user_id: str | UUID,
+    *,
+    full_name: str | None = None,
+    has_completed_onboarding: bool | None = None,
+) -> dict[str, Any]:
+    updates: list[str] = []
+    params: list[object] = []
+
+    if full_name is not None:
+        updates.append("full_name = %s")
+        params.append(full_name)
+    if has_completed_onboarding is not None:
+        updates.append("has_completed_onboarding = %s")
+        params.append(has_completed_onboarding)
+
+    if not updates:
+        user = get_user_by_id(conn, user_id)
+        if not user:
+            raise ValueError("User not found")
+        return user
+
+    params.append(str(user_id))
     with conn.cursor() as cur:
         cur.execute(
-            """
-            UPDATE users SET full_name = %s
+            f"""
+            UPDATE users SET {", ".join(updates)}
             WHERE id = %s
             RETURNING id, email, password_hash, full_name, email_verified, created_at,
                       failed_login_attempts, locked_until, has_completed_onboarding
             """,
-            (full_name, str(user_id)),
+            tuple(params),
         )
         row = cur.fetchone()
     return _row_to_user(row)

@@ -27,5 +27,10 @@ def update_me(
     conn: connection = Depends(_get_db),
 ):
     user = get_verified_user(request)
-    updated = user_queries.update_full_name(conn, user["id"], body.full_name)
+    updated = user_queries.update_profile(
+        conn,
+        user["id"],
+        full_name=body.full_name,
+        has_completed_onboarding=body.has_completed_onboarding,
+    )
     return user_queries.public_user(updated)
