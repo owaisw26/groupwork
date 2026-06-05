@@ -1,4 +1,5 @@
 import os
+from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,6 +9,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://localhost:5432/groupwork_tes
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-key-for-pytest-only")
 os.environ.setdefault("FRONTEND_URL", "http://localhost:5173")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
+os.environ.setdefault("COOKIE_SECURE", "false")
 
 
 @pytest.fixture(autouse=True)
@@ -20,12 +22,31 @@ def clear_settings_cache():
 
 
 @pytest.fixture
-def client():
+def email_outbox(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, str]]:
+    outbox: list[dict[str, str]] = []
+
+    def fake_send_email(to: str, subject: str, html_body: str) -> None:
+        outbox.append({"to": to, "subject": subject, "body": html_body})
+
+    monkeypatch.setattr("app.utils.email.send_email", fake_send_email)
+    return outbox
+
+
+@pytest.fixture
+def client(email_outbox: list[dict[str, str]]):
     from app.main import create_app
 
     app = create_app()
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def auth_client(client: TestClient, db_conn: PgConnection) -> Generator[TestClient, None, None]:
+    from app.db.migrate import run_migrations
+
+    run_migrations(db_conn)
+    yield client
 
 
 @pytest.fixture
