@@ -165,9 +165,15 @@ def get_password_reset(conn: connection, token_hash: str) -> dict[str, Any] | No
     }
 
 
-def mark_password_reset_used(conn: connection, reset_id: str | UUID) -> None:
+def mark_password_reset_used(conn: connection, reset_id: str | UUID) -> bool:
     with conn.cursor() as cur:
         cur.execute(
-            "UPDATE password_resets SET used_at = NOW() WHERE id = %s",
+            """
+            UPDATE password_resets
+            SET used_at = NOW()
+            WHERE id = %s AND used_at IS NULL
+            RETURNING id
+            """,
             (str(reset_id),),
         )
+        return cur.fetchone() is not None

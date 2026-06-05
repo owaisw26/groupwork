@@ -21,6 +21,7 @@ from app.utils.security import (
 
 LOCKOUT_THRESHOLD = 5
 LOCKOUT_MINUTES = 15
+INVALID_RESET_TOKEN_MSG = "Invalid or expired reset token"
 
 
 def register_user(
@@ -93,6 +94,7 @@ def verify_email(conn: connection, token: str) -> dict:
         )
 
     user_queries.update_email_verified(conn, verification["user_id"])
+    user_queries.reset_failed_logins(conn, verification["user_id"])
     token_queries.mark_email_verified(conn, verification["id"])
     user = user_queries.get_user_by_id(conn, verification["user_id"])
     return {"email_verified": True, "email": user["email"]}
@@ -139,12 +141,13 @@ def login_user(conn: connection, *, email: str, password: str) -> tuple[dict, st
         )
 
     user_queries.reset_failed_logins(conn, user["id"])
+    token_queries.revoke_all_user_tokens(conn, user["id"])
     return _issue_session(conn, user)
 
 
 def _issue_session(conn: connection, user: dict) -> tuple[dict, str, str, str]:
     settings = get_settings()
-    access_token = create_access_token(str(user["id"]))
+    access_token = create_access_token(str(user["id"]), user["token_version"])
     refresh_token = generate_token()
     csrf_token = generate_csrf_token()
 
@@ -158,7 +161,7 @@ def _issue_session(conn: connection, user: dict) -> tuple[dict, str, str, str]:
     return user_queries.public_user(user), access_token, refresh_token, csrf_token
 
 
-def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str]:
+def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str, str]:
     token_record = token_queries.get_refresh_token(conn, hash_token(refresh_token))
     if not token_record:
         raise HTTPException(
@@ -191,14 +194,31 @@ def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str]:
             detail="Email not verified",
         )
 
-    access_token = create_access_token(str(user["id"]))
+    settings = get_settings()
+    token_queries.revoke_refresh_token(conn, hash_token(refresh_token))
+
+    new_refresh_token = generate_token()
+    token_queries.create_refresh_token(
+        conn,
+        user_id=user["id"],
+        token_hash=hash_token(new_refresh_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(seconds=settings.JWT_REFRESH_TTL),
+    )
+
+    access_token = create_access_token(str(user["id"]), user["token_version"])
     csrf_token = generate_csrf_token()
-    return access_token, csrf_token
+    return access_token, new_refresh_token, csrf_token
 
 
-def logout_user(conn: connection, refresh_token: str | None) -> None:
+def logout_user(conn: connection, refresh_token: str | None, user_id: str | None = None) -> None:
     if refresh_token:
+        token_record = token_queries.get_refresh_token(conn, hash_token(refresh_token))
+        if token_record:
+            user_id = str(token_record["user_id"])
         token_queries.revoke_refresh_token(conn, hash_token(refresh_token))
+
+    if user_id:
+        user_queries.increment_token_version(conn, user_id)
 
 
 def forgot_password(conn: connection, email: str) -> None:
@@ -233,22 +253,28 @@ def reset_password(conn: connection, *, token: str, password: str) -> None:
     if not reset_record:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid reset token",
+            detail=INVALID_RESET_TOKEN_MSG,
         )
 
     if reset_record["used_at"] is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token already used",
+            detail=INVALID_RESET_TOKEN_MSG,
         )
 
     if reset_record["expires_at"] < datetime.now(timezone.utc):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Reset token expired",
+            detail=INVALID_RESET_TOKEN_MSG,
+        )
+
+    if not token_queries.mark_password_reset_used(conn, reset_record["id"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=INVALID_RESET_TOKEN_MSG,
         )
 
     user_queries.update_password(conn, reset_record["user_id"], hash_password(password))
     user_queries.reset_failed_logins(conn, reset_record["user_id"])
-    token_queries.mark_password_reset_used(conn, reset_record["id"])
     token_queries.revoke_all_user_tokens(conn, reset_record["user_id"])
+    user_queries.increment_token_version(conn, reset_record["user_id"])
