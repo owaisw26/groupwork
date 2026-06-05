@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: groupwork
+          POSTGRES_PASSWORD: groupwork
+          POSTGRES_DB: groupwork_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U groupwork -d groupwork_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pip install -r requirements.txt
+
+      - name: Lint with ruff
+        working-directory: backend
+        run: ruff check .
+
+      - name: Run tests
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://groupwork:groupwork@localhost:5432/groupwork_test
+          JWT_SECRET: ci-test-jwt-secret
+          FRONTEND_URL: http://localhost:5173
+          CORS_ORIGINS: http://localhost:5173
+        run: pytest -v
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint with eslint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm test
