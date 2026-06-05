@@ -9,6 +9,10 @@ from app.config import get_settings
 
 ALGORITHM = "HS256"
 INVALID_CREDENTIALS_MSG = "Invalid email or password"
+
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
 # Precomputed bcrypt hash for constant-time comparison when user is not found.
 DUMMY_PASSWORD_HASH = "$2b$12$EixZaYVK1fsbw1ZfbX3OXePaWxn96p36WQoeG6Lruj3vjPGga31lW"
 

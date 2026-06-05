@@ -45,6 +45,30 @@ def get_refresh_token(conn: connection, token_hash: str) -> dict[str, Any] | Non
     }
 
 
+def try_consume_refresh_token(conn: connection, token_hash: str) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE refresh_tokens
+            SET revoked = TRUE
+            WHERE token_hash = %s AND revoked = FALSE AND expires_at > NOW()
+            RETURNING id, user_id, token_hash, expires_at, created_at
+            """,
+            (token_hash,),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    return {
+        "id": row[0],
+        "user_id": row[1],
+        "token_hash": row[2],
+        "expires_at": row[3],
+        "created_at": row[4],
+        "revoked": True,
+    }
+
+
 def revoke_refresh_token(conn: connection, token_hash: str) -> None:
     with conn.cursor() as cur:
         cur.execute(

@@ -3,7 +3,7 @@ from psycopg2.extensions import connection
 
 from app.db.connection import get_connection
 from app.middleware.auth import ACCESS_COOKIE, CSRF_COOKIE, REFRESH_COOKIE
-from app.middleware.rate_limit import AUTH_RATE_LIMIT, limiter
+from app.middleware.rate_limit import AUTH_RATE_LIMIT, REFRESH_RATE_LIMIT, limiter
 from app.models.auth import (
     ForgotPasswordRequest,
     LoginRequest,
@@ -131,6 +131,7 @@ def login(
 
 
 @router.post("/refresh")
+@limiter.limit(REFRESH_RATE_LIMIT)
 def refresh(request: Request, response: Response, conn: connection = Depends(_get_db)):
     refresh_token = request.cookies.get(REFRESH_COOKIE)
     if not refresh_token:
@@ -179,7 +180,11 @@ def refresh(request: Request, response: Response, conn: connection = Depends(_ge
 
 @router.post("/logout")
 def logout(request: Request, response: Response, conn: connection = Depends(_get_db)):
-    auth_service.logout_user(conn, request.cookies.get(REFRESH_COOKIE))
+    auth_service.logout_user(
+        conn,
+        request.cookies.get(REFRESH_COOKIE),
+        request.cookies.get(ACCESS_COOKIE),
+    )
     _clear_auth_cookies(response)
     return {"status": "ok"}
 

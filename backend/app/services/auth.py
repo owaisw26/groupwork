@@ -11,13 +11,16 @@ from app.utils import email as email_utils
 from app.utils.security import (
     INVALID_CREDENTIALS_MSG,
     create_access_token,
+    decode_token,
     generate_csrf_token,
     generate_token,
     hash_password,
     hash_token,
+    normalize_email,
     validate_password_strength,
     verify_password_constant_time,
 )
+from jose import JWTError
 
 LOCKOUT_THRESHOLD = 5
 LOCKOUT_MINUTES = 15
@@ -37,6 +40,8 @@ def register_user(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=errors,
         )
+
+    email = normalize_email(email)
 
     if user_queries.get_user_by_email(conn, email):
         raise HTTPException(
@@ -110,6 +115,7 @@ def _check_lockout(user: dict) -> None:
 
 
 def login_user(conn: connection, *, email: str, password: str) -> tuple[dict, str, str, str]:
+    email = normalize_email(email)
     user = user_queries.get_user_by_email(conn, email)
 
     if user:
@@ -142,6 +148,7 @@ def login_user(conn: connection, *, email: str, password: str) -> tuple[dict, st
 
     user_queries.reset_failed_logins(conn, user["id"])
     token_queries.revoke_all_user_tokens(conn, user["id"])
+    user["token_version"] = user_queries.increment_token_version(conn, user["id"])
     return _issue_session(conn, user)
 
 
@@ -162,23 +169,16 @@ def _issue_session(conn: connection, user: dict) -> tuple[dict, str, str, str]:
 
 
 def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str, str]:
-    token_record = token_queries.get_refresh_token(conn, hash_token(refresh_token))
+    token_hash = hash_token(refresh_token)
+    token_record = token_queries.try_consume_refresh_token(conn, token_hash)
     if not token_record:
+        existing = token_queries.get_refresh_token(conn, token_hash)
+        if existing and existing["revoked"]:
+            token_queries.revoke_all_user_tokens(conn, existing["user_id"])
+            user_queries.increment_token_version(conn, existing["user_id"])
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
-        )
-
-    if token_record["revoked"]:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token revoked",
-        )
-
-    if token_record["expires_at"] < datetime.now(timezone.utc):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Refresh token expired",
         )
 
     user = user_queries.get_user_by_id(conn, token_record["user_id"])
@@ -188,6 +188,8 @@ def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str, str
             detail="Invalid refresh token",
         )
 
+    _check_lockout(user)
+
     if not user["email_verified"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -195,8 +197,6 @@ def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str, str
         )
 
     settings = get_settings()
-    token_queries.revoke_refresh_token(conn, hash_token(refresh_token))
-
     new_refresh_token = generate_token()
     token_queries.create_refresh_token(
         conn,
@@ -210,11 +210,29 @@ def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str, str
     return access_token, new_refresh_token, csrf_token
 
 
-def logout_user(conn: connection, refresh_token: str | None, user_id: str | None = None) -> None:
+def _user_id_from_access_token(access_token: str | None) -> str | None:
+    if not access_token:
+        return None
+    try:
+        payload = decode_token(access_token)
+        if payload.get("type") != "access":
+            return None
+        return payload["sub"]
+    except JWTError:
+        return None
+
+
+def logout_user(
+    conn: connection,
+    refresh_token: str | None,
+    access_token: str | None = None,
+) -> None:
+    user_id = _user_id_from_access_token(access_token)
+
     if refresh_token:
         token_record = token_queries.get_refresh_token(conn, hash_token(refresh_token))
         if token_record:
-            user_id = str(token_record["user_id"])
+            user_id = user_id or str(token_record["user_id"])
         token_queries.revoke_refresh_token(conn, hash_token(refresh_token))
 
     if user_id:
@@ -222,6 +240,7 @@ def logout_user(conn: connection, refresh_token: str | None, user_id: str | None
 
 
 def forgot_password(conn: connection, email: str) -> None:
+    email = normalize_email(email)
     user = user_queries.get_user_by_email(conn, email)
     if not user:
         return
