@@ -1,0 +1,68 @@
+import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
+import { Provider } from 'react-redux'
+import { configureStore } from '@reduxjs/toolkit'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
+import DashboardPage from '../DashboardPage'
+import projectsReducer from '../../store/projectsSlice'
+
+vi.mock('../../services/api', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    interceptors: { request: { use: vi.fn() }, response: { use: vi.fn() } },
+  },
+}))
+
+import api from '../../services/api'
+
+function renderDashboard() {
+  const store = configureStore({
+    reducer: {
+      projects: projectsReducer,
+      auth: () => ({
+        user: { id: '1', email: 'test@example.com', full_name: 'Test', email_verified: true, has_completed_onboarding: true, created_at: '' },
+        isAuthenticated: true,
+        isLoading: false,
+        error: null,
+      }),
+    },
+  })
+
+  return render(
+    <Provider store={store}>
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    </Provider>,
+  )
+}
+
+describe('DashboardPage', () => {
+  beforeEach(() => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        my_tasks: [],
+        upcoming_deadlines: [],
+        recent_activity: [],
+      },
+    })
+  })
+
+  it('renders four dashboard widgets', async () => {
+    renderDashboard()
+
+    expect(await screen.findByText('My Tasks')).toBeInTheDocument()
+    expect(screen.getByText('Upcoming Deadlines')).toBeInTheDocument()
+    expect(screen.getByText('Recent Activity')).toBeInTheDocument()
+    expect(screen.getByText('Quick Actions')).toBeInTheDocument()
+  })
+
+  it('shows empty state for new user', async () => {
+    renderDashboard()
+
+    expect(await screen.findByText('No tasks assigned yet.')).toBeInTheDocument()
+    expect(screen.getByText('No upcoming deadlines.')).toBeInTheDocument()
+    expect(screen.getByText('No recent activity.')).toBeInTheDocument()
+  })
+})
