@@ -18,7 +18,7 @@ def create_user(
             INSERT INTO users (email, password_hash, full_name)
             VALUES (%s, %s, %s)
             RETURNING id, email, password_hash, full_name, email_verified, created_at,
-                      failed_login_attempts, locked_until, has_completed_onboarding
+                      failed_login_attempts, locked_until, has_completed_onboarding, token_version
             """,
             (email, password_hash, full_name),
         )
@@ -31,7 +31,7 @@ def get_user_by_email(conn: connection, email: str) -> dict[str, Any] | None:
         cur.execute(
             """
             SELECT id, email, password_hash, full_name, email_verified, created_at,
-                   failed_login_attempts, locked_until, has_completed_onboarding
+                   failed_login_attempts, locked_until, has_completed_onboarding, token_version
             FROM users
             WHERE email = %s
             """,
@@ -46,7 +46,7 @@ def get_user_by_id(conn: connection, user_id: str | UUID) -> dict[str, Any] | No
         cur.execute(
             """
             SELECT id, email, password_hash, full_name, email_verified, created_at,
-                   failed_login_attempts, locked_until, has_completed_onboarding
+                   failed_login_attempts, locked_until, has_completed_onboarding, token_version
             FROM users
             WHERE id = %s
             """,
@@ -102,7 +102,7 @@ def update_profile(
             UPDATE users SET {", ".join(updates)}
             WHERE id = %s
             RETURNING id, email, password_hash, full_name, email_verified, created_at,
-                      failed_login_attempts, locked_until, has_completed_onboarding
+                      failed_login_attempts, locked_until, has_completed_onboarding, token_version
             """,
             tuple(params),
         )
@@ -144,6 +144,20 @@ def lock_account(conn: connection, user_id: str | UUID, locked_until: datetime) 
         )
 
 
+def increment_token_version(conn: connection, user_id: str | UUID) -> int:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE users
+            SET token_version = token_version + 1
+            WHERE id = %s
+            RETURNING token_version
+            """,
+            (str(user_id),),
+        )
+        return cur.fetchone()[0]
+
+
 def _row_to_user(row: tuple) -> dict[str, Any]:
     return {
         "id": row[0],
@@ -155,6 +169,7 @@ def _row_to_user(row: tuple) -> dict[str, Any]:
         "failed_login_attempts": row[6],
         "locked_until": row[7],
         "has_completed_onboarding": row[8],
+        "token_version": row[9],
     }
 
 

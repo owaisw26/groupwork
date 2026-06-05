@@ -50,11 +50,17 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def create_access_token(user_id: str) -> str:
+def create_access_token(user_id: str, token_version: int) -> str:
     settings = get_settings()
     expire = datetime.now(timezone.utc) + timedelta(seconds=settings.JWT_ACCESS_TTL)
     return jwt.encode(
-        {"sub": user_id, "exp": expire, "type": "access", "jti": generate_token()},
+        {
+            "sub": user_id,
+            "exp": expire,
+            "type": "access",
+            "tv": token_version,
+            "jti": generate_token(),
+        },
         settings.JWT_SECRET,
         algorithm=ALGORITHM,
     )

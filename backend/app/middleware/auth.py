@@ -24,10 +24,11 @@ def get_current_user(request: Request) -> dict[str, Any]:
         payload = decode_token(token)
         if payload.get("type") != "access":
             raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Not authenticated",
+            )
         user_id = payload["sub"]
+        token_version = payload.get("tv")
     except JWTError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -38,6 +39,12 @@ def get_current_user(request: Request) -> dict[str, Any]:
         user = user_queries.get_user_by_id(conn, user_id)
 
     if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+        )
+
+    if token_version is None or token_version != user["token_version"]:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated",
