@@ -15,16 +15,29 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         request.state.request_id = request_id
         start = time.perf_counter()
 
-        response = await call_next(request)
-        duration_ms = round((time.perf_counter() - start) * 1000, 2)
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+        except Exception:
+            duration_ms = round((time.perf_counter() - start) * 1000, 2)
+            log_entry = {
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status": 500,
+                "duration_ms": duration_ms,
+            }
+            logger.info(json.dumps(log_entry))
+            raise
 
+        duration_ms = round((time.perf_counter() - start) * 1000, 2)
         response.headers["X-Request-ID"] = request_id
 
         log_entry = {
             "request_id": request_id,
             "method": request.method,
             "path": request.url.path,
-            "status": response.status_code,
+            "status": status_code,
             "duration_ms": duration_ms,
         }
         logger.info(json.dumps(log_entry))
