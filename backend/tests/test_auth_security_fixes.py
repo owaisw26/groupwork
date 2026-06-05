@@ -67,6 +67,48 @@ def test_refresh_rotates_refresh_token(auth_client, email_outbox):
     assert auth_client.cookies.get("refresh_token") != old_refresh
 
 
+def test_login_invalidates_prior_access_token(auth_client, email_outbox, db_conn):
+    _verified_session(auth_client, email_outbox, email="relogin@example.com")
+    old_access = auth_client.cookies.get("access_token")
+    headers = auth_headers(auth_client)
+
+    from app.middleware.rate_limit import limiter
+
+    if hasattr(limiter, "_storage") and hasattr(limiter._storage, "storage"):
+        limiter._storage.storage.clear()
+
+    login_user(auth_client, email="relogin@example.com")
+
+    auth_client.cookies.set("access_token", old_access)
+    response = auth_client.get("/api/v1/users/me", headers=headers)
+    assert response.status_code == 401
+
+
+def test_logout_invalidates_access_without_refresh_cookie(auth_client, email_outbox):
+    _verified_session(auth_client, email_outbox, email="logout-no-refresh@example.com")
+    access_token = auth_client.cookies.get("access_token")
+    csrf_token = auth_client.cookies.get("csrf_token")
+    headers = auth_headers(auth_client)
+
+    auth_client.cookies.clear()
+    auth_client.cookies.set("access_token", access_token)
+    auth_client.cookies.set("csrf_token", csrf_token)
+    auth_client.post("/api/v1/auth/logout", headers=headers)
+
+    auth_client.cookies.set("access_token", access_token)
+    response = auth_client.get("/api/v1/users/me", headers=headers)
+    assert response.status_code == 401
+
+
+def test_email_case_insensitive_login(auth_client, email_outbox):
+    register_user(auth_client, email="case@example.com")
+    token = extract_token_from_email(email_outbox[-1]["body"])
+    auth_client.post("/api/v1/auth/verify-email", json={"token": token})
+
+    response = login_user(auth_client, email="CASE@example.com")
+    assert response.status_code == 200
+
+
 def test_old_refresh_token_fails_after_rotation(auth_client, email_outbox):
     _verified_session(auth_client, email_outbox, email="rotate2@example.com")
     old_refresh = auth_client.cookies.get("refresh_token")
