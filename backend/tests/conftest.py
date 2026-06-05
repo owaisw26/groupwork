@@ -2,6 +2,7 @@ import os
 
 import pytest
 from fastapi.testclient import TestClient
+from psycopg2.extensions import connection as PgConnection
 
 os.environ.setdefault("DATABASE_URL", "postgresql://localhost:5432/groupwork_test")
 os.environ.setdefault("JWT_SECRET", "test-jwt-secret-key-for-pytest-only")
@@ -25,3 +26,49 @@ def client():
     app = create_app()
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def db_conn() -> PgConnection:
+    from app.db.connection import close_pool, get_connection, init_pool
+
+    close_pool()
+    init_pool()
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DROP SCHEMA public CASCADE")
+            cur.execute("CREATE SCHEMA public")
+
+    with get_connection() as conn:
+        yield conn
+
+    close_pool()
+
+
+EXPECTED_TABLES = [
+    "schema_migrations",
+    "users",
+    "projects",
+    "project_members",
+    "invitations",
+    "tasks",
+    "task_assignees",
+    "subtasks",
+    "task_comments",
+    "time_logs",
+    "evidence_files",
+    "task_verifications",
+    "meetings",
+    "meeting_attendance",
+    "disputes",
+    "dispute_votes",
+    "peer_reviews",
+    "notifications",
+    "notification_preferences",
+    "refresh_tokens",
+    "task_edit_requests",
+    "activity_log",
+    "email_verifications",
+    "password_resets",
+]

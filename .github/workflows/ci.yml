@@ -48,6 +48,15 @@ jobs:
         working-directory: backend
         run: ruff check .
 
+      - name: Run migrations
+        working-directory: backend
+        env:
+          DATABASE_URL: postgresql://groupwork:groupwork@localhost:5432/groupwork_test
+          JWT_SECRET: ci-test-jwt-secret
+          FRONTEND_URL: http://localhost:5173
+          CORS_ORIGINS: http://localhost:5173
+        run: python -m app.db.migrate
+
       - name: Run tests
         working-directory: backend
         env:
