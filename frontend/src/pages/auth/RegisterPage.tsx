@@ -35,6 +35,10 @@ export default function RegisterPage() {
       setValidationError('All fields are required')
       return
     }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setValidationError('Please enter a valid email address')
+      return
+    }
     if (password !== confirmPassword) {
       setValidationError('Passwords do not match')
       return

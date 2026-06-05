@@ -9,13 +9,15 @@ import {
   Typography,
 } from '@mui/material'
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import type { Location } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { clearAuthError, login } from '../../store/authSlice'
 
 export default function LoginPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
   const { isLoading, error } = useAppSelector((state) => state.auth)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -42,7 +44,14 @@ export default function LoginPage() {
     const result = await dispatch(login({ email, password }))
     if (login.fulfilled.match(result)) {
       const user = result.payload
-      navigate(user.has_completed_onboarding ? '/dashboard' : '/onboarding')
+      const from = (location.state as { from?: Location } | null)?.from?.pathname
+      const destination =
+        from && from !== '/login'
+          ? from
+          : user.has_completed_onboarding
+            ? '/dashboard'
+            : '/onboarding'
+      navigate(destination)
     }
   }
 

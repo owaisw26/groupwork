@@ -11,6 +11,16 @@ export default function ForgotPasswordPage() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError(null)
+
+    if (!email.trim()) {
+      setError('Email is required')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Please enter a valid email address')
+      return
+    }
+
     setIsLoading(true)
     try {
       await api.post('/auth/forgot-password', { email })

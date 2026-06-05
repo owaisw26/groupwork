@@ -26,8 +26,19 @@ const initialState: AuthState = {
 
 function getErrorMessage(error: unknown): string {
   if (error && typeof error === 'object' && 'response' in error) {
-    const response = (error as { response?: { data?: { error?: { message?: string } } } }).response
-    return response?.data?.error?.message ?? 'Something went wrong'
+    const data = (error as { response?: { data?: Record<string, unknown> } }).response?.data
+    if (data && typeof data === 'object') {
+      const apiError = data.error as { message?: string; details?: unknown } | undefined
+      if (apiError?.message) {
+        if (Array.isArray(apiError.details) && apiError.details.length > 0) {
+          return apiError.details.map(String).join('. ')
+        }
+        return apiError.message
+      }
+      if (typeof data.detail === 'string') {
+        return data.detail
+      }
+    }
   }
   return 'Something went wrong'
 }

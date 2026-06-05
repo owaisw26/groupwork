@@ -1,4 +1,5 @@
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -24,11 +25,21 @@ export default function OnboardingFlow() {
   const [projectName, setProjectName] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [inviteEmails, setInviteEmails] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const completeOnboarding = async () => {
-    await api.put('/users/me', { has_completed_onboarding: true })
-    await dispatch(fetchCurrentUser())
-    navigate('/dashboard')
+    setError(null)
+    setIsSubmitting(true)
+    try {
+      await api.put('/users/me', { has_completed_onboarding: true })
+      await dispatch(fetchCurrentUser())
+      navigate('/dashboard')
+    } catch {
+      setError('Unable to complete onboarding. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const handleSkip = async () => {
@@ -51,7 +62,9 @@ export default function OnboardingFlow() {
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
               Welcome to GroupWork
             </Typography>
-            <Button onClick={handleSkip}>Skip</Button>
+            <Button onClick={handleSkip} disabled={isSubmitting}>
+              Skip
+            </Button>
           </Box>
           <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
             {steps.map((label) => (
@@ -60,6 +73,11 @@ export default function OnboardingFlow() {
               </Step>
             ))}
           </Stepper>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
           {activeStep === 0 && (
             <Typography>
               GroupWork helps your team track contributions, verify work, and generate fair reports.
@@ -67,12 +85,18 @@ export default function OnboardingFlow() {
           )}
           {activeStep === 1 && (
             <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Project creation and join codes will be available from your dashboard after
+                onboarding. You can skip this step for now.
+              </Typography>
               <TextField
                 fullWidth
                 label="Project name"
                 margin="normal"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
+                disabled
+                helperText="Available after onboarding"
               />
               <Typography align="center" sx={{ my: 2 }}>
                 or
@@ -82,21 +106,31 @@ export default function OnboardingFlow() {
                 label="Join code"
                 value={joinCode}
                 onChange={(e) => setJoinCode(e.target.value)}
+                disabled
+                helperText="Available after onboarding"
               />
             </Box>
           )}
           {activeStep === 2 && (
-            <TextField
-              fullWidth
-              label="Invite emails (comma separated)"
-              multiline
-              minRows={3}
-              value={inviteEmails}
-              onChange={(e) => setInviteEmails(e.target.value)}
-            />
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Member invites will be available once you create or join a project. You can skip
+                this step.
+              </Typography>
+              <TextField
+                fullWidth
+                label="Invite emails (comma separated)"
+                multiline
+                minRows={3}
+                value={inviteEmails}
+                onChange={(e) => setInviteEmails(e.target.value)}
+                disabled
+                helperText="Available after onboarding"
+              />
+            </Box>
           )}
           <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
-            <Button variant="contained" onClick={handleNext}>
+            <Button variant="contained" onClick={handleNext} disabled={isSubmitting}>
               {activeStep === steps.length - 1 ? 'Finish' : 'Next'}
             </Button>
           </Box>

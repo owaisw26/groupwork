@@ -24,8 +24,10 @@ export default function Header() {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null)
 
   const handleLogout = async () => {
-    await dispatch(logout())
-    navigate('/login')
+    const result = await dispatch(logout())
+    if (logout.fulfilled.match(result)) {
+      navigate('/login')
+    }
   }
 
   return (

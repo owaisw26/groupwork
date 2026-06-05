@@ -10,9 +10,40 @@ const refreshClient = axios.create({
   withCredentials: true,
 })
 
+const AUTH_NO_REFRESH_PATHS = [
+  '/auth/login',
+  '/auth/register',
+  '/auth/verify-email',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+]
+
+const PUBLIC_ROUTE_PREFIXES = [
+  '/login',
+  '/register',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+]
+
 function getCsrfToken(): string | null {
   const match = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]*)/)
   return match ? decodeURIComponent(match[1]) : null
+}
+
+function hasRefreshCookie(): boolean {
+  return /(?:^|;\s*)refresh_token=/.test(document.cookie)
+}
+
+function shouldSkipRefresh(url: string): boolean {
+  return AUTH_NO_REFRESH_PATHS.some((path) => url.includes(path))
+}
+
+function isPublicRoute(): boolean {
+  const { pathname } = window.location
+  return PUBLIC_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  )
 }
 
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
@@ -42,8 +73,17 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
+    const requestUrl = originalRequest?.url ?? ''
 
     if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+      if (shouldSkipRefresh(requestUrl)) {
+        return Promise.reject(error)
+      }
+
+      if (requestUrl.includes('/users/me') && !hasRefreshCookie()) {
+        return Promise.reject(error)
+      }
+
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           subscribeTokenRefresh((success) => {
@@ -67,7 +107,9 @@ api.interceptors.response.use(
       } catch (refreshError) {
         isRefreshing = false
         onRefreshSettled(false)
-        window.location.href = '/login'
+        if (!isPublicRoute()) {
+          window.location.href = '/login'
+        }
         return Promise.reject(refreshError)
       }
     }

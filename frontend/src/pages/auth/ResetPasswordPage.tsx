@@ -13,6 +13,20 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
 
+  if (!token) {
+    return (
+      <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Card sx={{ width: '100%', maxWidth: 420 }}>
+          <CardContent sx={{ p: 4 }}>
+            <Alert severity="error">
+              Invalid reset link. Please request a new password reset email.
+            </Alert>
+          </CardContent>
+        </Card>
+      </Box>
+    )
+  }
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     setError(null)

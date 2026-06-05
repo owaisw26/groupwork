@@ -1,4 +1,4 @@
-import { CssBaseline, ThemeProvider } from '@mui/material'
+import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material'
 import { useEffect } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import AppShell from './components/layout/AppShell'
@@ -27,7 +27,11 @@ function AppRoutes() {
   }, [dispatch])
 
   if (isLoading) {
-    return null
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+        <CircularProgress />
+      </Box>
+    )
   }
 
   return (
