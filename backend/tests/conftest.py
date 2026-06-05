@@ -9,6 +9,15 @@ os.environ.setdefault("FRONTEND_URL", "http://localhost:5173")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
 
 
+@pytest.fixture(autouse=True)
+def clear_settings_cache():
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
+
+
 @pytest.fixture
 def client():
     from app.main import create_app
