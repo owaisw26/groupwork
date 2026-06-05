@@ -38,7 +38,10 @@ def get_connection() -> Generator[connection, None, None]:
         yield conn
         conn.commit()
     except Exception:
-        conn.rollback()
+        try:
+            conn.rollback()
+        except Exception:
+            pass
         raise
     finally:
         _pool.putconn(conn)
