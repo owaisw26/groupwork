@@ -33,6 +33,11 @@ def test_lockout_expires_after_fifteen_minutes(auth_client, email_outbox, db_con
         )
     db_conn.commit()
 
+    from app.middleware.rate_limit import limiter
+
+    if hasattr(limiter, "_storage") and hasattr(limiter._storage, "storage"):
+        limiter._storage.storage.clear()
+
     response = login_user(auth_client, email="lockout@example.com", password="Password1")
 
     assert response.status_code == 200

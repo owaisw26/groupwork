@@ -13,6 +13,17 @@ os.environ.setdefault("COOKIE_SECURE", "false")
 
 
 @pytest.fixture(autouse=True)
+def reset_rate_limiter():
+    from app.middleware.rate_limit import limiter
+
+    if hasattr(limiter, "_storage") and hasattr(limiter._storage, "storage"):
+        limiter._storage.storage.clear()
+    yield
+    if hasattr(limiter, "_storage") and hasattr(limiter._storage, "storage"):
+        limiter._storage.storage.clear()
+
+
+@pytest.fixture(autouse=True)
 def clear_settings_cache():
     from app.config import get_settings
 
