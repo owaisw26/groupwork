@@ -13,6 +13,7 @@ os.environ.setdefault("JWT_SECRET", "test-jwt-secret-key-for-pytest-only")
 os.environ.setdefault("FRONTEND_URL", "http://localhost:5173")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
 os.environ.setdefault("COOKIE_SECURE", "false")
+os.environ.setdefault("AWS_S3_BUCKET", "test-bucket")
 
 
 @pytest.fixture(autouse=True)

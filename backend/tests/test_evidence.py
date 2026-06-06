@@ -48,11 +48,11 @@ def mock_s3(monkeypatch):
         return f"https://{bucket}.s3.amazonaws.com/{key}?download=true"
 
     monkeypatch.setattr(
-        "app.utils.s3.generate_presigned_upload_url",
+        "app.services.evidence.generate_presigned_upload_url",
         fake_presigned_upload,
     )
     monkeypatch.setattr(
-        "app.utils.s3.generate_presigned_download_url",
+        "app.services.evidence.generate_presigned_download_url",
         fake_presigned_download,
     )
     return generated_urls
