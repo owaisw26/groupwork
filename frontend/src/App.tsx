@@ -12,6 +12,7 @@ import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import VerifyEmailPage from './pages/auth/VerifyEmailPage'
+import AcceptInvitationPage from './pages/AcceptInvitationPage'
 import OnboardingFlow from './pages/onboarding/OnboardingFlow'
 import ProjectLayout from './pages/project/ProjectLayout'
 import MembersTab from './pages/project/MembersTab'
@@ -32,7 +33,9 @@ function isPublicPath(pathname: string): boolean {
     return true
   }
   return (
-    pathname.startsWith('/reset-password/') || pathname.startsWith('/verify-email/')
+    pathname.startsWith('/reset-password/')
+    || pathname.startsWith('/verify-email/')
+    || pathname.startsWith('/invitations/accept/')
   )
 }
 
@@ -71,6 +74,7 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
       <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
+      <Route path="/invitations/accept/:token" element={<AcceptInvitationPage />} />
 
       <Route element={<ProtectedRoute />}>
         <Route path="/onboarding" element={<OnboardingFlow />} />

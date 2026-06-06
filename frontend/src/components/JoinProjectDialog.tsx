@@ -9,6 +9,8 @@ import {
 } from '@mui/material'
 import { useState } from 'react'
 import api from '../services/api'
+import { useAppDispatch } from '../store/hooks'
+import { fetchProjects } from '../store/projectsSlice'
 
 interface JoinProjectDialogProps {
   open: boolean
@@ -16,6 +18,7 @@ interface JoinProjectDialogProps {
 }
 
 export default function JoinProjectDialog({ open, onClose }: JoinProjectDialogProps) {
+  const dispatch = useAppDispatch()
   const [joinCode, setJoinCode] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
@@ -23,6 +26,7 @@ export default function JoinProjectDialog({ open, onClose }: JoinProjectDialogPr
     setMessage(null)
     try {
       await api.post('/projects/join', { join_code: joinCode })
+      await dispatch(fetchProjects())
       onClose()
       setJoinCode('')
     } catch {

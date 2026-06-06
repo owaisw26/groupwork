@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -22,36 +23,50 @@ export default function CreateProjectDialog({ open, onClose }: CreateProjectDial
   const [course, setCourse] = useState('')
   const [dueDate, setDueDate] = useState('')
   const [maxMembers, setMaxMembers] = useState('6')
+  const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
+  const resetForm = () => {
+    setName('')
+    setDescription('')
+    setCourse('')
+    setDueDate('')
+    setMaxMembers('6')
+    setError(null)
+  }
+
+  const handleClose = () => {
+    resetForm()
+    onClose()
+  }
+
   const handleSubmit = async () => {
-    if (!name.trim()) {
-      return
-    }
+    setError(null)
     setIsSubmitting(true)
     try {
-      await dispatch(
+      const result = await dispatch(
         createProject({
           name: name.trim(),
           description: description.trim() || undefined,
           course: course.trim() || undefined,
           due_date: dueDate || undefined,
-          max_members: Number(maxMembers) || 6,
+          max_members: Number(maxMembers),
         }),
-      ).unwrap()
-      onClose()
-      setName('')
-      setDescription('')
-      setCourse('')
-      setDueDate('')
-      setMaxMembers('6')
+      )
+      if (createProject.rejected.match(result)) {
+        setError((result.payload as string) ?? 'Unable to create project')
+        return
+      }
+      handleClose()
+    } catch {
+      setError('Unable to create project')
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="sm">
       <DialogTitle>Create Project</DialogTitle>
       <DialogContent>
         <TextField
@@ -81,25 +96,34 @@ export default function CreateProjectDialog({ open, onClose }: CreateProjectDial
         <TextField
           fullWidth
           label="Due date"
-          margin="normal"
           type="date"
-          slotProps={{ inputLabel: { shrink: true } }}
+          margin="normal"
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
+          slotProps={{ inputLabel: { shrink: true } }}
         />
         <TextField
           fullWidth
           label="Max members"
-          margin="normal"
           type="number"
-          slotProps={{ htmlInput: { min: 2, max: 20 } }}
+          margin="normal"
           value={maxMembers}
           onChange={(e) => setMaxMembers(e.target.value)}
+          slotProps={{ htmlInput: { min: 2, max: 20 } }}
         />
+        {error && (
+          <Alert severity="error" sx={{ mt: 2 }}>
+            {error}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button variant="contained" onClick={handleSubmit} disabled={isSubmitting || !name.trim()}>
+        <Button onClick={handleClose}>Cancel</Button>
+        <Button
+          variant="contained"
+          onClick={handleSubmit}
+          disabled={!name.trim() || isSubmitting}
+        >
           Create
         </Button>
       </DialogActions>

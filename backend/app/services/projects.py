@@ -163,7 +163,7 @@ def regenerate_join_code(conn: connection, project_id: str | UUID, user_id: str 
 
 
 def join_project(conn: connection, user: dict, join_code: str) -> dict:
-    project = project_queries.get_project_by_join_code(conn, join_code.upper())
+    project = project_queries.get_project_by_join_code_for_update(conn, join_code.upper())
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid join code")
 

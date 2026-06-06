@@ -6,73 +6,118 @@ from psycopg2.extensions import connection
 
 from app.db.queries import invitations as invitation_queries
 from app.db.queries import projects as project_queries
-from app.db.queries import users as user_queries
-from app.services import projects as project_service
-from app.utils import email as email_utils
-from app.utils.security import generate_token, normalize_email
+from app.utils.email import invite_email_body, send_email
+from app.utils.security import generate_token, hash_token, normalize_email
+
+INVITATION_TTL_DAYS = 7
 
 
-def invite_member(conn: connection, project_id: str | UUID, inviter: dict, email: str) -> dict:
-    email = normalize_email(email)
-    project = project_service._require_member(conn, project_id, inviter["id"])
+def _invitation_expiry() -> datetime:
+    return datetime.now(timezone.utc) + timedelta(days=INVITATION_TTL_DAYS)
 
-    if project_queries.get_member_count(conn, project_id) >= project["max_members"]:
+
+def _require_member(conn: connection, project_id: str | UUID, user_id: str | UUID) -> dict:
+    project = project_queries.get_project(conn, project_id)
+    if not project or project["deleted_at"] is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    if not project_queries.is_project_member(conn, project_id, user_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not a project member")
+    return project
+
+
+def _ensure_project_has_capacity(conn: connection, project: dict) -> None:
+    if project_queries.get_member_count(conn, project["id"]) >= project["max_members"]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project is full")
 
-    if invitation_queries.get_pending_invitation(conn, project_id, email):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Invitation already sent")
 
-    existing_user = user_queries.get_user_by_email(conn, email)
-    if existing_user and project_queries.is_project_member(conn, project_id, existing_user["id"]):
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="User is already a member")
+def invite_member(
+    conn: connection,
+    project_id: str | UUID,
+    user: dict,
+    email: str,
+) -> dict:
+    project = _require_member(conn, project_id, user["id"])
+    normalized_email = normalize_email(email)
+    _ensure_project_has_capacity(conn, project)
+
+    existing_user = project_queries.get_project_members(conn, project_id)
+    if any(member["email"] == normalized_email for member in existing_user):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="User is already a project member",
+        )
+
+    if invitation_queries.get_pending_invitation(conn, project_id, normalized_email):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Invitation already sent",
+        )
 
     token = generate_token()
     invitation = invitation_queries.create_invitation(
         conn,
         project_id=project_id,
-        inviter_id=inviter["id"],
-        invitee_email=email,
-        token=token,
-        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        inviter_id=user["id"],
+        invitee_email=normalized_email,
+        token_hash=hash_token(token),
+        expires_at=_invitation_expiry(),
     )
-    email_utils.send_email(
-        to=email,
-        subject=f"Invitation to join {project['name']} on GroupWork",
-        html_body=email_utils.invite_email_body(project["name"], token),
+
+    send_email(
+        normalized_email,
+        f"Invitation to join {project['name']} on GroupWork",
+        invite_email_body(project["name"], token),
     )
+
     return {
         "id": str(invitation["id"]),
+        "project_id": str(invitation["project_id"]),
         "invitee_email": invitation["invitee_email"],
         "status": invitation["status"],
+        "expires_at": invitation["expires_at"].isoformat(),
     }
 
 
 def accept_invitation(conn: connection, user: dict, token: str) -> dict:
-    invitation = invitation_queries.get_invitation_by_token(conn, token)
-    if not invitation or invitation["status"] != "pending":
+    invitation = invitation_queries.get_invitation_by_token_hash(conn, hash_token(token))
+    if not invitation:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid invitation")
+
+    if invitation["status"] != "pending":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation already used",
+        )
 
     if invitation["expires_at"] < datetime.now(timezone.utc):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invitation expired")
 
-    if normalize_email(user["email"]) != normalize_email(invitation["invitee_email"]):
+    if normalize_email(user["email"]) != invitation["invitee_email"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invitation not for this user",
+            detail="Invitation was sent to a different email address",
         )
 
-    project = project_queries.get_project(conn, invitation["project_id"])
+    project = project_queries.get_project_for_update(conn, invitation["project_id"])
     if not project or project["deleted_at"] is not None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid invitation")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
 
-    if project_queries.get_member_count(conn, project["id"]) >= project["max_members"]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project is full")
+    if project_queries.is_project_member(conn, project["id"], user["id"]):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already a member")
 
-    if not invitation_queries.accept_invitation(conn, invitation["id"]):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid invitation")
+    _ensure_project_has_capacity(conn, project)
+
+    if not invitation_queries.mark_invitation_accepted(conn, invitation["id"]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invitation already used",
+        )
 
     project_queries.add_member(conn, project["id"], user["id"])
-    project_service._log_activity(
-        conn, project["id"], user["id"], "member_joined", "user", user["id"]
-    )
-    return {"project_id": str(project["id"]), "status": "accepted"}
+    member_count = project_queries.get_member_count(conn, project["id"])
+
+    return {
+        "project_id": str(project["id"]),
+        "project_name": project["name"],
+        "member_count": member_count,
+    }

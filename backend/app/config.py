@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,12 +16,18 @@ class Settings(BaseSettings):
     SES_SENDER_EMAIL: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
     CORS_ORIGINS: str = "http://localhost:5173"
-    COOKIE_SECURE: bool = False
+    COOKIE_SECURE: bool = True
     ENVIRONMENT: str = "development"
 
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT.lower() == "production"
+
+    @model_validator(mode="after")
+    def require_secure_cookies_in_production(self) -> "Settings":
+        if self.is_production and not self.COOKIE_SECURE:
+            raise ValueError("COOKIE_SECURE must be true when ENVIRONMENT=production")
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:

@@ -58,6 +58,22 @@ def get_project(conn: connection, project_id: str | UUID) -> dict[str, Any] | No
     return _row_to_project(row) if row else None
 
 
+def get_project_for_update(conn: connection, project_id: str | UUID) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, name, description, course, due_date, status, owner_id,
+                   join_code, join_code_expires_at, max_members, deleted_at, created_at
+            FROM projects
+            WHERE id = %s
+            FOR UPDATE
+            """,
+            (str(project_id),),
+        )
+        row = cur.fetchone()
+    return _row_to_project(row) if row else None
+
+
 def list_user_projects(conn: connection, user_id: str | UUID) -> list[dict[str, Any]]:
     with conn.cursor() as cur:
         cur.execute(
@@ -228,6 +244,25 @@ def get_project_by_join_code(conn: connection, join_code: str) -> dict[str, Any]
                    join_code, join_code_expires_at, max_members, deleted_at, created_at
             FROM projects
             WHERE join_code = %s AND deleted_at IS NULL
+            """,
+            (join_code,),
+        )
+        row = cur.fetchone()
+    return _row_to_project(row) if row else None
+
+
+def get_project_by_join_code_for_update(
+    conn: connection,
+    join_code: str,
+) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, name, description, course, due_date, status, owner_id,
+                   join_code, join_code_expires_at, max_members, deleted_at, created_at
+            FROM projects
+            WHERE join_code = %s AND deleted_at IS NULL
+            FOR UPDATE
             """,
             (join_code,),
         )
