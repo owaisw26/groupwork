@@ -32,7 +32,7 @@ export default function JoinProjectDialog({ open, onClose }: JoinProjectDialogPr
           margin="normal"
           value={joinCode}
           onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-          inputProps={{ maxLength: 6 }}
+          slotProps={{ htmlInput: { maxLength: 6 } }}
         />
         {message && (
           <Alert severity="info" sx={{ mt: 2 }}>

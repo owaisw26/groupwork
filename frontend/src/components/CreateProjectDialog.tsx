@@ -83,7 +83,7 @@ export default function CreateProjectDialog({ open, onClose }: CreateProjectDial
           label="Due date"
           margin="normal"
           type="date"
-          InputLabelProps={{ shrink: true }}
+          slotProps={{ inputLabel: { shrink: true } }}
           value={dueDate}
           onChange={(e) => setDueDate(e.target.value)}
         />
@@ -92,7 +92,7 @@ export default function CreateProjectDialog({ open, onClose }: CreateProjectDial
           label="Max members"
           margin="normal"
           type="number"
-          inputProps={{ min: 2, max: 20 }}
+          slotProps={{ htmlInput: { min: 2, max: 20 } }}
           value={maxMembers}
           onChange={(e) => setMaxMembers(e.target.value)}
         />
