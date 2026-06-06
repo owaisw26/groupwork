@@ -10,7 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../../services/api'
 
@@ -55,7 +55,22 @@ export default function PeerReviewPage() {
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  const loadData = useCallback(async () => {
+  useEffect(() => {
+    if (!projectId) return
+    Promise.all([
+      api.get(`/projects/${projectId}/members`),
+      api.get(`/projects/${projectId}/peer-review/status`),
+      api.get('/users/me'),
+    ])
+      .then(([membersRes, statusRes, meRes]) => {
+        setMembers(membersRes.data)
+        setStatus(statusRes.data)
+        setCurrentUserId(meRes.data.id)
+      })
+      .catch(() => setError('Unable to load peer review data'))
+  }, [projectId])
+
+  const loadData = async () => {
     if (!projectId) return
     const [membersRes, statusRes, meRes] = await Promise.all([
       api.get(`/projects/${projectId}/members`),
@@ -65,11 +80,7 @@ export default function PeerReviewPage() {
     setMembers(membersRes.data)
     setStatus(statusRes.data)
     setCurrentUserId(meRes.data.id)
-  }, [projectId])
-
-  useEffect(() => {
-    loadData().catch(() => setError('Unable to load peer review data'))
-  }, [loadData])
+  }
 
   const reviewTargets = members.filter((m) => m.id !== currentUserId)
 
