@@ -47,6 +47,13 @@ interface EvidenceItem {
   download_url?: string
 }
 
+interface VerificationItem {
+  id: string
+  user_id: string
+  user_name?: string
+  status: string
+}
+
 interface TaskDetailModalProps {
   taskId: string | null
   projectOwnerId: string
@@ -68,9 +75,16 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
   const [requestEditOpen, setRequestEditOpen] = useState(false)
   const [proposedTitle, setProposedTitle] = useState('')
   const [evidence, setEvidence] = useState<EvidenceItem[]>([])
+  const [verifications, setVerifications] = useState<VerificationItem[]>([])
+  const [disputeReason, setDisputeReason] = useState('')
+  const [showDisputeForm, setShowDisputeForm] = useState(false)
 
   const isOwner = user?.id === projectOwnerId
   const isAssignee = currentTask?.assignee_ids.includes(user?.id ?? '') ?? false
+  const canVerify =
+    currentTask?.status === 'done'
+    && !isAssignee
+    && !verifications.some((v) => v.user_id === user?.id)
 
   useEffect(() => {
     if (!taskId) return
@@ -82,7 +96,31 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
     api.get(`/tasks/${taskId}/evidence`).then((res) => {
       setEvidence(res.data.items ?? [])
     }).catch(() => setEvidence([]))
+    api.get(`/tasks/${taskId}/verifications`).then((res) => {
+      setVerifications(res.data.items ?? [])
+    }).catch(() => setVerifications([]))
   }, [dispatch, taskId])
+
+  const refreshTaskAndVerifications = async () => {
+    if (!taskId) return
+    await dispatch(fetchTask(taskId))
+    const res = await api.get(`/tasks/${taskId}/verifications`)
+    setVerifications(res.data.items ?? [])
+  }
+
+  const handleVerify = async () => {
+    if (!taskId) return
+    await api.post(`/tasks/${taskId}/verify`)
+    await refreshTaskAndVerifications()
+  }
+
+  const handleDispute = async () => {
+    if (!taskId || !disputeReason.trim()) return
+    await api.post(`/tasks/${taskId}/dispute`, { reason: disputeReason.trim() })
+    setDisputeReason('')
+    setShowDisputeForm(false)
+    await refreshTaskAndVerifications()
+  }
 
   const refreshEvidence = () => {
     if (!taskId) return
@@ -180,7 +218,62 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
               <Chip label={currentTask.status.replace('_', ' ')} size="small" />
               <Chip label={currentTask.priority} size="small" color="primary" variant="outlined" />
               {currentTask.due_date && <Chip label={`Due ${currentTask.due_date}`} size="small" variant="outlined" />}
+              {currentTask.status === 'done' && (
+                <Chip
+                  label={`Verification: ${currentTask.verification_status}`}
+                  size="small"
+                  color={
+                    currentTask.verification_status === 'verified'
+                      ? 'success'
+                      : currentTask.verification_status === 'disputed'
+                        ? 'error'
+                        : 'warning'
+                  }
+                />
+              )}
             </Box>
+
+            {currentTask.status === 'done' && (
+              <>
+                <Typography variant="subtitle2">Verification</Typography>
+                {verifications.map((v) => (
+                  <Typography key={v.id} variant="body2">
+                    {v.user_name ?? 'Member'}: {v.status}
+                  </Typography>
+                ))}
+                {canVerify && (
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                    <Button size="small" variant="contained" color="success" onClick={handleVerify}>
+                      Verify
+                    </Button>
+                    <Button size="small" variant="outlined" color="error" onClick={() => setShowDisputeForm(true)}>
+                      Dispute
+                    </Button>
+                  </Box>
+                )}
+                {showDisputeForm && (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <TextField
+                      size="small"
+                      label="Dispute reason"
+                      value={disputeReason}
+                      onChange={(e) => setDisputeReason(e.target.value)}
+                      multiline
+                      rows={2}
+                    />
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button size="small" variant="contained" color="error" onClick={handleDispute}>
+                        Submit Dispute
+                      </Button>
+                      <Button size="small" onClick={() => setShowDisputeForm(false)}>
+                        Cancel
+                      </Button>
+                    </Box>
+                  </Box>
+                )}
+                <Divider />
+              </>
+            )}
 
             {editMode ? (
               <TextField
