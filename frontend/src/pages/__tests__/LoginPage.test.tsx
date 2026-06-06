@@ -21,6 +21,14 @@ describe('LoginPage', () => {
     expect(screen.getByRole('button', { name: /log in/i })).toBeInTheDocument()
   })
 
+  it('shows register form inline when sign up is clicked', async () => {
+    const user = userEvent.setup()
+    renderWithProviders(<LoginPage />, { route: '/login' })
+    await user.click(screen.getByRole('button', { name: /sign up/i }))
+    expect(screen.getByRole('heading', { name: /create your account/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/full name/i)).toBeInTheDocument()
+  })
+
   it('validates email format', async () => {
     const user = userEvent.setup()
     renderWithProviders(<LoginPage />, { route: '/login' })

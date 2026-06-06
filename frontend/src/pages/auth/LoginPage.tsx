@@ -4,36 +4,70 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import type { Location } from 'react-router-dom'
 import LoginCard from '../../components/auth/LoginCard'
 import LoginHeroPanel from '../../components/auth/LoginHeroPanel'
+import RegisterCard from '../../components/auth/RegisterCard'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
-import { clearAuthError, login } from '../../store/authSlice'
+import { clearAuthError, login, register } from '../../store/authSlice'
+import { checkPasswordStrength } from '../../utils/passwordValidation'
 
-export default function LoginPage() {
+type AuthMode = 'login' | 'register'
+
+interface LoginPageProps {
+  initialMode?: AuthMode
+}
+
+export default function LoginPage({ initialMode = 'login' }: LoginPageProps) {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const location = useLocation()
   const { isLoading, error } = useAppSelector((state) => state.auth)
+  const [authMode, setAuthMode] = useState<AuthMode>(initialMode)
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberMe, setRememberMe] = useState(false)
-  const [validationError, setValidationError] = useState<string | null>(null)
+  const [loginValidationError, setLoginValidationError] = useState<string | null>(null)
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const [fullName, setFullName] = useState('')
+  const [registerPassword, setRegisterPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [registerValidationError, setRegisterValidationError] = useState<string | null>(null)
+  const [registerSuccess, setRegisterSuccess] = useState(false)
+
+  const clearAuthState = () => {
+    dispatch(clearAuthError())
+    setLoginValidationError(null)
+    setRegisterValidationError(null)
+  }
+
+  const switchToRegister = () => {
+    clearAuthState()
+    setRegisterSuccess(false)
+    setAuthMode('register')
+  }
+
+  const switchToLogin = () => {
+    clearAuthState()
+    setRegisterSuccess(false)
+    setAuthMode('login')
+  }
+
+  const handleLoginSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
     dispatch(clearAuthError())
-    setValidationError(null)
+    setLoginValidationError(null)
 
     const trimmedEmail = email.trim()
 
     if (!trimmedEmail) {
-      setValidationError('Email is required')
+      setLoginValidationError('Email is required')
       return
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      setValidationError('Please enter a valid email address')
+      setLoginValidationError('Please enter a valid email address')
       return
     }
     if (!password) {
-      setValidationError('Password is required')
+      setLoginValidationError('Password is required')
       return
     }
 
@@ -53,6 +87,44 @@ export default function LoginPage() {
     }
   }
 
+  const handleRegisterSubmit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    dispatch(clearAuthError())
+    setRegisterValidationError(null)
+    setRegisterSuccess(false)
+
+    const trimmedFullName = fullName.trim()
+    const trimmedEmail = email.trim()
+
+    if (!trimmedFullName || !trimmedEmail || !registerPassword || !confirmPassword) {
+      setRegisterValidationError('All fields are required')
+      return
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setRegisterValidationError('Please enter a valid email address')
+      return
+    }
+    if (registerPassword !== confirmPassword) {
+      setRegisterValidationError('Passwords do not match')
+      return
+    }
+    if (!checkPasswordStrength(registerPassword).isValid) {
+      setRegisterValidationError('Password does not meet requirements')
+      return
+    }
+
+    const result = await dispatch(
+      register({
+        full_name: trimmedFullName,
+        email: trimmedEmail.toLowerCase(),
+        password: registerPassword,
+      }),
+    )
+    if (register.fulfilled.match(result)) {
+      setRegisterSuccess(true)
+    }
+  }
+
   return (
     <Box
       component="main"
@@ -65,19 +137,52 @@ export default function LoginPage() {
       }}
     >
       <LoginHeroPanel />
-      <LoginCard
-        email={email}
-        password={password}
-        rememberMe={rememberMe}
-        isLoading={isLoading}
-        validationError={validationError}
-        apiError={error}
-        showMobileLogo
-        onEmailChange={setEmail}
-        onPasswordChange={setPassword}
-        onRememberMeChange={setRememberMe}
-        onSubmit={handleSubmit}
-      />
+      <Box
+        key={authMode}
+        sx={{
+          minHeight: '100vh',
+          '@keyframes authPanelFadeIn': {
+            from: { opacity: 0, transform: 'translateY(8px)' },
+            to: { opacity: 1, transform: 'translateY(0)' },
+          },
+          animation: 'authPanelFadeIn 220ms ease',
+        }}
+      >
+        {authMode === 'login' ? (
+          <LoginCard
+            email={email}
+            password={password}
+            rememberMe={rememberMe}
+            isLoading={isLoading}
+            validationError={loginValidationError}
+            apiError={error}
+            showMobileLogo
+            onEmailChange={setEmail}
+            onPasswordChange={setPassword}
+            onRememberMeChange={setRememberMe}
+            onSubmit={handleLoginSubmit}
+            onSwitchToRegister={switchToRegister}
+          />
+        ) : (
+          <RegisterCard
+            fullName={fullName}
+            email={email}
+            password={registerPassword}
+            confirmPassword={confirmPassword}
+            isLoading={isLoading}
+            validationError={registerValidationError}
+            apiError={error}
+            success={registerSuccess}
+            showMobileLogo
+            onFullNameChange={setFullName}
+            onEmailChange={setEmail}
+            onPasswordChange={setRegisterPassword}
+            onConfirmPasswordChange={setConfirmPassword}
+            onSubmit={handleRegisterSubmit}
+            onSwitchToLogin={switchToLogin}
+          />
+        )}
+      </Box>
     </Box>
   )
 }
