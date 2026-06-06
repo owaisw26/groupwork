@@ -428,6 +428,81 @@ def test_review_edit_request_reject_discards_changes(auth_client, email_outbox, 
     assert unchanged["title"] == "Implement API"
 
 
+def test_review_edit_request_approve_applies_status_change(auth_client, email_outbox, db_conn):
+    owner_headers, _ = verified_user(
+        auth_client, email_outbox, email="edit-status-owner@example.com"
+    )
+    project = create_project(auth_client, owner_headers).json()
+    task = create_task(auth_client, owner_headers, project["id"]).json()
+
+    member_headers, member_email = verified_user(
+        auth_client, email_outbox, email="edit-status-member@example.com"
+    )
+    add_project_member(db_conn, project["id"], member_email)
+
+    edit_request = auth_client.post(
+        f"/api/v1/tasks/{task['id']}/request-edit",
+        json={"proposed_changes": {"status": "in_progress"}},
+        headers=member_headers,
+    ).json()
+
+    response = auth_client.post(
+        f"/api/v1/tasks/{task['id']}/edit-requests/{edit_request['id']}/review",
+        json={"approved": True},
+        headers=switch_user(auth_client, "edit-status-owner@example.com"),
+    )
+
+    assert response.status_code == 200
+
+    updated = auth_client.get(
+        f"/api/v1/tasks/{task['id']}",
+        headers=switch_user(auth_client, "edit-status-owner@example.com"),
+    ).json()
+    assert updated["status"] == "in_progress"
+
+
+def test_update_task_status_leaving_done_resets_verification(auth_client, email_outbox):
+    headers, _ = verified_user(
+        auth_client, email_outbox, email="task-verification-reset@example.com"
+    )
+    project = create_project(auth_client, headers).json()
+    task = create_task(auth_client, headers, project["id"], status="done").json()
+    assert task["verification_status"] == "pending"
+
+    response = auth_client.patch(
+        f"/api/v1/tasks/{task['id']}/status",
+        json={"status": "in_progress"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "in_progress"
+    assert response.json()["verification_status"] == "none"
+
+
+def test_create_task_non_member_assignee_returns_422(auth_client, email_outbox, db_conn):
+    owner_headers, _ = verified_user(
+        auth_client, email_outbox, email="assignee-owner@example.com"
+    )
+    project = create_project(auth_client, owner_headers).json()
+
+    _, outsider_email = verified_user(
+        auth_client, email_outbox, email="assignee-outsider@example.com"
+    )
+    with db_conn.cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE email = %s", (outsider_email,))
+        outsider_id = str(cur.fetchone()[0])
+
+    response = create_task(
+        auth_client,
+        owner_headers,
+        project["id"],
+        assignee_ids=[outsider_id],
+    )
+
+    assert response.status_code == 422
+
+
 def test_task_title_sql_injection_stored_safely(auth_client, email_outbox, db_conn):
     headers, _ = verified_user(auth_client, email_outbox, email="task-sqli@example.com")
     project = create_project(auth_client, headers).json()

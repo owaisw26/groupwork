@@ -15,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TaskDetailModal from '../components/TaskDetailModal'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
+import { fetchProjects } from '../store/projectsSlice'
 import { fetchMyTasks } from '../store/tasksSlice'
 
 const STATUS_COLORS: Record<string, 'default' | 'info' | 'warning' | 'success'> = {
@@ -27,18 +28,19 @@ const STATUS_COLORS: Record<string, 'default' | 'info' | 'warning' | 'success'> 
 export default function MyTasksPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const { myTasks, isLoading } = useAppSelector((state) => state.tasks)
+  const { myTasks, myTasksLoading } = useAppSelector((state) => state.tasks)
   const projects = useAppSelector((state) => state.projects.items)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
 
   useEffect(() => {
+    dispatch(fetchProjects())
     dispatch(fetchMyTasks())
   }, [dispatch])
 
   const getProjectOwnerId = (projectId: string) =>
     projects.find((p) => p.id === projectId)?.owner_id ?? ''
 
-  if (isLoading && myTasks.length === 0) {
+  if (myTasksLoading && myTasks.length === 0) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
         <CircularProgress />

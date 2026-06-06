@@ -361,30 +361,18 @@ def update_task_status(
     task_id: str | UUID,
     status: str,
 ) -> dict[str, Any] | None:
-    verification_status = "pending" if status == "done" else None
+    verification_status = "pending" if status == "done" else "none"
     with conn.cursor() as cur:
-        if verification_status:
-            cur.execute(
-                """
-                UPDATE tasks
-                SET status = %s, verification_status = %s, updated_at = NOW()
-                WHERE id = %s
-                RETURNING id, project_id, title, description, status, priority,
-                          due_date, verification_status, created_by, created_at, updated_at
-                """,
-                (status, verification_status, str(task_id)),
-            )
-        else:
-            cur.execute(
-                """
-                UPDATE tasks
-                SET status = %s, updated_at = NOW()
-                WHERE id = %s
-                RETURNING id, project_id, title, description, status, priority,
-                          due_date, verification_status, created_by, created_at, updated_at
-                """,
-                (status, str(task_id)),
-            )
+        cur.execute(
+            """
+            UPDATE tasks
+            SET status = %s, verification_status = %s, updated_at = NOW()
+            WHERE id = %s
+            RETURNING id, project_id, title, description, status, priority,
+                      due_date, verification_status, created_by, created_at, updated_at
+            """,
+            (status, verification_status, str(task_id)),
+        )
         row = cur.fetchone()
     if not row:
         return None

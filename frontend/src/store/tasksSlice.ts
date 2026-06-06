@@ -70,6 +70,9 @@ export interface TasksState {
   myTasks: Task[]
   searchResults: Task[]
   currentTask: Task | null
+  activeDetailTaskId: string | null
+  lastSearchQuery: string
+  myTasksLoading: boolean
   subtasks: Subtask[]
   comments: Comment[]
   timeLogs: TimeLog[]
@@ -84,6 +87,9 @@ const initialState: TasksState = {
   myTasks: [],
   searchResults: [],
   currentTask: null,
+  activeDetailTaskId: null,
+  lastSearchQuery: '',
+  myTasksLoading: false,
   subtasks: [],
   comments: [],
   timeLogs: [],
@@ -319,7 +325,29 @@ export const fetchEditRequests = createAsyncThunk(
   async (taskId: string, { rejectWithValue }) => {
     try {
       const response = await api.get<EditRequest[]>(`/tasks/${taskId}/edit-requests`)
-      return response.data
+      return { taskId, requests: response.data }
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  },
+)
+
+export const reviewEditRequest = createAsyncThunk(
+  'tasks/reviewEditRequest',
+  async (
+    {
+      taskId,
+      requestId,
+      approved,
+    }: { taskId: string; requestId: string; approved: boolean },
+    { rejectWithValue },
+  ) => {
+    try {
+      const response = await api.post<EditRequest>(
+        `/tasks/${taskId}/edit-requests/${requestId}/review`,
+        { approved },
+      )
+      return { taskId, request: response.data }
     } catch (error) {
       return rejectWithValue(getErrorMessage(error))
     }
@@ -342,7 +370,7 @@ export const searchTasks = createAsyncThunk(
       const response = await api.get<PaginatedTasks>('/search/tasks', {
         params: { q: query, limit: 10 },
       })
-      return response.data.items
+      return { query, items: response.data.items }
     } catch (error) {
       return rejectWithValue(getErrorMessage(error))
     }
@@ -353,19 +381,31 @@ function upsertTask(state: TasksState, task: Task) {
   const index = state.items.findIndex((item) => item.id === task.id)
   if (index >= 0) {
     state.items[index] = task
-  } else {
+  } else if (state.items.length === 0 || state.items.some((item) => item.project_id === task.project_id)) {
     state.items.push(task)
+  }
+  const myIndex = state.myTasks.findIndex((item) => item.id === task.id)
+  if (myIndex >= 0) {
+    state.myTasks[myIndex] = { ...state.myTasks[myIndex], ...task }
   }
   if (state.currentTask?.id === task.id) {
     state.currentTask = task
   }
 }
 
+function isActiveDetailTask(state: TasksState, taskId: string): boolean {
+  return state.activeDetailTaskId === taskId
+}
+
 const tasksSlice = createSlice({
   name: 'tasks',
   initialState,
   reducers: {
+    setActiveDetailTaskId(state, action: { payload: string | null }) {
+      state.activeDetailTaskId = action.payload
+    },
     clearTaskDetail(state) {
+      state.activeDetailTaskId = null
       state.currentTask = null
       state.subtasks = []
       state.comments = []
@@ -401,6 +441,7 @@ const tasksSlice = createSlice({
         state.items = state.items.filter((item) => item.id !== action.payload)
       })
       .addCase(fetchTask.fulfilled, (state, action) => {
+        if (!isActiveDetailTask(state, action.meta.arg)) return
         state.currentTask = action.payload
         upsertTask(state, action.payload)
       })
@@ -408,6 +449,7 @@ const tasksSlice = createSlice({
         upsertTask(state, action.payload)
       })
       .addCase(fetchSubtasks.fulfilled, (state, action) => {
+        if (!isActiveDetailTask(state, action.meta.arg)) return
         state.subtasks = action.payload
       })
       .addCase(createSubtask.fulfilled, (state, action) => {
@@ -418,12 +460,14 @@ const tasksSlice = createSlice({
         if (index >= 0) state.subtasks[index] = action.payload
       })
       .addCase(fetchComments.fulfilled, (state, action) => {
+        if (!isActiveDetailTask(state, action.meta.arg)) return
         state.comments = action.payload
       })
       .addCase(createComment.fulfilled, (state, action) => {
         state.comments.push(action.payload)
       })
       .addCase(fetchTimeLogs.fulfilled, (state, action) => {
+        if (!isActiveDetailTask(state, action.meta.arg)) return
         state.timeLogs = action.payload.items
         state.totalProjectHours = action.payload.total_hours_for_user_in_project
       })
@@ -431,19 +475,37 @@ const tasksSlice = createSlice({
         state.timeLogs.unshift(action.payload)
       })
       .addCase(fetchEditRequests.fulfilled, (state, action) => {
-        state.editRequests = action.payload
+        if (!isActiveDetailTask(state, action.payload.taskId)) return
+        state.editRequests = action.payload.requests
       })
       .addCase(submitEditRequest.fulfilled, (state, action) => {
+        if (!isActiveDetailTask(state, action.meta.arg.taskId)) return
         state.editRequests.push(action.payload)
       })
+      .addCase(reviewEditRequest.fulfilled, (state, action) => {
+        state.editRequests = state.editRequests.filter(
+          (item) => item.id !== action.payload.request.id,
+        )
+      })
+      .addCase(fetchMyTasks.pending, (state) => {
+        state.myTasksLoading = true
+      })
       .addCase(fetchMyTasks.fulfilled, (state, action) => {
+        state.myTasksLoading = false
         state.myTasks = action.payload
       })
+      .addCase(fetchMyTasks.rejected, (state) => {
+        state.myTasksLoading = false
+      })
+      .addCase(searchTasks.pending, (state, action) => {
+        state.lastSearchQuery = action.meta.arg
+      })
       .addCase(searchTasks.fulfilled, (state, action) => {
-        state.searchResults = action.payload
+        if (action.payload.query !== state.lastSearchQuery) return
+        state.searchResults = action.payload.items
       })
   },
 })
 
-export const { clearTaskDetail, clearSearchResults } = tasksSlice.actions
+export const { clearTaskDetail, clearSearchResults, setActiveDetailTaskId } = tasksSlice.actions
 export default tasksSlice.reducer

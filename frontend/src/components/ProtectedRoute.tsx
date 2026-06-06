@@ -3,10 +3,10 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAppSelector } from '../store/hooks'
 
 export default function ProtectedRoute() {
-  const { isAuthenticated, isLoading, user } = useAppSelector((state) => state.auth)
+  const { isAuthenticated, authInitialized, user } = useAppSelector((state) => state.auth)
   const location = useLocation()
 
-  if (isLoading) {
+  if (!authInitialized) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
         <CircularProgress />

@@ -27,6 +27,8 @@ import {
   fetchSubtasks,
   fetchTask,
   fetchTimeLogs,
+  reviewEditRequest,
+  setActiveDetailTaskId,
   submitEditRequest,
   toggleSubtask,
   updateTask,
@@ -60,13 +62,16 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
 
   useEffect(() => {
     if (!taskId) return
+    dispatch(setActiveDetailTaskId(taskId))
     dispatch(fetchTask(taskId))
     dispatch(fetchSubtasks(taskId))
     dispatch(fetchComments(taskId))
     dispatch(fetchTimeLogs(taskId))
-    if (isOwner) {
-      dispatch(fetchEditRequests(taskId))
-    }
+  }, [dispatch, taskId])
+
+  useEffect(() => {
+    if (!taskId || !isOwner) return
+    dispatch(fetchEditRequests(taskId))
   }, [dispatch, taskId, isOwner])
 
   useEffect(() => {
@@ -119,6 +124,15 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
     if (Object.keys(changes).length === 0) return
     await dispatch(submitEditRequest({ taskId, proposed_changes: changes }))
     setRequestEditOpen(false)
+  }
+
+  const handleReviewEditRequest = async (requestId: string, approved: boolean) => {
+    if (!taskId) return
+    await dispatch(reviewEditRequest({ taskId, requestId, approved }))
+    await dispatch(fetchTask(taskId))
+    if (approved) {
+      dispatch(fetchEditRequests(taskId))
+    }
   }
 
   if (!taskId) return null
@@ -250,11 +264,30 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                 <Divider />
                 <Typography variant="subtitle2">Pending Edit Requests</Typography>
                 {editRequests.map((request) => (
-                  <EditRequestDiff
-                    key={request.id}
-                    current={currentTask}
-                    proposed={request.proposed_changes}
-                  />
+                  <Box key={request.id}>
+                    <EditRequestDiff
+                      current={currentTask}
+                      proposed={request.proposed_changes}
+                    />
+                    <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        onClick={() => handleReviewEditRequest(request.id, true)}
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        color="error"
+                        onClick={() => handleReviewEditRequest(request.id, false)}
+                      >
+                        Reject
+                      </Button>
+                    </Box>
+                  </Box>
                 ))}
               </>
             )}

@@ -97,6 +97,52 @@ def _validate_priority(priority: str) -> None:
         )
 
 
+def _validate_assignees(
+    conn: connection,
+    project_id: str | UUID,
+    assignee_ids: list[str],
+) -> None:
+    for assignee_id in assignee_ids:
+        if not project_queries.is_project_member(conn, project_id, assignee_id):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"User {assignee_id} is not a project member",
+            )
+
+
+def _apply_approved_edit_changes(
+    conn: connection,
+    task_id: str | UUID,
+    project_id: str | UUID,
+    changes: dict,
+) -> None:
+    update_kwargs: dict = {}
+    for field in ("title", "description", "priority", "due_date", "assignee_ids"):
+        if field in changes:
+            update_kwargs[field] = changes[field]
+
+    if "assignee_ids" in update_kwargs:
+        assignee_ids = update_kwargs["assignee_ids"] or []
+        _validate_assignees(conn, project_id, assignee_ids)
+
+    if update_kwargs:
+        updated = task_queries.update_task(conn, task_id, **update_kwargs)
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found while applying edit request",
+            )
+
+    if "status" in changes:
+        _validate_status(changes["status"])
+        status_updated = task_queries.update_task_status(conn, task_id, changes["status"])
+        if not status_updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found while applying status change",
+            )
+
+
 def _log_activity(
     conn: connection,
     project_id: str | UUID,
@@ -131,6 +177,9 @@ def create_task(
     _validate_status(status_value)
     _validate_priority(priority)
 
+    resolved_assignees = assignee_ids or [user["id"]]
+    _validate_assignees(conn, project_id, resolved_assignees)
+
     task = task_queries.create_task(
         conn,
         project_id=project_id,
@@ -140,7 +189,7 @@ def create_task(
         priority=priority,
         due_date=due_date,
         created_by=user["id"],
-        assignee_ids=assignee_ids or [user["id"]],
+        assignee_ids=resolved_assignees,
     )
     _log_activity(conn, project_id, user["id"], "task_created", "task", task["id"])
     return _public_task(task)
@@ -206,6 +255,8 @@ def update_task(
         )
     if priority is not None:
         _validate_priority(priority)
+    if assignee_ids is not None:
+        _validate_assignees(conn, task["project_id"], assignee_ids)
 
     updated = task_queries.update_task(
         conn,
@@ -394,15 +445,11 @@ def review_edit_request(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Edit request not found")
 
     if approved:
-        changes = edit_request["proposed_changes"]
-        task_queries.update_task(
+        _apply_approved_edit_changes(
             conn,
             task_id,
-            title=changes.get("title"),
-            description=changes.get("description"),
-            priority=changes.get("priority"),
-            due_date=changes.get("due_date"),
-            assignee_ids=changes.get("assignee_ids"),
+            task["project_id"],
+            edit_request["proposed_changes"],
         )
 
     notification_title = "Edit request approved" if approved else "Edit request rejected"

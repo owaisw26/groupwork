@@ -39,7 +39,7 @@ function isPublicPath(pathname: string): boolean {
 function AppRoutes() {
   const dispatch = useAppDispatch()
   const location = useLocation()
-  const { isAuthenticated, isLoading, user } = useAppSelector((state) => state.auth)
+  const { isAuthenticated, authInitialized, user } = useAppSelector((state) => state.auth)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -50,7 +50,7 @@ function AppRoutes() {
   const authRedirectPath =
     isAuthenticated && user && !user.has_completed_onboarding ? '/onboarding' : '/dashboard'
 
-  if (isLoading && !isPublicPath(location.pathname)) {
+  if (!authInitialized && !isPublicPath(location.pathname)) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
         <CircularProgress />
