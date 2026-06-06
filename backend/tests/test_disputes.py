@@ -36,14 +36,17 @@ def _setup_three_member_project(auth_client, email_outbox, db_conn):
 
 
 def _owner_headers(auth_client, ctx):
+    _clear_rate_limit()
     return switch_user(auth_client, ctx["owner_email"])
 
 
 def _member_one_headers(auth_client, ctx):
+    _clear_rate_limit()
     return switch_user(auth_client, ctx["member_one_email"])
 
 
 def _member_two_headers(auth_client, ctx):
+    _clear_rate_limit()
     return switch_user(auth_client, ctx["member_two_email"])
 
 
@@ -75,7 +78,15 @@ def _file_dispute(auth_client, ctx, task_id, *, reason="Work incomplete", as_mem
     )
 
 
+def _clear_rate_limit() -> None:
+    from app.middleware.rate_limit import limiter
+
+    if hasattr(limiter, "_storage") and hasattr(limiter._storage, "storage"):
+        limiter._storage.storage.clear()
+
+
 def _vote(auth_client, ctx, dispute_id, vote, *, as_email):
+    _clear_rate_limit()
     return auth_client.post(
         f"/api/v1/disputes/{dispute_id}/vote",
         json={"vote": vote},
@@ -225,16 +236,17 @@ def test_cannot_vote_twice(auth_client, email_outbox, db_conn):
 def test_dispute_resolved_on_majority_uphold(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_done_task(auth_client, ctx)
-    dispute = _file_dispute(auth_client, ctx, task["id"]).json()
+    dispute = _file_dispute(
+        auth_client, ctx, task["id"], as_member="member_two"
+    ).json()
 
     _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["owner_email"])
-    _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["member_one_email"])
     response = _vote(
         auth_client,
         ctx,
         dispute["id"],
-        "reject",
-        as_email=ctx["member_two_email"],
+        "uphold",
+        as_email=ctx["member_one_email"],
     )
 
     assert response.json()["dispute"]["status"] == "resolved"
@@ -244,15 +256,16 @@ def test_dispute_resolved_on_majority_uphold(auth_client, email_outbox, db_conn)
 def test_dispute_resolved_on_majority_reject(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_done_task(auth_client, ctx)
-    dispute = _file_dispute(auth_client, ctx, task["id"]).json()
+    dispute = _file_dispute(
+        auth_client, ctx, task["id"], as_member="member_two"
+    ).json()
 
     _vote(auth_client, ctx, dispute["id"], "reject", as_email=ctx["owner_email"])
-    _vote(auth_client, ctx, dispute["id"], "reject", as_email=ctx["member_two_email"])
     response = _vote(
         auth_client,
         ctx,
         dispute["id"],
-        "uphold",
+        "reject",
         as_email=ctx["member_one_email"],
     )
 
@@ -263,16 +276,18 @@ def test_dispute_resolved_on_majority_reject(auth_client, email_outbox, db_conn)
 def test_dispute_resolved_when_all_members_voted(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_done_task(auth_client, ctx)
-    dispute = _file_dispute(auth_client, ctx, task["id"]).json()
+    dispute = _file_dispute(
+        auth_client, ctx, task["id"], as_member="member_two"
+    ).json()
 
     _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["owner_email"])
-    _vote(auth_client, ctx, dispute["id"], "reject", as_email=ctx["member_two_email"])
+    _vote(auth_client, ctx, dispute["id"], "reject", as_email=ctx["member_one_email"])
     response = _vote(
         auth_client,
         ctx,
         dispute["id"],
         "uphold",
-        as_email=ctx["member_one_email"],
+        as_email=ctx["member_two_email"],
     )
 
     assert response.json()["dispute"]["status"] == "resolved"
@@ -282,11 +297,12 @@ def test_dispute_resolved_when_all_members_voted(auth_client, email_outbox, db_c
 def test_notification_sent_on_dispute_resolution(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_done_task(auth_client, ctx)
-    dispute = _file_dispute(auth_client, ctx, task["id"]).json()
+    dispute = _file_dispute(
+        auth_client, ctx, task["id"], as_member="member_two"
+    ).json()
 
     _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["owner_email"])
     _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["member_one_email"])
-    _vote(auth_client, ctx, dispute["id"], "reject", as_email=ctx["member_two_email"])
 
     with db_conn.cursor() as cur:
         cur.execute(
@@ -319,18 +335,19 @@ def test_list_task_disputes_returns_history(auth_client, email_outbox, db_conn):
 def test_cannot_vote_on_resolved_dispute(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_done_task(auth_client, ctx)
-    dispute = _file_dispute(auth_client, ctx, task["id"]).json()
+    dispute = _file_dispute(
+        auth_client, ctx, task["id"], as_member="member_two"
+    ).json()
 
     _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["owner_email"])
     _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["member_one_email"])
-    _vote(auth_client, ctx, dispute["id"], "reject", as_email=ctx["member_two_email"])
 
     response = _vote(
         auth_client,
         ctx,
         dispute["id"],
         "uphold",
-        as_email=ctx["owner_email"],
+        as_email=ctx["member_two_email"],
     )
 
     assert response.status_code == 409

@@ -112,19 +112,25 @@ def resolve_dispute(
     dispute_id: str | UUID,
     *,
     outcome: str,
-) -> dict[str, Any]:
+) -> dict[str, Any] | None:
     with conn.cursor() as cur:
         cur.execute(
             """
             UPDATE disputes
             SET status = 'resolved', outcome = %s, resolved_at = NOW()
-            WHERE id = %s
+            WHERE id = %s AND status = 'open'
             RETURNING id, task_id, filed_by, reason, status, outcome, created_at, resolved_at
             """,
             (outcome, str(dispute_id)),
         )
         row = cur.fetchone()
-    return _public_dispute(_row_to_dispute(row))
+    return _public_dispute(_row_to_dispute(row)) if row else None
+
+
+def as_public_dispute(dispute: dict[str, Any]) -> dict[str, Any]:
+    if isinstance(dispute.get("created_at"), str):
+        return dispute
+    return _public_dispute(dispute)
 
 
 def _row_to_dispute(row: tuple) -> dict[str, Any]:
