@@ -16,7 +16,9 @@ from app.models.tasks import (
     UpdateTaskRequest,
     UpdateTaskStatusRequest,
 )
+from app.models.verification import DisputeTaskRequest
 from app.services import tasks as task_service
+from app.services import verification as verification_service
 
 router = APIRouter(tags=["tasks"])
 
@@ -228,6 +230,42 @@ def list_edit_requests(
 ):
     user = get_verified_user(request)
     return task_service.list_edit_requests(conn, task_id, user["id"])
+
+
+@router.post("/tasks/{task_id}/verify")
+def verify_task(
+    task_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return verification_service.verify_task(conn, task_id, user["id"])
+
+
+@router.post("/tasks/{task_id}/dispute", status_code=status.HTTP_201_CREATED)
+def dispute_task(
+    task_id: UUID,
+    request: Request,
+    body: DisputeTaskRequest,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return verification_service.dispute_task(
+        conn,
+        task_id,
+        user["id"],
+        reason=body.reason,
+    )
+
+
+@router.get("/tasks/{task_id}/verifications")
+def list_task_verifications(
+    task_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return verification_service.list_task_verifications(conn, task_id, user["id"])
 
 
 @router.get("/my-tasks")
