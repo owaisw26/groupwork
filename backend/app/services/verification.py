@@ -80,6 +80,10 @@ def _recalculate_verification_status(conn: connection, task_id: str | UUID) -> N
     verification_queries.update_task_verification_status(conn, task_id, new_status)
 
 
+def recalculate_task_verification(conn: connection, task_id: str | UUID) -> None:
+    _recalculate_verification_status(conn, task_id)
+
+
 def notify_verification_needed(conn: connection, task: dict) -> None:
     members = project_queries.get_project_members(conn, task["project_id"])
     assignee_ids = {str(aid) for aid in task.get("assignee_ids", [])}

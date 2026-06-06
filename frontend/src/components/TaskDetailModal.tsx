@@ -54,6 +54,26 @@ interface VerificationItem {
   status: string
 }
 
+interface DisputeVoteItem {
+  id: string
+  user_id: string
+  user_name?: string
+  vote: string
+}
+
+interface DisputeItem {
+  id: string
+  reason: string
+  status: string
+  outcome: string | null
+  votes: DisputeVoteItem[]
+  vote_summary: {
+    uphold: number
+    reject: number
+    total_members: number
+  }
+}
+
 interface TaskDetailModalProps {
   taskId: string | null
   projectOwnerId: string
@@ -76,6 +96,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
   const [proposedTitle, setProposedTitle] = useState('')
   const [evidence, setEvidence] = useState<EvidenceItem[]>([])
   const [verifications, setVerifications] = useState<VerificationItem[]>([])
+  const [disputes, setDisputes] = useState<DisputeItem[]>([])
   const [disputeReason, setDisputeReason] = useState('')
   const [showDisputeForm, setShowDisputeForm] = useState(false)
 
@@ -99,13 +120,20 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
     api.get(`/tasks/${taskId}/verifications`).then((res) => {
       setVerifications(res.data.items ?? [])
     }).catch(() => setVerifications([]))
+    api.get(`/tasks/${taskId}/disputes`).then((res) => {
+      setDisputes(res.data.items ?? [])
+    }).catch(() => setDisputes([]))
   }, [dispatch, taskId])
 
   const refreshTaskAndVerifications = async () => {
     if (!taskId) return
     await dispatch(fetchTask(taskId))
-    const res = await api.get(`/tasks/${taskId}/verifications`)
-    setVerifications(res.data.items ?? [])
+    const [verificationsRes, disputesRes] = await Promise.all([
+      api.get(`/tasks/${taskId}/verifications`),
+      api.get(`/tasks/${taskId}/disputes`),
+    ])
+    setVerifications(verificationsRes.data.items ?? [])
+    setDisputes(disputesRes.data.items ?? [])
   }
 
   const handleVerify = async () => {
@@ -119,6 +147,11 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
     await api.post(`/tasks/${taskId}/dispute`, { reason: disputeReason.trim() })
     setDisputeReason('')
     setShowDisputeForm(false)
+    await refreshTaskAndVerifications()
+  }
+
+  const handleDisputeVote = async (disputeId: string, vote: 'uphold' | 'reject') => {
+    await api.post(`/disputes/${disputeId}/vote`, { vote })
     await refreshTaskAndVerifications()
   }
 
@@ -270,6 +303,58 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                       </Button>
                     </Box>
                   </Box>
+                )}
+                {disputes.length > 0 && (
+                  <>
+                    <Typography variant="subtitle2">Disputes</Typography>
+                    {disputes.map((dispute) => {
+                      const userVoted = dispute.votes.some((v) => v.user_id === user?.id)
+                      const canVote = dispute.status === 'open' && !userVoted
+                      return (
+                        <Box
+                          key={dispute.id}
+                          sx={{
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            borderRadius: 1,
+                            p: 1.5,
+                          }}
+                        >
+                          <Typography variant="body2">{dispute.reason}</Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {dispute.status === 'resolved'
+                              ? `Resolved: ${dispute.outcome ?? 'unknown'}`
+                              : `Votes: ${dispute.vote_summary.uphold} uphold / ${dispute.vote_summary.reject} reject`}
+                          </Typography>
+                          {dispute.votes.map((vote) => (
+                            <Typography key={vote.id} variant="caption" sx={{ display: 'block' }}>
+                              {vote.user_name ?? 'Member'}: {vote.vote}
+                            </Typography>
+                          ))}
+                          {canVote && (
+                            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="success"
+                                onClick={() => handleDisputeVote(dispute.id, 'uphold')}
+                              >
+                                Uphold
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="error"
+                                onClick={() => handleDisputeVote(dispute.id, 'reject')}
+                              >
+                                Reject
+                              </Button>
+                            </Box>
+                          )}
+                        </Box>
+                      )
+                    })}
+                  </>
                 )}
                 <Divider />
               </>
