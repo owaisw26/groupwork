@@ -50,7 +50,12 @@ export default function EvidenceUpload({ taskId, onUploaded }: EvidenceUploadPro
       })
       setProgress(80)
 
-      await api.post(`/tasks/${taskId}/evidence/confirm`, { evidence_id })
+      await api.post(`/tasks/${taskId}/evidence/confirm`, {
+        evidence_id,
+        filename: file.name,
+        content_type: file.type || 'application/octet-stream',
+        file_size: file.size,
+      })
       setProgress(100)
       onUploaded?.()
     } catch {

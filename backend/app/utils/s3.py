@@ -51,3 +51,15 @@ def object_exists(bucket: str, key: str) -> bool:
         return True
     except ClientError:
         return False
+
+
+def get_object_metadata(bucket: str, key: str) -> dict:
+    client = _get_s3_client()
+    try:
+        response = client.head_object(Bucket=bucket, Key=key)
+        return {
+            "ContentLength": response.get("ContentLength", 0),
+            "ContentType": response.get("ContentType"),
+        }
+    except ClientError as exc:
+        raise exc

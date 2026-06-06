@@ -36,9 +36,11 @@ SQL_FILENAME = {
 @pytest.fixture
 def mock_s3(monkeypatch):
     generated_urls: list[dict] = []
+    uploaded_objects: set[str] = set()
 
     def fake_presigned_upload(bucket, key, content_type, max_size):
         url = f"https://{bucket}.s3.amazonaws.com/{key}?presigned=true"
+        uploaded_objects.add(key)
         generated_urls.append(
             {"bucket": bucket, "key": key, "content_type": content_type, "max_size": max_size}
         )
@@ -46,6 +48,14 @@ def mock_s3(monkeypatch):
 
     def fake_presigned_download(bucket, key, expires_in=900):
         return f"https://{bucket}.s3.amazonaws.com/{key}?download=true"
+
+    def fake_object_exists(bucket, key):
+        return key in uploaded_objects
+
+    def fake_object_metadata(bucket, key):
+        matching = next((entry for entry in generated_urls if entry["key"] == key), None)
+        size = matching["max_size"] if matching else 1024
+        return {"ContentLength": size, "ContentType": "application/pdf"}
 
     monkeypatch.setattr(
         "app.services.evidence.generate_presigned_upload_url",
@@ -55,6 +65,8 @@ def mock_s3(monkeypatch):
         "app.services.evidence.generate_presigned_download_url",
         fake_presigned_download,
     )
+    monkeypatch.setattr("app.services.evidence.object_exists", fake_object_exists)
+    monkeypatch.setattr("app.services.evidence.get_object_metadata", fake_object_metadata)
     return generated_urls
 
 
@@ -66,10 +78,15 @@ def _request_upload(client, headers, task_id, payload):
     )
 
 
-def _confirm_upload(client, headers, task_id, evidence_id):
+def _confirm_upload(client, headers, task_id, evidence_id, payload=ALLOWED_FILE):
     return client.post(
         f"/api/v1/tasks/{task_id}/evidence/confirm",
-        json={"evidence_id": evidence_id},
+        json={
+            "evidence_id": evidence_id,
+            "filename": payload["filename"],
+            "content_type": payload["content_type"],
+            "file_size": payload["file_size"],
+        },
         headers=headers,
     )
 
@@ -240,17 +257,13 @@ def test_list_project_evidence(auth_client, email_outbox, mock_s3):
     task_two = create_task(auth_client, headers, project["id"], title="Task B").json()
 
     for task, filename in [(task_one, "a.pdf"), (task_two, "b.png")]:
-        upload = _request_upload(
-            auth_client,
-            headers,
-            task["id"],
-            {
-                "filename": filename,
-                "content_type": "application/pdf" if filename.endswith(".pdf") else "image/png",
-                "file_size": 500,
-            },
-        ).json()
-        _confirm_upload(auth_client, headers, task["id"], upload["evidence_id"])
+        file_payload = {
+            "filename": filename,
+            "content_type": "application/pdf" if filename.endswith(".pdf") else "image/png",
+            "file_size": 500,
+        }
+        upload = _request_upload(auth_client, headers, task["id"], file_payload).json()
+        _confirm_upload(auth_client, headers, task["id"], upload["evidence_id"], file_payload)
 
     response = auth_client.get(f"/api/v1/projects/{project['id']}/evidence", headers=headers)
 
@@ -267,10 +280,12 @@ def test_sql_injection_filename_stored_safely(auth_client, email_outbox, mock_s3
     task = create_task(auth_client, headers, project["id"]).json()
 
     upload = _request_upload(auth_client, headers, task["id"], SQL_FILENAME).json()
-    confirmed = _confirm_upload(auth_client, headers, task["id"], upload["evidence_id"])
+    confirmed = _confirm_upload(
+        auth_client, headers, task["id"], upload["evidence_id"], SQL_FILENAME
+    )
 
     assert confirmed.status_code == 200
-    assert confirmed.json()["original_filename"] == SQL_FILENAME["filename"]
+    assert confirmed.json()["original_filename"] == upload["filename"]
 
     with db_conn.cursor() as cur:
         cur.execute("SELECT COUNT(*) FROM evidence_files")

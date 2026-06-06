@@ -49,6 +49,9 @@ def confirm_evidence_upload(
         task_id,
         user["id"],
         evidence_id=body.evidence_id,
+        filename=body.filename,
+        content_type=body.content_type,
+        file_size=body.file_size,
     )
 
 

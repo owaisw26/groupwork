@@ -43,6 +43,23 @@ def create_evidence_record(
     return _public_evidence(_row_to_evidence(row))
 
 
+def get_evidence_by_s3_key(conn: connection, s3_key: str) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, task_id, user_id, s3_key, original_filename,
+                   file_size, mime_type, uploaded_at
+            FROM evidence_files
+            WHERE s3_key = %s
+            """,
+            (s3_key,),
+        )
+        row = cur.fetchone()
+    if not row:
+        return None
+    return _row_to_evidence(row)
+
+
 def get_evidence_record(
     conn: connection,
     evidence_id: str | UUID,
@@ -77,9 +94,7 @@ def list_task_evidence(conn: connection, task_id: str | UUID) -> list[dict[str, 
             (str(task_id),),
         )
         rows = cur.fetchall()
-    return [
-        _public_evidence(_row_to_evidence(row[:8]), user_name=row[8]) for row in rows
-    ]
+    return [_row_to_evidence(row[:8], user_name=row[8]) for row in rows]
 
 
 def list_project_evidence(conn: connection, project_id: str | UUID) -> list[dict[str, Any]]:
@@ -98,10 +113,7 @@ def list_project_evidence(conn: connection, project_id: str | UUID) -> list[dict
         )
         rows = cur.fetchall()
     return [
-        {
-            **_public_evidence(_row_to_evidence(row[:8]), user_name=row[8]),
-            "task_title": row[9],
-        }
+        {**_row_to_evidence(row[:8], user_name=row[8]), "task_title": row[9]}
         for row in rows
     ]
 
@@ -120,8 +132,8 @@ def get_project_total_size(conn: connection, project_id: str | UUID) -> int:
         return int(cur.fetchone()[0])
 
 
-def _row_to_evidence(row: tuple) -> dict[str, Any]:
-    return {
+def _row_to_evidence(row: tuple, *, user_name: str | None = None) -> dict[str, Any]:
+    data = {
         "id": row[0],
         "task_id": row[1],
         "user_id": row[2],
@@ -131,6 +143,9 @@ def _row_to_evidence(row: tuple) -> dict[str, Any]:
         "mime_type": row[6],
         "uploaded_at": row[7],
     }
+    if user_name is not None:
+        data["user_name"] = user_name
+    return data
 
 
 def _public_evidence(
@@ -142,7 +157,6 @@ def _public_evidence(
         "id": str(evidence["id"]),
         "task_id": str(evidence["task_id"]),
         "user_id": str(evidence["user_id"]),
-        "s3_key": evidence["s3_key"],
         "original_filename": evidence["original_filename"],
         "file_size": evidence["file_size"],
         "mime_type": evidence["mime_type"],
