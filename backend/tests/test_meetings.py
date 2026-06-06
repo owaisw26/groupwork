@@ -58,7 +58,6 @@ def test_create_meeting_valid_returns_201(auth_client, email_outbox, db_conn):
 
 def test_create_meeting_non_member_returns_403(auth_client, email_outbox, db_conn):
     ctx = _setup_project(auth_client, email_outbox, db_conn)
-    owner_headers = switch_user(auth_client, ctx["owner_email"])
     project = ctx["project"]
     outsider_headers, _ = verified_user(
         auth_client, email_outbox, email="meeting-outsider@example.com"
