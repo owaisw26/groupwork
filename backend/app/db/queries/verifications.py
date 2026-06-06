@@ -66,6 +66,23 @@ def get_task_verifications(conn: connection, task_id: str | UUID) -> list[dict[s
     ]
 
 
+def update_user_verification_status(
+    conn: connection,
+    task_id: str | UUID,
+    user_id: str | UUID,
+    status: str,
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE task_verifications
+            SET status = %s
+            WHERE task_id = %s AND user_id = %s
+            """,
+            (status, str(task_id), str(user_id)),
+        )
+
+
 def update_task_verification_status(
     conn: connection,
     task_id: str | UUID,
