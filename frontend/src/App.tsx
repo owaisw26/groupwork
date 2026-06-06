@@ -17,6 +17,7 @@ import OnboardingFlow from './pages/onboarding/OnboardingFlow'
 import ProjectLayout from './pages/project/ProjectLayout'
 import MembersTab from './pages/project/MembersTab'
 import EvidenceTab from './pages/project/EvidenceTab'
+import MeetingsTab from './pages/project/MeetingsTab'
 import ProjectPlaceholderPage from './pages/project/ProjectPlaceholderPage'
 import TasksTab from './pages/project/TasksTab'
 import { useAppDispatch, useAppSelector } from './store/hooks'
@@ -86,7 +87,7 @@ function AppRoutes() {
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/projects/:id" element={<ProjectLayout />}>
             <Route path="tasks" element={<TasksTab />} />
-            <Route path="meetings" element={<ProjectPlaceholderPage title="Meetings" />} />
+            <Route path="meetings" element={<MeetingsTab />} />
             <Route path="members" element={<MembersTab />} />
             <Route path="evidence" element={<EvidenceTab />} />
             <Route path="settings" element={<ProjectPlaceholderPage title="Settings" />} />
