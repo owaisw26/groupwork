@@ -1,5 +1,5 @@
 import { Box, Button, Grid, Paper, Typography } from '@mui/material'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import InviteMemberForm from '../../components/InviteMemberForm'
 import MemberCard, { type Member } from '../../components/MemberCard'
@@ -16,15 +16,22 @@ export default function MembersTab() {
   const [members, setMembers] = useState<Member[]>([])
   const [transferOpen, setTransferOpen] = useState(false)
 
-  const loadMembers = useCallback(async () => {
+  useEffect(() => {
+    if (!id) return
+    let cancelled = false
+    api.get<Member[]>(`/projects/${id}/members`).then((response) => {
+      if (!cancelled) setMembers(response.data)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  const loadMembers = async () => {
     if (!id) return
     const response = await api.get<Member[]>(`/projects/${id}/members`)
     setMembers(response.data)
-  }, [id])
-
-  useEffect(() => {
-    loadMembers()
-  }, [loadMembers])
+  }
 
   const isOwner = currentProject?.owner_id === user?.id
 
