@@ -16,6 +16,7 @@ import AcceptInvitationPage from './pages/AcceptInvitationPage'
 import OnboardingFlow from './pages/onboarding/OnboardingFlow'
 import ProjectLayout from './pages/project/ProjectLayout'
 import MembersTab from './pages/project/MembersTab'
+import EvidenceTab from './pages/project/EvidenceTab'
 import ProjectPlaceholderPage from './pages/project/ProjectPlaceholderPage'
 import TasksTab from './pages/project/TasksTab'
 import { useAppDispatch, useAppSelector } from './store/hooks'
@@ -87,7 +88,7 @@ function AppRoutes() {
             <Route path="tasks" element={<TasksTab />} />
             <Route path="meetings" element={<ProjectPlaceholderPage title="Meetings" />} />
             <Route path="members" element={<MembersTab />} />
-            <Route path="evidence" element={<ProjectPlaceholderPage title="Evidence" />} />
+            <Route path="evidence" element={<EvidenceTab />} />
             <Route path="settings" element={<ProjectPlaceholderPage title="Settings" />} />
             <Route path="report" element={<ProjectPlaceholderPage title="Report" />} />
           </Route>
