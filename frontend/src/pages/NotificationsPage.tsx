@@ -42,16 +42,11 @@ export default function NotificationsPage() {
             <ListItem key={notification.id} divider>
               <ListItemText
                 primary={notification.title}
-                secondary={
-                  <>
-                    {notification.message}
-                    <Typography component="span" variant="caption" display="block">
-                      {new Date(notification.created_at).toLocaleString()}
-                    </Typography>
-                  </>
-                }
-                slotProps={{
-                  primary: { fontWeight: notification.is_read ? 400 : 600 },
+                secondary={`${notification.message} · ${new Date(notification.created_at).toLocaleString()}`}
+                sx={{
+                  '& .MuiListItemText-primary': {
+                    fontWeight: notification.is_read ? 400 : 600,
+                  },
                 }}
               />
             </ListItem>
