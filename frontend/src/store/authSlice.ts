@@ -138,6 +138,7 @@ const authSlice = createSlice({
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false
+        state.authInitialized = true
         state.error = action.payload as string
       })
       .addCase(register.pending, (state) => {
@@ -146,9 +147,11 @@ const authSlice = createSlice({
       })
       .addCase(register.fulfilled, (state) => {
         state.isLoading = false
+        state.authInitialized = true
       })
       .addCase(register.rejected, (state, action) => {
         state.isLoading = false
+        state.authInitialized = true
         state.error = action.payload as string
       })
       .addCase(logout.fulfilled, (state) => {

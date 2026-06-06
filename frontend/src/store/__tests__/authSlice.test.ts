@@ -5,6 +5,7 @@ import authReducer, {
   login,
   logout,
   refreshToken,
+  register,
   type AuthState,
 } from '../authSlice'
 
@@ -20,6 +21,7 @@ const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
   isLoading: false,
+  authInitialized: false,
   error: null,
 }
 
@@ -51,6 +53,7 @@ describe('authSlice', () => {
       user: mockUser,
       isAuthenticated: true,
       isLoading: false,
+      authInitialized: true,
       error: null,
     }
     const action = await logout()(vi.fn(), () => ({}) as never, undefined)
@@ -66,6 +69,7 @@ describe('authSlice', () => {
       user: mockUser,
       isAuthenticated: true,
       isLoading: false,
+      authInitialized: true,
       error: null,
     }
     const action = await refreshToken()(vi.fn(), () => ({}) as never, undefined)
@@ -80,5 +84,45 @@ describe('authSlice', () => {
     const state = authReducer(initialState, action)
     expect(state.isAuthenticated).toBe(true)
     expect(state.user?.full_name).toBe('Test User')
+  })
+
+  it('login rejection marks auth as initialized so protected routes do not spin forever', async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({
+      response: { data: { error: { message: 'Invalid credentials' } } },
+    })
+    const pendingState: AuthState = {
+      ...initialState,
+      isLoading: true,
+      authInitialized: false,
+    }
+    const action = await login({ email: 'test@example.com', password: 'wrong' })(
+      vi.fn(),
+      () => ({}) as never,
+      undefined,
+    )
+    const state = authReducer(pendingState, action)
+    expect(state.authInitialized).toBe(true)
+    expect(state.isAuthenticated).toBe(false)
+    expect(state.error).toBe('Invalid credentials')
+  })
+
+  it('register rejection marks auth as initialized', async () => {
+    vi.mocked(api.post).mockRejectedValueOnce({
+      response: { data: { error: { message: 'Email already registered' } } },
+    })
+    const pendingState: AuthState = {
+      ...initialState,
+      isLoading: true,
+      authInitialized: false,
+    }
+    const action = await register({
+      full_name: 'Test User',
+      email: 'test@example.com',
+      password: 'Password1',
+    })(vi.fn(), () => ({}) as never, undefined)
+    const state = authReducer(pendingState, action)
+    expect(state.authInitialized).toBe(true)
+    expect(state.isAuthenticated).toBe(false)
+    expect(state.error).toBe('Email already registered')
   })
 })
