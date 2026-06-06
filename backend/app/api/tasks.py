@@ -17,6 +17,7 @@ from app.models.tasks import (
     UpdateTaskStatusRequest,
 )
 from app.models.verification import DisputeTaskRequest
+from app.services import disputes as dispute_service
 from app.services import tasks as task_service
 from app.services import verification as verification_service
 
@@ -266,6 +267,16 @@ def list_task_verifications(
 ):
     user = get_verified_user(request)
     return verification_service.list_task_verifications(conn, task_id, user["id"])
+
+
+@router.get("/tasks/{task_id}/disputes")
+def list_task_disputes(
+    task_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return dispute_service.list_task_disputes(conn, task_id, user["id"])
 
 
 @router.get("/my-tasks")
