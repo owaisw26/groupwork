@@ -220,6 +220,47 @@ def regenerate_join_code(
     return _row_to_project(row) if row else None
 
 
+def get_project_by_join_code(conn: connection, join_code: str) -> dict[str, Any] | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, name, description, course, due_date, status, owner_id,
+                   join_code, join_code_expires_at, max_members, deleted_at, created_at
+            FROM projects
+            WHERE join_code = %s AND deleted_at IS NULL
+            """,
+            (join_code,),
+        )
+        row = cur.fetchone()
+    return _row_to_project(row) if row else None
+
+
+def get_project_members(conn: connection, project_id: str | UUID) -> list[dict[str, Any]]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT u.id, u.email, u.full_name, pm.joined_at, p.owner_id
+            FROM project_members pm
+            JOIN users u ON u.id = pm.user_id
+            JOIN projects p ON p.id = pm.project_id
+            WHERE pm.project_id = %s
+            ORDER BY pm.joined_at ASC
+            """,
+            (str(project_id),),
+        )
+        rows = cur.fetchall()
+    return [
+        {
+            "id": str(row[0]),
+            "email": row[1],
+            "full_name": row[2],
+            "joined_at": row[3].isoformat(),
+            "role": "owner" if str(row[0]) == str(row[4]) else "member",
+        }
+        for row in rows
+    ]
+
+
 def get_user_project_ids(conn: connection, user_id: str | UUID) -> list[str]:
     with conn.cursor() as cur:
         cur.execute(

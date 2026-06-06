@@ -162,6 +162,67 @@ def regenerate_join_code(conn: connection, project_id: str | UUID, user_id: str 
     return _public_project(updated, member_count=member_count)
 
 
+def join_project(conn: connection, user: dict, join_code: str) -> dict:
+    project = project_queries.get_project_by_join_code(conn, join_code.upper())
+    if not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invalid join code")
+
+    if project["join_code_expires_at"] < datetime.now(timezone.utc):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Join code expired")
+
+    if project_queries.is_project_member(conn, project["id"], user["id"]):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Already a member")
+
+    if project_queries.get_member_count(conn, project["id"]) >= project["max_members"]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Project is full")
+
+    project_queries.add_member(conn, project["id"], user["id"])
+    _log_activity(conn, project["id"], user["id"], "member_joined", "user", user["id"])
+    member_count = project_queries.get_member_count(conn, project["id"])
+    return _public_project(project, member_count=member_count)
+
+
+def leave_project(conn: connection, project_id: str | UUID, user_id: str | UUID) -> None:
+    project = _require_member(conn, project_id, user_id)
+    if str(project["owner_id"]) == str(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Owner must transfer ownership before leaving",
+        )
+    project_queries.remove_member(conn, project_id, user_id)
+    _log_activity(conn, project_id, user_id, "member_left", "user", user_id)
+
+
+def transfer_ownership(
+    conn: connection,
+    project_id: str | UUID,
+    owner_id: str | UUID,
+    new_owner_id: str | UUID,
+) -> dict:
+    _require_owner(conn, project_id, owner_id)
+    if str(owner_id) == str(new_owner_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot transfer to self",
+        )
+    if not project_queries.is_project_member(conn, project_id, new_owner_id):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New owner must be a member",
+        )
+    updated = project_queries.transfer_ownership(conn, project_id, new_owner_id)
+    if not updated:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+    _log_activity(conn, project_id, owner_id, "ownership_transferred", "project", project_id)
+    member_count = project_queries.get_member_count(conn, project_id)
+    return _public_project(updated, member_count=member_count)
+
+
+def list_members(conn: connection, project_id: str | UUID, user_id: str | UUID) -> list[dict]:
+    _require_member(conn, project_id, user_id)
+    return project_queries.get_project_members(conn, project_id)
+
+
 def _log_activity(
     conn: connection,
     project_id: str | UUID,
