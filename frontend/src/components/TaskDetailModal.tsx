@@ -33,8 +33,19 @@ import {
   toggleSubtask,
   updateTask,
 } from '../store/tasksSlice'
+import api from '../services/api'
 import EditRequestDiff from './EditRequestDiff'
+import EvidenceUpload from './EvidenceUpload'
 import TimeLogForm from './TimeLogForm'
+
+interface EvidenceItem {
+  id: string
+  original_filename: string
+  file_size: number
+  uploaded_at: string
+  user_name?: string
+  download_url?: string
+}
 
 interface TaskDetailModalProps {
   taskId: string | null
@@ -56,6 +67,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
   const [editPriority, setEditPriority] = useState('')
   const [requestEditOpen, setRequestEditOpen] = useState(false)
   const [proposedTitle, setProposedTitle] = useState('')
+  const [evidence, setEvidence] = useState<EvidenceItem[]>([])
 
   const isOwner = user?.id === projectOwnerId
   const isAssignee = currentTask?.assignee_ids.includes(user?.id ?? '') ?? false
@@ -67,7 +79,17 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
     dispatch(fetchSubtasks(taskId))
     dispatch(fetchComments(taskId))
     dispatch(fetchTimeLogs(taskId))
+    api.get(`/tasks/${taskId}/evidence`).then((res) => {
+      setEvidence(res.data.items ?? [])
+    }).catch(() => setEvidence([]))
   }, [dispatch, taskId])
+
+  const refreshEvidence = () => {
+    if (!taskId) return
+    api.get(`/tasks/${taskId}/evidence`).then((res) => {
+      setEvidence(res.data.items ?? [])
+    }).catch(() => setEvidence([]))
+  }
 
   useEffect(() => {
     if (!taskId || !isOwner) return
@@ -242,6 +264,21 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                 Post
               </Button>
             </Box>
+
+            <Divider />
+
+            <Typography variant="subtitle2">Evidence</Typography>
+            {evidence.map((file) => (
+              <Box key={file.id} sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                <Typography variant="body2" component="a" href={file.download_url} target="_blank" rel="noopener noreferrer">
+                  {file.original_filename}
+                </Typography>
+                <Typography variant="caption" color="text.secondary">
+                  {file.user_name ?? 'User'}
+                </Typography>
+              </Box>
+            ))}
+            <EvidenceUpload taskId={taskId} onUploaded={refreshEvidence} />
 
             <Divider />
 

@@ -7,6 +7,7 @@ from slowapi.middleware import SlowAPIMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.dashboard import router as dashboard_router
+from app.api.evidence import router as evidence_router
 from app.api.health import router as health_router
 from app.api.invitations import router as invitations_router
 from app.api.projects import router as projects_router
@@ -57,5 +58,6 @@ def create_app() -> FastAPI:
     app.include_router(tasks_router, prefix="/api/v1")
     app.include_router(time_logs_router, prefix="/api/v1")
     app.include_router(search_router, prefix="/api/v1")
+    app.include_router(evidence_router, prefix="/api/v1")
 
     return app

@@ -5,3 +5,4 @@ limiter = Limiter(key_func=get_remote_address)
 
 AUTH_RATE_LIMIT = "5/minute"
 REFRESH_RATE_LIMIT = "10/minute"
+FILE_UPLOAD_RATE_LIMIT = "10/minute"

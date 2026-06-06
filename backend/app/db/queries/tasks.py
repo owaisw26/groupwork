@@ -30,13 +30,15 @@ def create_task(
     created_by: str | UUID,
     assignee_ids: list[str | UUID] | None = None,
 ) -> dict[str, Any]:
+    verification_status = "pending" if status == "done" else "none"
     with conn.cursor() as cur:
         cur.execute(
             """
             INSERT INTO tasks (
-                project_id, title, description, status, priority, due_date, created_by
+                project_id, title, description, status, priority, due_date,
+                verification_status, created_by
             )
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id, project_id, title, description, status, priority,
                       due_date, verification_status, created_by, created_at, updated_at
             """,
@@ -47,6 +49,7 @@ def create_task(
                 status,
                 priority,
                 due_date,
+                verification_status,
                 str(created_by),
             ),
         )
@@ -361,7 +364,15 @@ def update_task_status(
     task_id: str | UUID,
     status: str,
 ) -> dict[str, Any] | None:
-    verification_status = "pending" if status == "done" else "none"
+    current = get_task(conn, task_id)
+    if not current:
+        return None
+    if status == "done":
+        verification_status = "pending"
+    elif current["status"] == "done":
+        verification_status = "none"
+    else:
+        verification_status = current["verification_status"]
     with conn.cursor() as cur:
         cur.execute(
             """

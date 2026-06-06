@@ -493,6 +493,7 @@ def test_create_task_non_member_assignee_returns_422(auth_client, email_outbox, 
         cur.execute("SELECT id FROM users WHERE email = %s", (outsider_email,))
         outsider_id = str(cur.fetchone()[0])
 
+    owner_headers = switch_user(auth_client, "assignee-owner@example.com")
     response = create_task(
         auth_client,
         owner_headers,
