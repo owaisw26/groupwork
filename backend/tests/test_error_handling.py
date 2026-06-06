@@ -28,6 +28,7 @@ def test_422_validation_returns_field_details(auth_client):
 def test_500_returns_generic_error_without_stack_trace(monkeypatch):
     monkeypatch.setenv("ENVIRONMENT", "production")
     monkeypatch.setenv("COOKIE_SECURE", "true")
+    monkeypatch.setenv("JWT_SECRET", "ci-production-test-jwt-secret-32chars")
     from app.config import get_settings
 
     get_settings.cache_clear()

@@ -327,7 +327,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                               : `Votes: ${dispute.vote_summary.uphold} uphold / ${dispute.vote_summary.reject} reject`}
                           </Typography>
                           {dispute.votes.map((vote) => (
-                            <Typography key={vote.id} variant="caption" display="block">
+                            <Typography key={vote.id} variant="caption" sx={{ display: 'block' }}>
                               {vote.user_name ?? 'Member'}: {vote.vote}
                             </Typography>
                           ))}
