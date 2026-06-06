@@ -1,16 +1,9 @@
-import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Link as MuiLink,
-  TextField,
-  Typography,
-} from '@mui/material'
+import { Box } from '@mui/material'
 import { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import type { Location } from 'react-router-dom'
+import LoginCard from '../../components/auth/LoginCard'
+import LoginHeroPanel from '../../components/auth/LoginHeroPanel'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { clearAuthError, login } from '../../store/authSlice'
 
@@ -21,6 +14,7 @@ export default function LoginPage() {
   const { isLoading, error } = useAppSelector((state) => state.auth)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [rememberMe, setRememberMe] = useState(false)
   const [validationError, setValidationError] = useState<string | null>(null)
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -28,11 +22,13 @@ export default function LoginPage() {
     dispatch(clearAuthError())
     setValidationError(null)
 
-    if (!email.trim()) {
+    const trimmedEmail = email.trim()
+
+    if (!trimmedEmail) {
       setValidationError('Email is required')
       return
     }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       setValidationError('Please enter a valid email address')
       return
     }
@@ -41,7 +37,9 @@ export default function LoginPage() {
       return
     }
 
-    const result = await dispatch(login({ email, password }))
+    const result = await dispatch(
+      login({ email: trimmedEmail.toLowerCase(), password }),
+    )
     if (login.fulfilled.match(result)) {
       const user = result.payload
       const from = (location.state as { from?: Location } | null)?.from?.pathname
@@ -56,61 +54,30 @@ export default function LoginPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <Card sx={{ width: '100%', maxWidth: 420 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h5" component="h1" gutterBottom sx={{ fontWeight: 600 }}>
-            Log in to GroupWork
-          </Typography>
-          <Box component="form" onSubmit={handleSubmit} noValidate>
-            <TextField
-              fullWidth
-              margin="normal"
-              label="Email"
-              name="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <TextField
-              fullWidth
-              margin="normal"
-              label="Password"
-              name="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {(validationError || error) && (
-              <Alert severity="error" sx={{ mt: 2 }}>
-                {validationError || error}
-              </Alert>
-            )}
-            <Button
-              fullWidth
-              type="submit"
-              variant="contained"
-              sx={{ mt: 3 }}
-              disabled={isLoading}
-            >
-              Log In
-            </Button>
-          </Box>
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <MuiLink component={Link} to="/forgot-password" variant="body2">
-              Forgot password?
-            </MuiLink>
-          </Box>
-          <Box sx={{ mt: 1, textAlign: 'center' }}>
-            <Typography variant="body2">
-              Don&apos;t have an account?{' '}
-              <MuiLink component={Link} to="/register">
-                Sign up
-              </MuiLink>
-            </Typography>
-          </Box>
-        </CardContent>
-      </Card>
+    <Box
+      component="main"
+      sx={{
+        minHeight: '100vh',
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 3fr) minmax(0, 2fr)' },
+        bgcolor: '#FFFFFF',
+        fontFamily: '"Atlassian Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      }}
+    >
+      <LoginHeroPanel />
+      <LoginCard
+        email={email}
+        password={password}
+        rememberMe={rememberMe}
+        isLoading={isLoading}
+        validationError={validationError}
+        apiError={error}
+        showMobileLogo
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        onRememberMeChange={setRememberMe}
+        onSubmit={handleSubmit}
+      />
     </Box>
   )
 }

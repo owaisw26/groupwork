@@ -26,7 +26,7 @@ describe('App', () => {
       </Provider>,
     )
 
-    expect(await screen.findByRole('heading', { name: /log in to groupwork/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument()
     expect(api.get).toHaveBeenCalled()
   })
 })
