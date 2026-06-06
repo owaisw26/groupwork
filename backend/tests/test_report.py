@@ -1,6 +1,12 @@
 import pytest
 
-from tests.task_helpers import add_project_member, create_project, create_task, switch_user, verified_user
+from tests.task_helpers import (
+    add_project_member,
+    create_project,
+    create_task,
+    switch_user,
+    verified_user,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -37,7 +43,9 @@ def _set_project_status(db_conn, project_id: str, status: str) -> None:
 
 
 def _seed_report_data(auth_client, email_outbox, db_conn):
-    owner_headers, owner_email = verified_user(auth_client, email_outbox, email="report-owner@example.com")
+    owner_headers, owner_email = verified_user(
+        auth_client, email_outbox, email="report-owner@example.com"
+    )
     project = create_project(auth_client, owner_headers, name="Report Project").json()
     task_done = create_task(
         auth_client,
@@ -61,7 +69,7 @@ def _seed_report_data(auth_client, email_outbox, db_conn):
     )
     member_id = add_project_member(db_conn, project["id"], member_email)
 
-    outsider_headers, _ = verified_user(auth_client, email_outbox, email="report-outsider@example.com")
+    verified_user(auth_client, email_outbox, email="report-outsider@example.com")
 
     with db_conn.cursor() as cur:
         cur.execute("SELECT id FROM users WHERE email = %s", (owner_email,))
@@ -111,7 +119,10 @@ def _seed_report_data(auth_client, email_outbox, db_conn):
 
         cur.execute(
             """
-            INSERT INTO meetings (project_id, meeting_date, agenda, discussion_points, action_items_json, notes, created_by)
+            INSERT INTO meetings (
+                project_id, meeting_date, agenda, discussion_points,
+                action_items_json, notes, created_by
+            )
             VALUES
                 (%s, NOW() - INTERVAL '2 days', 'Sprint sync', 'Updates', '[]', 'All good', %s),
                 (%s, NOW() - INTERVAL '1 day', 'Wrap up', 'Final checks', '[]', 'Done', %s)

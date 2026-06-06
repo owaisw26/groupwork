@@ -63,7 +63,10 @@ def _set_project_lifecycle_status(
             UPDATE projects
             SET status = %s,
                 completed_at = CASE WHEN %s THEN NOW() ELSE completed_at END,
-                peer_review_ends_at = CASE WHEN %s THEN NOW() + INTERVAL '7 days' ELSE peer_review_ends_at END,
+                peer_review_ends_at = CASE
+                    WHEN %s THEN NOW() + INTERVAL '7 days'
+                    ELSE peer_review_ends_at
+                END,
                 report_s3_key = CASE WHEN %s THEN 'reports/manual.pdf' ELSE report_s3_key END
             WHERE id = %s
             """,
