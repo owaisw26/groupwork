@@ -76,6 +76,10 @@ isProject: false
 
 # GroupWork -- Detailed Implementation Plan
 
+## Design Debt (Deferred)
+
+- **UI polish (post-Phase 4)**: Current frontend is functional but visually rigid. Target a more flowy, Jira-style experience — fluid Kanban columns, denser information hierarchy, smoother transitions, and board-first navigation. Track as a dedicated UI/UX pass after core product phases; do not block Phase 4 feature delivery.
+
 ## Git Workflow & Practices
 
 ### Branching Strategy
