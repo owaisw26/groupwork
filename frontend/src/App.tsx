@@ -13,6 +13,7 @@ import RegisterPage from './pages/auth/RegisterPage'
 import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import OnboardingFlow from './pages/onboarding/OnboardingFlow'
+import ProjectLayout from './pages/project/ProjectLayout'
 import ProjectPlaceholderPage from './pages/project/ProjectPlaceholderPage'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { fetchCurrentUser } from './store/authSlice'
@@ -76,12 +77,14 @@ function AppRoutes() {
           <Route path="/my-tasks" element={<MyTasksPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
-          <Route path="/projects/:id/tasks" element={<ProjectPlaceholderPage title="Tasks" />} />
-          <Route path="/projects/:id/meetings" element={<ProjectPlaceholderPage title="Meetings" />} />
-          <Route path="/projects/:id/members" element={<ProjectPlaceholderPage title="Members" />} />
-          <Route path="/projects/:id/evidence" element={<ProjectPlaceholderPage title="Evidence" />} />
-          <Route path="/projects/:id/settings" element={<ProjectPlaceholderPage title="Settings" />} />
-          <Route path="/projects/:id/report" element={<ProjectPlaceholderPage title="Report" />} />
+          <Route path="/projects/:id" element={<ProjectLayout />}>
+            <Route path="tasks" element={<ProjectPlaceholderPage title="Tasks" />} />
+            <Route path="meetings" element={<ProjectPlaceholderPage title="Meetings" />} />
+            <Route path="members" element={<ProjectPlaceholderPage title="Members" />} />
+            <Route path="evidence" element={<ProjectPlaceholderPage title="Evidence" />} />
+            <Route path="settings" element={<ProjectPlaceholderPage title="Settings" />} />
+            <Route path="report" element={<ProjectPlaceholderPage title="Report" />} />
+          </Route>
         </Route>
       </Route>
 

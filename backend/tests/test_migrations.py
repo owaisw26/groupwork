@@ -7,12 +7,12 @@ def test_migration_runner_executes_all_sql_files_in_order(db_conn: PgConnection)
     from app.db.migrate import get_migration_files, run_migrations
 
     migration_files = get_migration_files()
-    assert len(migration_files) == 26
+    assert len(migration_files) == 27
     assert migration_files[0].name == "001_create_users.sql"
-    assert migration_files[-1].name == "026_normalize_user_emails.sql"
+    assert migration_files[-1].name == "027_unique_join_code.sql"
 
     applied = run_migrations(db_conn)
-    assert len(applied) == 26
+    assert len(applied) == 27
     assert applied == [path.name for path in migration_files]
 
 
@@ -22,7 +22,7 @@ def test_running_migrations_twice_is_idempotent(db_conn: PgConnection):
     first_run = run_migrations(db_conn)
     second_run = run_migrations(db_conn)
 
-    assert len(first_run) == 26
+    assert len(first_run) == 27
     assert second_run == []
 
 
