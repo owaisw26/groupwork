@@ -9,6 +9,7 @@ const TABS = [
   { label: 'Meetings', path: 'meetings' },
   { label: 'Members', path: 'members' },
   { label: 'Evidence', path: 'evidence' },
+  { label: 'Peer Review', path: 'peer-review' },
   { label: 'Settings', path: 'settings' },
   { label: 'Report', path: 'report' },
 ]
