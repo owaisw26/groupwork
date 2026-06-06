@@ -6,6 +6,8 @@ from psycopg2.extensions import connection
 
 from app.db.queries import invitations as invitation_queries
 from app.db.queries import projects as project_queries
+from app.db.queries import users as user_queries
+from app.services import notifications as notification_service
 from app.utils.email import invite_email_body, send_email
 from app.utils.security import generate_token, hash_token, normalize_email
 
@@ -68,6 +70,21 @@ def invite_member(
         f"Invitation to join {project['name']} on GroupWork",
         invite_email_body(project["name"], token),
     )
+
+    invitee = user_queries.get_user_by_email(conn, normalized_email)
+    if invitee:
+        notification_service.notify(
+            conn,
+            user_id=invitee["id"],
+            notification_type="invitation",
+            title="Project invitation",
+            message=f"You were invited to join {project['name']}.",
+            entity_type="invitation",
+            entity_id=invitation["id"],
+            recipient_email=invitee["email"],
+            email_subject=f"Invitation to join {project['name']}",
+            email_body=invite_email_body(project["name"], token),
+        )
 
     return {
         "id": str(invitation["id"]),

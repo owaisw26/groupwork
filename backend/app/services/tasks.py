@@ -192,6 +192,17 @@ def create_task(
         assignee_ids=resolved_assignees,
     )
     _log_activity(conn, project_id, user["id"], "task_created", "task", task["id"])
+    for assignee_id in resolved_assignees:
+        if str(assignee_id) != str(user["id"]):
+            _create_notification(
+                conn,
+                user_id=assignee_id,
+                notification_type="task_assigned",
+                title="Task assigned to you",
+                message=f"You were assigned to task: {title}",
+                entity_type="task",
+                entity_id=task["id"],
+            )
     return _public_task(task)
 
 
