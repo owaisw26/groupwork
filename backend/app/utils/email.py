@@ -47,6 +47,24 @@ def invite_email_body(project_name: str, token: str) -> str:
     )
 
 
+def notification_email_body(title: str, message: str, *, notification_type: str) -> str:
+    safe_title = html.escape(title)
+    safe_message = html.escape(message)
+    safe_type = html.escape(notification_type.replace("_", " "))
+    settings = get_settings()
+    safe_url = html.escape(settings.FRONTEND_URL)
+    return (
+        f"<div style='font-family:Arial,sans-serif;max-width:560px'>"
+        f"<p><strong>GroupWork</strong> &mdash; {safe_type}</p>"
+        f"<h2 style='color:#1565C0'>{safe_title}</h2>"
+        f"<p>{safe_message}</p>"
+        f'<p><a href="{safe_url}/notifications">View notifications</a></p>'
+        f"<p style='color:#666;font-size:12px'>"
+        f"You can manage email preferences in your profile settings."
+        f"</p></div>"
+    )
+
+
 def password_reset_email_body(token: str) -> str:
     settings = get_settings()
     safe_url = html.escape(settings.FRONTEND_URL)

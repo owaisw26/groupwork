@@ -10,6 +10,7 @@ from app.db.queries import subtasks as subtask_queries
 from app.db.queries import task_edit_requests as edit_request_queries
 from app.db.queries import tasks as task_queries
 from app.db.queries.tasks import VALID_PRIORITIES, VALID_STATUSES, _public_task
+from app.services import lifecycle as lifecycle_service
 from app.utils.pagination import decode_cursor
 
 
@@ -174,6 +175,7 @@ def create_task(
     assignee_ids: list[str],
 ) -> dict:
     _require_project_member(conn, project_id, user["id"])
+    lifecycle_service.assert_project_writable(conn, project_id)
     _validate_status(status_value)
     _validate_priority(priority)
 
@@ -266,6 +268,7 @@ def update_task(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only the project owner can edit tasks directly",
         )
+    lifecycle_service.assert_project_writable(conn, task["project_id"])
     if priority is not None:
         _validate_priority(priority)
     if assignee_ids is not None:
@@ -307,6 +310,7 @@ def update_task_status(
 def delete_task(conn: connection, task_id: str | UUID, user_id: str | UUID) -> None:
     task = _require_task_access(conn, task_id, user_id)
     _require_project_owner(conn, task["project_id"], user_id)
+    lifecycle_service.assert_project_writable(conn, task["project_id"])
     if not task_queries.delete_task(conn, task_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 

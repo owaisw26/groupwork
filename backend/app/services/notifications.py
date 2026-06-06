@@ -1,4 +1,3 @@
-import html
 import logging
 from uuid import UUID
 
@@ -7,7 +6,7 @@ from psycopg2.extensions import connection
 
 from app.db.queries import notification_preferences as preference_queries
 from app.db.queries import notifications as notification_queries
-from app.utils.email import send_email
+from app.utils.email import notification_email_body, send_email
 from app.utils.pagination import decode_cursor
 
 logger = logging.getLogger(__name__)
@@ -42,8 +41,13 @@ def notify(
         try:
             send_email(
                 recipient_email,
-                email_subject or title,
-                email_body or f"<p>{html.escape(message)}</p>",
+                email_subject or f"GroupWork: {title}",
+                email_body
+                or notification_email_body(
+                    title,
+                    message,
+                    notification_type=notification_type,
+                ),
             )
         except Exception:
             logger.exception(

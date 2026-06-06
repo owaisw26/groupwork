@@ -14,6 +14,7 @@ from app.models.projects import (
     UpdateProjectRequest,
 )
 from app.services import invitations as invitation_service
+from app.services import lifecycle as lifecycle_service
 from app.services import projects as project_service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -154,3 +155,36 @@ def transfer_ownership(
     return project_service.transfer_ownership(
         conn, project_id, user["id"], body.new_owner_id
     )
+
+
+@router.post("/{project_id}/complete")
+def complete_project(
+    project_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    lifecycle_service.complete_project(conn, project_id, user["id"])
+    return project_service.get_project(conn, project_id, user["id"])
+
+
+@router.post("/{project_id}/generate-report")
+def generate_project_report(
+    project_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    lifecycle_service.generate_project_report(conn, project_id, user["id"])
+    return project_service.get_project(conn, project_id, user["id"])
+
+
+@router.post("/{project_id}/archive")
+def archive_project(
+    project_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    lifecycle_service.archive_project(conn, project_id, user["id"])
+    return project_service.get_project(conn, project_id, user["id"])

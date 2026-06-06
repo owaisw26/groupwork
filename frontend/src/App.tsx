@@ -20,6 +20,7 @@ import EvidenceTab from './pages/project/EvidenceTab'
 import MeetingsTab from './pages/project/MeetingsTab'
 import PeerReviewPage from './pages/project/PeerReviewPage'
 import ProjectPlaceholderPage from './pages/project/ProjectPlaceholderPage'
+import ReportPreviewPage from './pages/project/ReportPreviewPage'
 import TasksTab from './pages/project/TasksTab'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { fetchCurrentUser } from './store/authSlice'
@@ -93,7 +94,7 @@ function AppRoutes() {
             <Route path="evidence" element={<EvidenceTab />} />
             <Route path="peer-review" element={<PeerReviewPage />} />
             <Route path="settings" element={<ProjectPlaceholderPage title="Settings" />} />
-            <Route path="report" element={<ProjectPlaceholderPage title="Report" />} />
+            <Route path="report" element={<ReportPreviewPage />} />
           </Route>
         </Route>
       </Route>
