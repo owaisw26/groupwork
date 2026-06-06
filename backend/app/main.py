@@ -13,6 +13,7 @@ from app.api.health import router as health_router
 from app.api.invitations import router as invitations_router
 from app.api.meetings import router as meetings_router
 from app.api.notifications import router as notifications_router
+from app.api.peer_reviews import router as peer_reviews_router
 from app.api.projects import router as projects_router
 from app.api.search import router as search_router
 from app.api.tasks import router as tasks_router
@@ -74,5 +75,6 @@ def create_app() -> FastAPI:
     app.include_router(evidence_router, prefix="/api/v1")
     app.include_router(meetings_router, prefix="/api/v1")
     app.include_router(notifications_router, prefix="/api/v1")
+    app.include_router(peer_reviews_router, prefix="/api/v1")
 
     return app

@@ -18,6 +18,7 @@ import ProjectLayout from './pages/project/ProjectLayout'
 import MembersTab from './pages/project/MembersTab'
 import EvidenceTab from './pages/project/EvidenceTab'
 import MeetingsTab from './pages/project/MeetingsTab'
+import PeerReviewPage from './pages/project/PeerReviewPage'
 import ProjectPlaceholderPage from './pages/project/ProjectPlaceholderPage'
 import TasksTab from './pages/project/TasksTab'
 import { useAppDispatch, useAppSelector } from './store/hooks'
@@ -90,6 +91,7 @@ function AppRoutes() {
             <Route path="meetings" element={<MeetingsTab />} />
             <Route path="members" element={<MembersTab />} />
             <Route path="evidence" element={<EvidenceTab />} />
+            <Route path="peer-review" element={<PeerReviewPage />} />
             <Route path="settings" element={<ProjectPlaceholderPage title="Settings" />} />
             <Route path="report" element={<ProjectPlaceholderPage title="Report" />} />
           </Route>
