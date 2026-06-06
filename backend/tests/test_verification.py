@@ -1,5 +1,4 @@
-import pytest
-
+from tests.auth_helpers import extract_token_from_email, register_user
 from tests.task_helpers import (
     add_project_member,
     create_project,
@@ -9,25 +8,49 @@ from tests.task_helpers import (
 )
 
 
+def _register_and_verify(auth_client, email_outbox, email: str) -> None:
+    register_user(auth_client, email=email)
+    token = extract_token_from_email(email_outbox[-1]["body"])
+    auth_client.post("/api/v1/auth/verify-email", json={"token": token})
+
+
 def _setup_three_member_project(auth_client, email_outbox, db_conn):
-    owner_headers, _ = verified_user(
-        auth_client, email_outbox, email="verify-owner@example.com"
-    )
+    owner_email = "verify-owner@example.com"
+    member_one_email = "verify-member1@example.com"
+    member_two_email = "verify-member2@example.com"
+
+    owner_headers, _ = verified_user(auth_client, email_outbox, email=owner_email)
     project = create_project(auth_client, owner_headers).json()
-    member_one_headers, member_one_email = verified_user(
-        auth_client, email_outbox, email="verify-member1@example.com"
-    )
-    member_two_headers, member_two_email = verified_user(
-        auth_client, email_outbox, email="verify-member2@example.com"
-    )
+
+    _register_and_verify(auth_client, email_outbox, member_one_email)
+    _register_and_verify(auth_client, email_outbox, member_two_email)
     add_project_member(db_conn, project["id"], member_one_email)
     add_project_member(db_conn, project["id"], member_two_email)
+
     return {
-        "owner_headers": switch_user(auth_client, "verify-owner@example.com"),
-        "member_one_headers": member_one_headers,
-        "member_two_headers": switch_user(auth_client, "verify-member2@example.com"),
+        "owner_email": owner_email,
+        "member_one_email": member_one_email,
+        "member_two_email": member_two_email,
         "project": project,
     }
+
+
+def _owner_headers(auth_client, ctx):
+    return switch_user(auth_client, ctx["owner_email"])
+
+
+def _member_one_headers(auth_client, ctx):
+    return switch_user(auth_client, ctx["member_one_email"])
+
+
+def _member_two_headers(auth_client, ctx):
+    return switch_user(auth_client, ctx["member_two_email"])
+
+
+def _create_task_checked(auth_client, headers, project_id, **overrides):
+    response = create_task(auth_client, headers, project_id, **overrides)
+    assert response.status_code == 201, response.json()
+    return response.json()
 
 
 def _mark_task_done(auth_client, headers, task_id):
@@ -40,14 +63,14 @@ def _mark_task_done(auth_client, headers, task_id):
 
 def test_moving_task_to_done_triggers_verification_state(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = create_task(
+    task = _create_task_checked(
         auth_client,
-        ctx["owner_headers"],
+        _owner_headers(auth_client, ctx),
         ctx["project"]["id"],
         title="Done task",
-    ).json()
+    )
 
-    response = _mark_task_done(auth_client, ctx["owner_headers"], task["id"])
+    response = _mark_task_done(auth_client, _owner_headers(auth_client, ctx), task["id"])
 
     assert response.status_code == 200
     assert response.json()["verification_status"] == "pending"
@@ -55,16 +78,12 @@ def test_moving_task_to_done_triggers_verification_state(auth_client, email_outb
 
 def test_member_can_verify(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = create_task(
-        auth_client,
-        ctx["owner_headers"],
-        ctx["project"]["id"],
-    ).json()
-    _mark_task_done(auth_client, ctx["owner_headers"], task["id"])
+    task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
+    _mark_task_done(auth_client, _owner_headers(auth_client, ctx), task["id"])
 
     response = auth_client.post(
         f"/api/v1/tasks/{task['id']}/verify",
-        headers=ctx["member_one_headers"],
+        headers=_member_one_headers(auth_client, ctx),
     )
 
     assert response.status_code == 200
@@ -73,16 +92,12 @@ def test_member_can_verify(auth_client, email_outbox, db_conn):
 
 def test_cannot_verify_own_task(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = create_task(
-        auth_client,
-        ctx["owner_headers"],
-        ctx["project"]["id"],
-    ).json()
-    _mark_task_done(auth_client, ctx["owner_headers"], task["id"])
+    task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
+    _mark_task_done(auth_client, _owner_headers(auth_client, ctx), task["id"])
 
     response = auth_client.post(
         f"/api/v1/tasks/{task['id']}/verify",
-        headers=ctx["owner_headers"],
+        headers=_owner_headers(auth_client, ctx),
     )
 
     assert response.status_code == 403
@@ -90,63 +105,46 @@ def test_cannot_verify_own_task(auth_client, email_outbox, db_conn):
 
 def test_cannot_verify_twice(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = create_task(
-        auth_client,
-        ctx["owner_headers"],
-        ctx["project"]["id"],
-    ).json()
-    _mark_task_done(auth_client, ctx["owner_headers"], task["id"])
+    task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
+    _mark_task_done(auth_client, _owner_headers(auth_client, ctx), task["id"])
 
-    auth_client.post(
-        f"/api/v1/tasks/{task['id']}/verify",
-        headers=ctx["member_one_headers"],
-    )
-    response = auth_client.post(
-        f"/api/v1/tasks/{task['id']}/verify",
-        headers=ctx["member_one_headers"],
-    )
+    member_headers = _member_one_headers(auth_client, ctx)
+    auth_client.post(f"/api/v1/tasks/{task['id']}/verify", headers=member_headers)
+    response = auth_client.post(f"/api/v1/tasks/{task['id']}/verify", headers=member_headers)
 
     assert response.status_code == 409
 
 
 def test_task_verified_when_majority_verify(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = create_task(
-        auth_client,
-        ctx["owner_headers"],
-        ctx["project"]["id"],
-    ).json()
-    _mark_task_done(auth_client, ctx["owner_headers"], task["id"])
+    task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
+    _mark_task_done(auth_client, _owner_headers(auth_client, ctx), task["id"])
 
     auth_client.post(
         f"/api/v1/tasks/{task['id']}/verify",
-        headers=ctx["member_one_headers"],
+        headers=_member_one_headers(auth_client, ctx),
     )
     auth_client.post(
         f"/api/v1/tasks/{task['id']}/verify",
-        headers=ctx["member_two_headers"],
+        headers=_member_two_headers(auth_client, ctx),
     )
 
     task_response = auth_client.get(
         f"/api/v1/tasks/{task['id']}",
-        headers=ctx["owner_headers"],
+        headers=_owner_headers(auth_client, ctx),
     )
     assert task_response.json()["verification_status"] == "verified"
 
 
 def test_dispute_creates_dispute_record(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = create_task(
-        auth_client,
-        ctx["owner_headers"],
-        ctx["project"]["id"],
-    ).json()
-    _mark_task_done(auth_client, ctx["owner_headers"], task["id"])
+    task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
+    _mark_task_done(auth_client, _owner_headers(auth_client, ctx), task["id"])
 
     response = auth_client.post(
         f"/api/v1/tasks/{task['id']}/dispute",
         json={"reason": "Work was not actually completed"},
-        headers=ctx["member_one_headers"],
+        headers=_member_one_headers(auth_client, ctx),
     )
 
     assert response.status_code == 201
@@ -161,17 +159,13 @@ def test_dispute_creates_dispute_record(auth_client, email_outbox, db_conn):
 
 def test_dispute_triggers_notification(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = create_task(
-        auth_client,
-        ctx["owner_headers"],
-        ctx["project"]["id"],
-    ).json()
-    _mark_task_done(auth_client, ctx["owner_headers"], task["id"])
+    task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
+    _mark_task_done(auth_client, _owner_headers(auth_client, ctx), task["id"])
 
     auth_client.post(
         f"/api/v1/tasks/{task['id']}/dispute",
         json={"reason": "Insufficient evidence"},
-        headers=ctx["member_one_headers"],
+        headers=_member_one_headers(auth_client, ctx),
     )
 
     with db_conn.cursor() as cur:
@@ -206,20 +200,16 @@ def test_non_member_cannot_verify(auth_client, email_outbox, db_conn):
 
 def test_get_task_verifications(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = create_task(
-        auth_client,
-        ctx["owner_headers"],
-        ctx["project"]["id"],
-    ).json()
-    _mark_task_done(auth_client, ctx["owner_headers"], task["id"])
+    task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
+    _mark_task_done(auth_client, _owner_headers(auth_client, ctx), task["id"])
     auth_client.post(
         f"/api/v1/tasks/{task['id']}/verify",
-        headers=ctx["member_one_headers"],
+        headers=_member_one_headers(auth_client, ctx),
     )
 
     response = auth_client.get(
         f"/api/v1/tasks/{task['id']}/verifications",
-        headers=ctx["owner_headers"],
+        headers=_owner_headers(auth_client, ctx),
     )
 
     assert response.status_code == 200
