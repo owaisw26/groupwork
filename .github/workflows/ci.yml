@@ -64,6 +64,8 @@ jobs:
           JWT_SECRET: ci-test-jwt-secret
           FRONTEND_URL: http://localhost:5173
           CORS_ORIGINS: http://localhost:5173
+          COOKIE_SECURE: "false"
+          AWS_S3_BUCKET: test-bucket
         run: pytest -v
 
   frontend:

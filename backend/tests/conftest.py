@@ -44,6 +44,7 @@ def email_outbox(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, str]]:
         outbox.append({"to": to, "subject": subject, "body": html_body})
 
     monkeypatch.setattr("app.utils.email.send_email", fake_send_email)
+    monkeypatch.setattr("app.services.invitations.send_email", fake_send_email)
     return outbox
 
 
