@@ -16,6 +16,7 @@ import OnboardingFlow from './pages/onboarding/OnboardingFlow'
 import ProjectLayout from './pages/project/ProjectLayout'
 import MembersTab from './pages/project/MembersTab'
 import ProjectPlaceholderPage from './pages/project/ProjectPlaceholderPage'
+import TasksTab from './pages/project/TasksTab'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { fetchCurrentUser } from './store/authSlice'
 import theme from './theme'
@@ -79,7 +80,7 @@ function AppRoutes() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/projects/:id" element={<ProjectLayout />}>
-            <Route path="tasks" element={<ProjectPlaceholderPage title="Tasks" />} />
+            <Route path="tasks" element={<TasksTab />} />
             <Route path="meetings" element={<ProjectPlaceholderPage title="Meetings" />} />
             <Route path="members" element={<MembersTab />} />
             <Route path="evidence" element={<ProjectPlaceholderPage title="Evidence" />} />
