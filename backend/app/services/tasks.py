@@ -279,11 +279,15 @@ def update_task_status(
     user_id: str | UUID,
     status_value: str,
 ) -> dict:
-    _require_task_access(conn, task_id, user_id)
+    task = _require_task_access(conn, task_id, user_id)
     _validate_status(status_value)
     updated = task_queries.update_task_status(conn, task_id, status_value)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if status_value == "done" and task["status"] != "done":
+        from app.services.verification import notify_verification_needed
+
+        notify_verification_needed(conn, updated)
     return _public_task(updated)
 
 
