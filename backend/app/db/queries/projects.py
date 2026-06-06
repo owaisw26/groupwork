@@ -26,7 +26,8 @@ def create_project(
             )
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             RETURNING id, name, description, course, due_date, status, owner_id,
-                      join_code, join_code_expires_at, max_members, deleted_at, created_at
+                      join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                      completed_at, peer_review_ends_at, report_s3_key, archived_at
             """,
             (
                 name,
@@ -48,7 +49,8 @@ def get_project(conn: connection, project_id: str | UUID) -> dict[str, Any] | No
         cur.execute(
             """
             SELECT id, name, description, course, due_date, status, owner_id,
-                   join_code, join_code_expires_at, max_members, deleted_at, created_at
+                   join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                   completed_at, peer_review_ends_at, report_s3_key, archived_at
             FROM projects
             WHERE id = %s
             """,
@@ -63,7 +65,8 @@ def get_project_for_update(conn: connection, project_id: str | UUID) -> dict[str
         cur.execute(
             """
             SELECT id, name, description, course, due_date, status, owner_id,
-                   join_code, join_code_expires_at, max_members, deleted_at, created_at
+                   join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                   completed_at, peer_review_ends_at, report_s3_key, archived_at
             FROM projects
             WHERE id = %s
             FOR UPDATE
@@ -80,6 +83,7 @@ def list_user_projects(conn: connection, user_id: str | UUID) -> list[dict[str, 
             """
             SELECT p.id, p.name, p.description, p.course, p.due_date, p.status, p.owner_id,
                    p.join_code, p.join_code_expires_at, p.max_members, p.deleted_at, p.created_at,
+                   p.completed_at, p.peer_review_ends_at, p.report_s3_key, p.archived_at,
                    COUNT(pm.user_id) AS member_count
             FROM projects p
             JOIN project_members pm_self ON pm_self.project_id = p.id AND pm_self.user_id = %s
@@ -91,7 +95,7 @@ def list_user_projects(conn: connection, user_id: str | UUID) -> list[dict[str, 
             (str(user_id),),
         )
         rows = cur.fetchall()
-    return [_row_to_project(row[:12], member_count=row[12]) for row in rows]
+    return [_row_to_project(row[:16], member_count=row[16]) for row in rows]
 
 
 def update_project(
@@ -133,9 +137,70 @@ def update_project(
             UPDATE projects SET {", ".join(updates)}
             WHERE id = %s AND deleted_at IS NULL
             RETURNING id, name, description, course, due_date, status, owner_id,
-                      join_code, join_code_expires_at, max_members, deleted_at, created_at
+                      join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                      completed_at, peer_review_ends_at, report_s3_key, archived_at
             """,
             tuple(params),
+        )
+        row = cur.fetchone()
+    return _row_to_project(row) if row else None
+
+
+def _build_lifecycle_updates(
+    *,
+    status: str,
+    completed_at: datetime | None = None,
+    peer_review_ends_at: datetime | None = None,
+    report_s3_key: str | None = None,
+    archived_at: datetime | None = None,
+) -> tuple[str, tuple[object, ...]]:
+    assignments = ["status = %s"]
+    params: list[object] = [status]
+
+    if completed_at is not None:
+        assignments.append("completed_at = %s")
+        params.append(completed_at)
+    if peer_review_ends_at is not None:
+        assignments.append("peer_review_ends_at = %s")
+        params.append(peer_review_ends_at)
+    if report_s3_key is not None:
+        assignments.append("report_s3_key = %s")
+        params.append(report_s3_key)
+    if archived_at is not None:
+        assignments.append("archived_at = %s")
+        params.append(archived_at)
+
+    return ", ".join(assignments), tuple(params)
+
+
+def update_project_status(
+    conn: connection,
+    project_id: str | UUID,
+    *,
+    status: str,
+    completed_at: datetime | None = None,
+    peer_review_ends_at: datetime | None = None,
+    report_s3_key: str | None = None,
+    archived_at: datetime | None = None,
+) -> dict[str, Any] | None:
+    updates, params = _build_lifecycle_updates(
+        status=status,
+        completed_at=completed_at,
+        peer_review_ends_at=peer_review_ends_at,
+        report_s3_key=report_s3_key,
+        archived_at=archived_at,
+    )
+    with conn.cursor() as cur:
+        cur.execute(
+            f"""
+            UPDATE projects
+            SET {updates}
+            WHERE id = %s AND deleted_at IS NULL
+            RETURNING id, name, description, course, due_date, status, owner_id,
+                      join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                      completed_at, peer_review_ends_at, report_s3_key, archived_at
+            """,
+            (*params, str(project_id)),
         )
         row = cur.fetchone()
     return _row_to_project(row) if row else None
@@ -206,7 +271,8 @@ def transfer_ownership(
             UPDATE projects SET owner_id = %s
             WHERE id = %s AND deleted_at IS NULL
             RETURNING id, name, description, course, due_date, status, owner_id,
-                      join_code, join_code_expires_at, max_members, deleted_at, created_at
+                      join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                      completed_at, peer_review_ends_at, report_s3_key, archived_at
             """,
             (str(new_owner_id), str(project_id)),
         )
@@ -228,7 +294,8 @@ def regenerate_join_code(
             SET join_code = %s, join_code_expires_at = %s
             WHERE id = %s AND deleted_at IS NULL
             RETURNING id, name, description, course, due_date, status, owner_id,
-                      join_code, join_code_expires_at, max_members, deleted_at, created_at
+                      join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                      completed_at, peer_review_ends_at, report_s3_key, archived_at
             """,
             (join_code, join_code_expires_at, str(project_id)),
         )
@@ -241,7 +308,8 @@ def get_project_by_join_code(conn: connection, join_code: str) -> dict[str, Any]
         cur.execute(
             """
             SELECT id, name, description, course, due_date, status, owner_id,
-                   join_code, join_code_expires_at, max_members, deleted_at, created_at
+                   join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                   completed_at, peer_review_ends_at, report_s3_key, archived_at
             FROM projects
             WHERE join_code = %s AND deleted_at IS NULL
             """,
@@ -259,7 +327,8 @@ def get_project_by_join_code_for_update(
         cur.execute(
             """
             SELECT id, name, description, course, due_date, status, owner_id,
-                   join_code, join_code_expires_at, max_members, deleted_at, created_at
+                   join_code, join_code_expires_at, max_members, deleted_at, created_at,
+                   completed_at, peer_review_ends_at, report_s3_key, archived_at
             FROM projects
             WHERE join_code = %s AND deleted_at IS NULL
             FOR UPDATE
@@ -324,6 +393,10 @@ def _row_to_project(row: tuple, *, member_count: int | None = None) -> dict[str,
         "max_members": row[9],
         "deleted_at": row[10],
         "created_at": row[11],
+        "completed_at": row[12] if len(row) > 12 else None,
+        "peer_review_ends_at": row[13] if len(row) > 13 else None,
+        "report_s3_key": row[14] if len(row) > 14 else None,
+        "archived_at": row[15] if len(row) > 15 else None,
     }
     if member_count is not None:
         project["member_count"] = member_count

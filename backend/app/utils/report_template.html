@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Contribution Report</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #1f2937;
+        font-size: 12px;
+        margin: 24px;
+      }
+      h1,
+      h2 {
+        margin: 0 0 8px 0;
+      }
+      h1 {
+        font-size: 24px;
+      }
+      h2 {
+        margin-top: 22px;
+        font-size: 16px;
+        border-bottom: 1px solid #e5e7eb;
+        padding-bottom: 4px;
+      }
+      p {
+        margin: 4px 0;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 8px;
+      }
+      th,
+      td {
+        border: 1px solid #d1d5db;
+        padding: 6px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: #f3f4f6;
+      }
+      .muted {
+        color: #6b7280;
+      }
+      .stats {
+        display: flex;
+        gap: 20px;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Contribution Report</h1>
+    <p><strong>Project:</strong> {{project_name}}</p>
+    <p><strong>Course:</strong> {{project_course}}</p>
+    <p class="muted"><strong>Generated:</strong> {{generated_at}}</p>
+
+    <h2>Task Summary</h2>
+    <div class="stats">
+      <p><strong>Total Tasks:</strong> {{total_tasks}}</p>
+      <p><strong>Completed Tasks:</strong> {{completed_tasks}}</p>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Status</th>
+          <th>Priority</th>
+          <th>Assignees</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{task_rows}}
+      </tbody>
+    </table>
+
+    <h2>Time Logs</h2>
+    <p><strong>Total Logged Hours:</strong> {{total_hours}}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Hours</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{time_rows}}
+      </tbody>
+    </table>
+
+    <h2>Peer Scores</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Quality</th>
+          <th>Communication</th>
+          <th>Reliability</th>
+          <th>Overall</th>
+          <th>Reviews</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{peer_rows}}
+      </tbody>
+    </table>
+
+    <h2>Disputes</h2>
+    <p><strong>Total Disputes:</strong> {{dispute_total}}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Task</th>
+          <th>Status</th>
+          <th>Reason</th>
+          <th>Outcome</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{dispute_rows}}
+      </tbody>
+    </table>
+
+    <h2>Attendance</h2>
+    <p><strong>Total Meetings:</strong> {{attendance_total_meetings}}</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Attended</th>
+          <th>Attendance Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{attendance_rows}}
+      </tbody>
+    </table>
+  </body>
+</html>
