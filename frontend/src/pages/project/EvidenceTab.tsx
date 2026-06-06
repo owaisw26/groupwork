@@ -1,7 +1,5 @@
 import {
   Alert,
-  Box,
-  CircularProgress,
   Link,
   Paper,
   Table,
@@ -11,7 +9,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../../services/api'
 
@@ -36,34 +34,22 @@ function formatFileSize(bytes: number): string {
 export default function EvidenceTab() {
   const { id: projectId } = useParams()
   const [items, setItems] = useState<EvidenceItem[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const loadEvidence = useCallback(async () => {
-    if (!projectId) return
-    setLoading(true)
-    setError(null)
-    try {
-      const response = await api.get(`/projects/${projectId}/evidence`)
-      setItems(response.data.items ?? [])
-    } catch {
-      setError('Failed to load evidence files')
-    } finally {
-      setLoading(false)
-    }
-  }, [projectId])
-
   useEffect(() => {
-    loadEvidence()
-  }, [loadEvidence])
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
-      </Box>
-    )
-  }
+    if (!projectId) {
+      return
+    }
+    api
+      .get(`/projects/${projectId}/evidence`)
+      .then((response) => {
+        setItems(response.data.items ?? [])
+        setError(null)
+      })
+      .catch(() => {
+        setError('Failed to load evidence files')
+      })
+  }, [projectId])
 
   return (
     <Paper sx={{ p: 3 }}>

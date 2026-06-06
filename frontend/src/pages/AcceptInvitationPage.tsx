@@ -24,13 +24,10 @@ export default function AcceptInvitationPage() {
   })
   const [projectName, setProjectName] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!token || !authInitialized) {
-      return
-    }
+  const showLoginRequired = authInitialized && !isAuthenticated
 
-    if (!isAuthenticated) {
-      setStatus('login-required')
+  useEffect(() => {
+    if (!token || !authInitialized || !isAuthenticated) {
       return
     }
 
@@ -64,8 +61,8 @@ export default function AcceptInvitationPage() {
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <Card sx={{ width: '100%', maxWidth: 420 }}>
         <CardContent sx={{ p: 4, textAlign: 'center' }}>
-          {status === 'loading' && <CircularProgress />}
-          {status === 'login-required' && (
+          {(status === 'loading' || (!authInitialized && token)) && <CircularProgress />}
+          {showLoginRequired && (
             <>
               <Alert severity="info">Please log in to accept this invitation.</Alert>
               <Button

@@ -1,6 +1,6 @@
 import pytest
 
-from tests.task_helpers import add_project_member, create_project, create_task, verified_user
+from tests.task_helpers import create_project, create_task, verified_user
 
 ALLOWED_FILE = {
     "filename": "report.pdf",
@@ -155,7 +155,8 @@ def test_request_presigned_url_rejects_project_quota_exceeded(
             INSERT INTO evidence_files (
                 task_id, user_id, s3_key, original_filename, file_size, mime_type
             )
-            SELECT %s, u.id, 'projects/test/key', 'existing.pdf', 49 * 1024 * 1024, 'application/pdf'
+            SELECT %s, u.id, 'projects/test/key', 'existing.pdf',
+                   49 * 1024 * 1024, 'application/pdf'
             FROM users u WHERE u.email = %s
             """,
             (task["id"], "evidence-quota@example.com"),
