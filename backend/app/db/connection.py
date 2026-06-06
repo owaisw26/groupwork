@@ -1,3 +1,4 @@
+import threading
 from contextlib import contextmanager
 from typing import Generator
 
@@ -7,17 +8,19 @@ from psycopg2.extensions import connection
 from app.config import get_settings
 
 _pool: pool.ThreadedConnectionPool | None = None
+_pool_lock = threading.Lock()
 
 
 def init_pool() -> None:
     global _pool
-    if _pool is None:
-        settings = get_settings()
-        _pool = pool.ThreadedConnectionPool(
-            minconn=5,
-            maxconn=20,
-            dsn=settings.DATABASE_URL,
-        )
+    with _pool_lock:
+        if _pool is None:
+            settings = get_settings()
+            _pool = pool.ThreadedConnectionPool(
+                minconn=5,
+                maxconn=20,
+                dsn=settings.DATABASE_URL,
+            )
 
 
 def close_pool() -> None:

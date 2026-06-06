@@ -1,3 +1,5 @@
+import html
+import logging
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -7,6 +9,8 @@ from app.db.queries import notification_preferences as preference_queries
 from app.db.queries import notifications as notification_queries
 from app.utils.email import send_email
 from app.utils.pagination import decode_cursor
+
+logger = logging.getLogger(__name__)
 
 
 def notify(
@@ -39,10 +43,13 @@ def notify(
             send_email(
                 recipient_email,
                 email_subject or title,
-                email_body or f"<p>{message}</p>",
+                email_body or f"<p>{html.escape(message)}</p>",
             )
         except Exception:
-            pass
+            logger.exception(
+                "Failed to send notification email for type %s",
+                notification_type,
+            )
 
     return notification
 

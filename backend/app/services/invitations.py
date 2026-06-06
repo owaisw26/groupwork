@@ -65,13 +65,9 @@ def invite_member(
         expires_at=_invitation_expiry(),
     )
 
-    send_email(
-        normalized_email,
-        f"Invitation to join {project['name']} on GroupWork",
-        invite_email_body(project["name"], token),
-    )
-
     invitee = user_queries.get_user_by_email(conn, normalized_email)
+    subject = f"Invitation to join {project['name']} on GroupWork"
+    body = invite_email_body(project["name"], token)
     if invitee:
         notification_service.notify(
             conn,
@@ -82,9 +78,11 @@ def invite_member(
             entity_type="invitation",
             entity_id=invitation["id"],
             recipient_email=invitee["email"],
-            email_subject=f"Invitation to join {project['name']}",
-            email_body=invite_email_body(project["name"], token),
+            email_subject=subject,
+            email_body=body,
         )
+    else:
+        send_email(normalized_email, subject, body)
 
     return {
         "id": str(invitation["id"]),

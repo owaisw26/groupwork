@@ -179,6 +179,7 @@ def refresh(request: Request, response: Response, conn: connection = Depends(_ge
 
 
 @router.post("/logout")
+@limiter.limit(AUTH_RATE_LIMIT)
 def logout(request: Request, response: Response, conn: connection = Depends(_get_db)):
     auth_service.logout_user(
         conn,

@@ -81,10 +81,10 @@ def update_comment(
         cur.execute(
             """
             UPDATE task_comments SET content = %s
-            WHERE id = %s
+            WHERE id = %s AND user_id = %s
             RETURNING id, task_id, user_id, content, created_at
             """,
-            (content, str(comment_id)),
+            (content, str(comment_id), str(user_id)),
         )
         row = cur.fetchone()
     return _public_comment(_row_to_comment(row)) if row else None

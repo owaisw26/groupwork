@@ -10,7 +10,7 @@ def send_email(to: str, subject: str, html_body: str) -> None:
     settings = get_settings()
     if not settings.SES_SENDER_EMAIL:
         logger.warning("SES_SENDER_EMAIL not configured; logging email to stdout for %s", to)
-        print(f"[DEV EMAIL] To: {to}\nSubject: {subject}\n{html_body}", flush=True)
+        print(f"[DEV EMAIL] To: {to}\nSubject: {subject}\n[body redacted]", flush=True)
         return
 
     import boto3
@@ -28,9 +28,10 @@ def send_email(to: str, subject: str, html_body: str) -> None:
 
 def verification_email_body(token: str) -> str:
     settings = get_settings()
+    safe_url = html.escape(settings.FRONTEND_URL)
     return (
         f"<p>Verify your GroupWork account.</p>"
-        f'<p><a href="{settings.FRONTEND_URL}/verify-email/{token}">'
+        f'<p><a href="{safe_url}/verify-email/{token}">'
         f"Verify email</a></p>"
     )
 
@@ -38,17 +39,19 @@ def verification_email_body(token: str) -> str:
 def invite_email_body(project_name: str, token: str) -> str:
     settings = get_settings()
     safe_name = html.escape(project_name)
+    safe_url = html.escape(settings.FRONTEND_URL)
     return (
         f"<p>You have been invited to join <strong>{safe_name}</strong> on GroupWork.</p>"
-        f'<p><a href="{settings.FRONTEND_URL}/invitations/accept/{token}">'
+        f'<p><a href="{safe_url}/invitations/accept/{token}">'
         f"Accept invitation</a></p>"
     )
 
 
 def password_reset_email_body(token: str) -> str:
     settings = get_settings()
+    safe_url = html.escape(settings.FRONTEND_URL)
     return (
         f"<p>Reset your GroupWork password.</p>"
-        f'<p><a href="{settings.FRONTEND_URL}/reset-password/{token}">'
+        f'<p><a href="{safe_url}/reset-password/{token}">'
         f"Reset password</a></p>"
     )

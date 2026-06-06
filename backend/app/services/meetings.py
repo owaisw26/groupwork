@@ -61,6 +61,7 @@ def _create_tasks_from_action_items(
         if not item.create_as_task:
             continue
         assignee_ids = [item.assignee_id] if item.assignee_id else [str(user_id)]
+        _validate_attendees(conn, project_id, assignee_ids)
         task_queries.create_task(
             conn,
             project_id=project_id,

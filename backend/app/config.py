@@ -7,7 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
-    DATABASE_URL: str = "postgresql://localhost:5432/groupwork"
+    DATABASE_URL: str
     JWT_SECRET: str
     JWT_ACCESS_TTL: int = 900
     JWT_REFRESH_TTL: int = 604800
@@ -27,6 +27,12 @@ class Settings(BaseSettings):
     def require_secure_cookies_in_production(self) -> "Settings":
         if self.is_production and not self.COOKIE_SECURE:
             raise ValueError("COOKIE_SECURE must be true when ENVIRONMENT=production")
+        return self
+
+    @model_validator(mode="after")
+    def require_strong_jwt_secret_in_production(self) -> "Settings":
+        if self.is_production and len(self.JWT_SECRET) < 32:
+            raise ValueError("JWT_SECRET must be at least 32 characters in production")
         return self
 
     @property

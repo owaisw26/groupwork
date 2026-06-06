@@ -1,6 +1,6 @@
 from datetime import date
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class CreateProjectRequest(BaseModel):
@@ -12,7 +12,7 @@ class CreateProjectRequest(BaseModel):
 
 
 class InviteMemberRequest(BaseModel):
-    email: str = Field(min_length=3, max_length=255)
+    email: EmailStr
 
 
 class JoinProjectRequest(BaseModel):

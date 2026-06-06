@@ -23,6 +23,7 @@ from app.middleware.csrf import CSRFMiddleware
 from app.middleware.error_handler import register_exception_handlers
 from app.middleware.logging import LoggingMiddleware
 from app.middleware.rate_limit import limiter
+from app.middleware.security_headers import SecurityHeadersMiddleware
 
 
 @asynccontextmanager
@@ -36,7 +37,14 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     settings = get_settings()
 
-    app = FastAPI(title="GroupWork API", version="1.0.0", lifespan=lifespan)
+    app = FastAPI(
+        title="GroupWork API",
+        version="1.0.0",
+        lifespan=lifespan,
+        docs_url=None if settings.is_production else "/docs",
+        redoc_url=None if settings.is_production else "/redoc",
+        openapi_url=None if settings.is_production else "/openapi.json",
+    )
     app.state.limiter = limiter
     register_exception_handlers(app)
 
@@ -50,6 +58,7 @@ def create_app() -> FastAPI:
     app.add_middleware(CSRFMiddleware)
     app.add_middleware(SlowAPIMiddleware)
     app.add_middleware(LoggingMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
 
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(auth_router, prefix="/api/v1")

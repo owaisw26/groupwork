@@ -259,6 +259,8 @@ def update_task(
 ) -> dict:
     task = _require_task_access(conn, task_id, user_id)
     project = project_queries.get_project(conn, task["project_id"])
+    if not project or project["deleted_at"] is not None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     if str(project["owner_id"]) != str(user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

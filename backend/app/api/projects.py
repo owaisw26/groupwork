@@ -5,6 +5,7 @@ from psycopg2.extensions import connection
 
 from app.db.connection import get_connection
 from app.middleware.auth import get_verified_user
+from app.middleware.rate_limit import INVITE_RATE_LIMIT, JOIN_PROJECT_RATE_LIMIT, limiter
 from app.models.projects import (
     CreateProjectRequest,
     InviteMemberRequest,
@@ -99,6 +100,7 @@ def regenerate_join_code(
 
 
 @router.post("/join")
+@limiter.limit(JOIN_PROJECT_RATE_LIMIT)
 def join_project(
     request: Request,
     body: JoinProjectRequest,
@@ -109,6 +111,7 @@ def join_project(
 
 
 @router.post("/{project_id}/invite", status_code=status.HTTP_201_CREATED)
+@limiter.limit(INVITE_RATE_LIMIT)
 def invite_member(
     project_id: UUID,
     request: Request,
