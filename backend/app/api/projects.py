@@ -5,7 +5,14 @@ from psycopg2.extensions import connection
 
 from app.db.connection import get_connection
 from app.middleware.auth import get_verified_user
-from app.models.projects import CreateProjectRequest, UpdateProjectRequest
+from app.models.projects import (
+    CreateProjectRequest,
+    InviteMemberRequest,
+    JoinProjectRequest,
+    TransferOwnershipRequest,
+    UpdateProjectRequest,
+)
+from app.services import invitations as invitation_service
 from app.services import projects as project_service
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -89,3 +96,58 @@ def regenerate_join_code(
 ):
     user = get_verified_user(request)
     return project_service.regenerate_join_code(conn, project_id, user["id"])
+
+
+@router.post("/join")
+def join_project(
+    request: Request,
+    body: JoinProjectRequest,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return project_service.join_project(conn, user, body.join_code)
+
+
+@router.post("/{project_id}/invite", status_code=status.HTTP_201_CREATED)
+def invite_member(
+    project_id: UUID,
+    request: Request,
+    body: InviteMemberRequest,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return invitation_service.invite_member(conn, project_id, user, body.email)
+
+
+@router.get("/{project_id}/members")
+def list_members(
+    project_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return project_service.list_members(conn, project_id, user["id"])
+
+
+@router.post("/{project_id}/leave")
+def leave_project(
+    project_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    project_service.leave_project(conn, project_id, user["id"])
+    return {"status": "ok"}
+
+
+@router.post("/{project_id}/transfer-ownership")
+def transfer_ownership(
+    project_id: UUID,
+    request: Request,
+    body: TransferOwnershipRequest,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return project_service.transfer_ownership(
+        conn, project_id, user["id"], body.new_owner_id
+    )

@@ -8,6 +8,7 @@ import {
   TextField,
 } from '@mui/material'
 import { useState } from 'react'
+import api from '../services/api'
 
 interface JoinProjectDialogProps {
   open: boolean
@@ -18,8 +19,15 @@ export default function JoinProjectDialog({ open, onClose }: JoinProjectDialogPr
   const [joinCode, setJoinCode] = useState('')
   const [message, setMessage] = useState<string | null>(null)
 
-  const handleSubmit = () => {
-    setMessage('Join by code will be available in the group formation module.')
+  const handleSubmit = async () => {
+    setMessage(null)
+    try {
+      await api.post('/projects/join', { join_code: joinCode })
+      onClose()
+      setJoinCode('')
+    } catch {
+      setMessage('Invalid or expired join code')
+    }
   }
 
   return (

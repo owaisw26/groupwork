@@ -34,6 +34,15 @@ def verification_email_body(token: str) -> str:
     )
 
 
+def invite_email_body(project_name: str, token: str) -> str:
+    settings = get_settings()
+    return (
+        f"<p>You have been invited to join <strong>{project_name}</strong> on GroupWork.</p>"
+        f'<p><a href="{settings.FRONTEND_URL}/invitations/accept/{token}">'
+        f"Accept invitation</a></p>"
+    )
+
+
 def password_reset_email_body(token: str) -> str:
     settings = get_settings()
     return (
