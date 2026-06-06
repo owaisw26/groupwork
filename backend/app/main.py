@@ -10,6 +10,9 @@ from app.api.dashboard import router as dashboard_router
 from app.api.health import router as health_router
 from app.api.invitations import router as invitations_router
 from app.api.projects import router as projects_router
+from app.api.search import router as search_router
+from app.api.tasks import router as tasks_router
+from app.api.time_logs import router as time_logs_router
 from app.api.users import router as users_router
 from app.config import get_settings
 from app.db.connection import close_pool, init_pool
@@ -51,5 +54,8 @@ def create_app() -> FastAPI:
     app.include_router(projects_router, prefix="/api/v1")
     app.include_router(invitations_router, prefix="/api/v1")
     app.include_router(dashboard_router, prefix="/api/v1")
+    app.include_router(tasks_router, prefix="/api/v1")
+    app.include_router(time_logs_router, prefix="/api/v1")
+    app.include_router(search_router, prefix="/api/v1")
 
     return app
