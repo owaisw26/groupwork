@@ -5,7 +5,6 @@ import { SLATE } from '../appTheme'
 import {
   AVATAR_COLORS,
   formatTaskDueDate,
-  getEffectiveDueDate,
   memberInitials,
   PRIORITY_PILL_WIDTH,
   PRIORITY_STYLES,
@@ -14,21 +13,21 @@ import type { Task } from '../store/tasksSlice'
 
 const TASK_CARD_BORDER = '#E7ECF3'
 
-const STATUS_CHECKLIST: Record<string, { done: number; total: number }> = {
-  todo: { done: 0, total: 4 },
-  in_progress: { done: 2, total: 4 },
-  review: { done: 3, total: 4 },
-  done: { done: 4, total: 4 },
-}
-
 interface TaskCardProps {
   task: Task
   onClick: () => void
   members?: { id: string; full_name: string }[]
-  projectDueDate?: string | null
+  completedSubtasks?: number
+  totalSubtasks?: number
 }
 
-export default function TaskCard({ task, onClick, members = [], projectDueDate = null }: TaskCardProps) {
+export default function TaskCard({
+  task,
+  onClick,
+  members = [],
+  completedSubtasks,
+  totalSubtasks,
+}: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
   })
@@ -38,20 +37,13 @@ export default function TaskCard({ task, onClick, members = [], projectDueDate =
     : undefined
 
   const priority = PRIORITY_STYLES[task.priority] ?? PRIORITY_STYLES.medium
-  const checklist = STATUS_CHECKLIST[task.status] ?? STATUS_CHECKLIST.todo
-  const progress = Math.round((checklist.done / checklist.total) * 100)
-  const assigneeCount = Math.max(task.assignee_ids.length, 1)
   const assignees = task.assignee_ids
     .map((id) => members.find((member) => member.id === id))
     .filter((member): member is { id: string; full_name: string } => Boolean(member))
-  const displayAssignees =
-    assignees.length > 0
-      ? assignees.slice(0, 3)
-      : Array.from({ length: Math.min(assigneeCount, 3) }).map((_, index) => ({
-          id: `placeholder-${index}`,
-          full_name: String.fromCharCode(65 + index),
-        }))
-  const effectiveDueDate = getEffectiveDueDate(task.due_date, projectDueDate)
+  const hasSubtaskProgress = totalSubtasks != null && totalSubtasks > 0
+  const progress = hasSubtaskProgress
+    ? Math.round(((completedSubtasks ?? 0) / totalSubtasks) * 100)
+    : 0
 
   return (
     <Paper
@@ -108,65 +100,79 @@ export default function TaskCard({ task, onClick, members = [], projectDueDate =
         </Box>
       </Box>
 
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          mt: 2,
-          mb: 1.5,
-        }}
-      >
-        <Box sx={{ display: 'flex' }}>
-          {displayAssignees.map((assignee, index) => (
-            <Avatar
-              key={assignee.id}
-              sx={{
-                width: 32,
-                height: 32,
-                fontSize: 12,
-                fontWeight: 700,
-                bgcolor: AVATAR_COLORS[index % AVATAR_COLORS.length],
-                border: '2.5px solid #FFFFFF',
-                ml: index > 0 ? '-10px' : 0,
-                color: SLATE[800],
-              }}
-            >
-              {memberInitials(assignee.full_name)}
-            </Avatar>
-          ))}
-        </Box>
-        {effectiveDueDate && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: SLATE[500] }}>
-            <CalendarTodayOutlinedIcon sx={{ fontSize: 15 }} />
-            <Typography sx={{ fontSize: 13 }}>{formatTaskDueDate(effectiveDueDate)}</Typography>
-          </Box>
-        )}
-      </Box>
-
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Typography sx={{ fontSize: 13, color: SLATE[500], fontWeight: 600, flexShrink: 0 }}>
-          {checklist.done} / {checklist.total}
-        </Typography>
+      {(assignees.length > 0 || task.due_date) && (
         <Box
           sx={{
-            flex: 1,
-            height: 8,
-            bgcolor: '#E2E8F0',
-            borderRadius: 4,
-            overflow: 'hidden',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            mt: 2,
+            mb: hasSubtaskProgress ? 1.5 : 0,
           }}
         >
-          <Box
-            sx={{
-              width: `${progress}%`,
-              height: '100%',
-              bgcolor: task.status === 'done' ? '#16A34A' : '#22C55E',
-              borderRadius: 4,
-              transition: 'width 200ms ease',
-            }}
-          />
+          {assignees.length > 0 ? (
+            <Box sx={{ display: 'flex' }}>
+              {assignees.slice(0, 3).map((assignee, index) => (
+                <Avatar
+                  key={assignee.id}
+                  sx={{
+                    width: 32,
+                    height: 32,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    bgcolor: AVATAR_COLORS[index % AVATAR_COLORS.length],
+                    border: '2.5px solid #FFFFFF',
+                    ml: index > 0 ? '-10px' : 0,
+                    color: SLATE[800],
+                  }}
+                >
+                  {memberInitials(assignee.full_name)}
+                </Avatar>
+              ))}
+            </Box>
+          ) : (
+            <Box />
+          )}
+          {task.due_date && (
+            <Box
+              data-testid="task-card-due-date"
+              sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: SLATE[500] }}
+            >
+              <CalendarTodayOutlinedIcon sx={{ fontSize: 15 }} />
+              <Typography sx={{ fontSize: 13 }}>{formatTaskDueDate(task.due_date)}</Typography>
+            </Box>
+          )}
         </Box>
+      )}
+
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mt: 2 }}>
+        {hasSubtaskProgress && (
+          <>
+            <Typography sx={{ fontSize: 13, color: SLATE[500], fontWeight: 600, flexShrink: 0 }}>
+              {completedSubtasks ?? 0} / {totalSubtasks}
+            </Typography>
+            <Box
+              sx={{
+                flex: 1,
+                height: 8,
+                bgcolor: '#E2E8F0',
+                borderRadius: 4,
+                overflow: 'hidden',
+              }}
+            >
+              <Box
+                sx={{
+                  width: `${progress}%`,
+                  height: '100%',
+                  bgcolor: task.status === 'done' ? '#16A34A' : '#22C55E',
+                  borderRadius: 4,
+                  transition: 'width 200ms ease',
+                }}
+              />
+            </Box>
+          </>
+        )}
+        {!hasSubtaskProgress && <Box sx={{ flex: 1 }} />}
         <Box
           sx={{
             width: PRIORITY_PILL_WIDTH,

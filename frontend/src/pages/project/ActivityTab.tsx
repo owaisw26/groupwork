@@ -16,12 +16,26 @@ export default function ActivityTab() {
     if (!projectId) {
       return
     }
-    setLoading(true)
-    api
-      .get<ActivityItem[]>(`/projects/${projectId}/activity`)
-      .then((response) => setItems(response.data))
-      .catch(() => setItems([]))
-      .finally(() => setLoading(false))
+
+    let cancelled = false
+
+    const loadActivity = async () => {
+      setLoading(true)
+      try {
+        const response = await api.get<ActivityItem[]>(`/projects/${projectId}/activity`)
+        if (!cancelled) setItems(response.data)
+      } catch {
+        if (!cancelled) setItems([])
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+
+    void loadActivity()
+
+    return () => {
+      cancelled = true
+    }
   }, [projectId])
 
   return (

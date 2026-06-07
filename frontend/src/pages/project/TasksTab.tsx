@@ -24,7 +24,7 @@ import {
   Stack,
   Typography,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link as RouterLink, useOutletContext, useParams } from 'react-router-dom'
 import { APP_BORDER, APP_PRIMARY, APP_PRIMARY_LIGHT, fs, SLATE, SURFACE_CARD_SX } from '../../appTheme'
 import TaskCard from '../../components/TaskCard'
@@ -35,6 +35,7 @@ import {
   fetchProjectTasks,
   TASK_STATUSES,
   updateTaskStatus,
+  type Subtask,
   type Task,
   type TaskStatus,
 } from '../../store/tasksSlice'
@@ -86,7 +87,7 @@ function KanbanColumn({
   onTaskClick,
   onAddTask,
   members,
-  projectDueDate,
+  subtaskCounts,
   expanded,
   onViewAll,
 }: {
@@ -95,7 +96,7 @@ function KanbanColumn({
   onTaskClick: (task: Task) => void
   onAddTask: () => void
   members: ProjectMember[]
-  projectDueDate?: string | null
+  subtaskCounts: Record<string, { completed: number; total: number }>
   expanded: boolean
   onViewAll: () => void
 }) {
@@ -171,7 +172,8 @@ function KanbanColumn({
             key={task.id}
             task={task}
             members={members}
-            projectDueDate={projectDueDate}
+            completedSubtasks={subtaskCounts[task.id]?.completed}
+            totalSubtasks={subtaskCounts[task.id]?.total}
             onClick={() => onTaskClick(task)}
           />
         ))}
@@ -230,10 +232,13 @@ export default function TasksTab() {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [subtaskCounts, setSubtaskCounts] = useState<Record<string, { completed: number; total: number }>>({})
   const [expandedColumns, setExpandedColumns] = useState<Partial<Record<TaskStatus, boolean>>>({})
   const [activityExpanded, setActivityExpanded] = useState(false)
+  const suppressTaskClickRef = useRef(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
+  const taskIdsKey = useMemo(() => items.map((task) => task.id).sort().join(','), [items])
 
   useEffect(() => {
     if (projectId) {
@@ -244,6 +249,46 @@ export default function TasksTab() {
         .catch(() => setMembers([]))
     }
   }, [dispatch, projectId])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSubtaskCounts = async () => {
+      if (!taskIdsKey) {
+        if (!cancelled) setSubtaskCounts({})
+        return
+      }
+
+      const taskIds = taskIdsKey.split(',')
+      const entries = await Promise.all(
+        taskIds.map(async (taskId) => {
+          try {
+            const response = await api.get<Subtask[]>(`/tasks/${taskId}/subtasks`)
+            const subtasks = response.data
+            return [
+              taskId,
+              {
+                completed: subtasks.filter((subtask) => subtask.is_completed).length,
+                total: subtasks.length,
+              },
+            ] as const
+          } catch {
+            return [taskId, { completed: 0, total: 0 }] as const
+          }
+        }),
+      )
+
+      if (!cancelled) {
+        setSubtaskCounts(Object.fromEntries(entries))
+      }
+    }
+
+    void loadSubtaskCounts()
+
+    return () => {
+      cancelled = true
+    }
+  }, [taskIdsKey])
 
   const reviewTasks = useMemo(
     () => items.filter((task) => task.status === 'review' || task.verification_status === 'pending'),
@@ -274,8 +319,17 @@ export default function TasksTab() {
 
     const task = items.find((t) => t.id === taskId)
     if (task && task.status !== newStatus) {
+      suppressTaskClickRef.current = true
+      window.setTimeout(() => {
+        suppressTaskClickRef.current = false
+      }, 0)
       dispatch(updateTaskStatus({ taskId, status: newStatus }))
     }
+  }
+
+  const handleTaskClick = (task: Task) => {
+    if (suppressTaskClickRef.current) return
+    setSelectedTaskId(task.id)
   }
 
   const handleVerify = async (taskId: string) => {
@@ -324,8 +378,8 @@ export default function TasksTab() {
                   status={status}
                   tasks={items.filter((t) => t.status === status)}
                   members={members}
-                  projectDueDate={currentProject?.due_date}
-                  onTaskClick={(task) => setSelectedTaskId(task.id)}
+                  subtaskCounts={subtaskCounts}
+                  onTaskClick={handleTaskClick}
                   onAddTask={() => openCreateTask?.()}
                   expanded={!!expandedColumns[status]}
                   onViewAll={() =>
@@ -340,7 +394,8 @@ export default function TasksTab() {
               <TaskCard
                 task={activeTask}
                 members={members}
-                projectDueDate={currentProject?.due_date}
+                completedSubtasks={subtaskCounts[activeTask.id]?.completed}
+                totalSubtasks={subtaskCounts[activeTask.id]?.total}
                 onClick={() => {}}
               />
             ) : null}

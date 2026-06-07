@@ -9,9 +9,13 @@ import {
   Button,
   Checkbox,
   Dialog,
+  FormControl,
   IconButton,
+  InputLabel,
   MenuItem,
+  OutlinedInput,
   Select,
+  type SelectChangeEvent,
   Stack,
   TextField,
   Typography,
@@ -218,6 +222,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
   const [editDescription, setEditDescription] = useState('')
   const [editPriority, setEditPriority] = useState('medium')
   const [editDueDate, setEditDueDate] = useState('')
+  const [editAssigneeIds, setEditAssigneeIds] = useState<string[]>([])
   const [requestEditOpen, setRequestEditOpen] = useState(false)
   const [proposedTitle, setProposedTitle] = useState('')
   const [evidence, setEvidence] = useState<EvidenceItem[]>([])
@@ -225,6 +230,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
   const [disputes, setDisputes] = useState<DisputeItem[]>([])
   const [disputeReason, setDisputeReason] = useState('')
   const [showDisputeForm, setShowDisputeForm] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const isOwner = user?.id === projectOwnerId
   const isAssignee = currentTask?.assignee_ids.includes(user?.id ?? '') ?? false
@@ -320,11 +326,12 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
       setEditTitle(currentTask.title)
       setEditDescription(currentTask.description ?? '')
       setEditPriority(currentTask.priority)
-      setEditDueDate(currentTask.due_date ?? projectDueDate ?? '')
+      setEditDueDate(currentTask.due_date ?? '')
+      setEditAssigneeIds(currentTask.assignee_ids)
       setProposedTitle(currentTask.title)
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [currentTask, taskId, projectDueDate])
+  }, [currentTask, taskId])
 
   const handleClose = () => {
     dispatch(clearTaskDetail())
@@ -333,18 +340,34 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
     onClose()
   }
 
+  const resetEditFields = () => {
+    if (!currentTask) return
+    setEditTitle(currentTask.title)
+    setEditDescription(currentTask.description ?? '')
+    setEditPriority(currentTask.priority)
+    setEditDueDate(currentTask.due_date ?? '')
+    setEditAssigneeIds(currentTask.assignee_ids)
+  }
+
   const handleSave = async () => {
     if (!taskId) return
-    await dispatch(
-      updateTask({
-        taskId,
-        title: editTitle,
-        description: editDescription,
-        priority: editPriority,
-        due_date: editDueDate || undefined,
-      }),
-    )
-    setEditMode(false)
+    const assigneeIds = editAssigneeIds.length > 0 ? editAssigneeIds : user?.id ? [user.id] : []
+    setSaveError(null)
+    try {
+      await dispatch(
+        updateTask({
+          taskId,
+          title: editTitle,
+          description: editDescription,
+          priority: editPriority,
+          due_date: editDueDate || undefined,
+          assignee_ids: assigneeIds,
+        }),
+      ).unwrap()
+      setEditMode(false)
+    } catch (error) {
+      setSaveError(typeof error === 'string' ? error : 'Failed to save task')
+    }
   }
 
   const handleAddSubtask = async () => {
@@ -388,13 +411,15 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
       onClose={handleClose}
       maxWidth="md"
       fullWidth
-      PaperProps={{
-        sx: {
-          borderRadius: '18px',
-          border: `1px solid ${APP_BORDER}`,
-          boxShadow: '0 18px 48px rgba(15, 23, 42, 0.11)',
-          overflow: 'hidden',
-          bgcolor: SLATE[50],
+      slotProps={{
+        paper: {
+          sx: {
+            borderRadius: '18px',
+            border: `1px solid ${APP_BORDER}`,
+            boxShadow: '0 18px 48px rgba(15, 23, 42, 0.11)',
+            overflow: 'hidden',
+            bgcolor: SLATE[50],
+          },
         },
       }}
     >
@@ -435,26 +460,31 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
 
                   {editMode ? (
                     <>
-                      <Select
-                        size="small"
-                        value={editPriority}
-                        onChange={(e) => setEditPriority(e.target.value)}
-                        sx={{
-                          ...COMPACT_SELECT_SX,
-                          width: PRIORITY_SELECT_WIDTH,
-                          flexShrink: 0,
-                          bgcolor: (PRIORITY_STYLES[editPriority] ?? PRIORITY_STYLES.medium).bg,
-                          color: (PRIORITY_STYLES[editPriority] ?? PRIORITY_STYLES.medium).color,
-                          '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                        }}
-                      >
-                        {PRIORITY_OPTIONS.map((option) => (
-                          <MenuItem key={option} value={option} sx={{ fontSize: 13, fontWeight: 600 }}>
-                            {PRIORITY_STYLES[option].label}
-                          </MenuItem>
-                        ))}
-                      </Select>
+                      <FormControl size="small" sx={{ width: PRIORITY_SELECT_WIDTH, flexShrink: 0 }}>
+                        <InputLabel id="edit-task-priority-label" shrink>
+                          Priority
+                        </InputLabel>
+                        <Select
+                          labelId="edit-task-priority-label"
+                          label="Priority"
+                          value={editPriority}
+                          onChange={(e) => setEditPriority(e.target.value)}
+                          sx={{
+                            ...COMPACT_SELECT_SX,
+                            bgcolor: (PRIORITY_STYLES[editPriority] ?? PRIORITY_STYLES.medium).bg,
+                            color: (PRIORITY_STYLES[editPriority] ?? PRIORITY_STYLES.medium).color,
+                            '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                          }}
+                        >
+                          {PRIORITY_OPTIONS.map((option) => (
+                            <MenuItem key={option} value={option} sx={{ fontSize: 13, fontWeight: 600 }}>
+                              {PRIORITY_STYLES[option].label}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
                       <TextField
+                        label="Due Date"
                         type="date"
                         size="small"
                         value={editDueDate}
@@ -475,7 +505,35 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                           },
                         }}
                       />
-                      <Typography sx={{ fontSize: 12, color: SLATE[400], fontWeight: 600 }}>
+                      <FormControl size="small" sx={{ minWidth: 180, flex: 1 }}>
+                        <InputLabel id="edit-task-assignees-label">Assignees</InputLabel>
+                        <Select<string[]>
+                          labelId="edit-task-assignees-label"
+                          label="Assignees"
+                          multiple
+                          value={editAssigneeIds}
+                          onChange={(event: SelectChangeEvent<string[]>) => {
+                            const value = event.target.value
+                            setEditAssigneeIds(typeof value === 'string' ? value.split(',') : value)
+                          }}
+                          input={<OutlinedInput label="Assignees" />}
+                          renderValue={(selected) =>
+                            selected
+                              .map((memberId: string) =>
+                                members.find((member) => member.id === memberId)?.full_name ?? memberId,
+                              )
+                              .join(', ')
+                          }
+                          sx={COMPACT_SELECT_SX}
+                        >
+                          {members.map((member) => (
+                            <MenuItem key={member.id} value={member.id} sx={{ fontSize: 13, fontWeight: 600 }}>
+                              {member.full_name}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Typography sx={{ fontSize: 12, color: SLATE[400], fontWeight: 600, width: '100%' }}>
                         {STATUS_LABELS[currentTask.status]} · move on board to change status
                       </Typography>
                     </>
@@ -851,7 +909,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                       <Typography sx={{ fontSize: fs(13), fontWeight: 700, color: SLATE[900], mb: 0.25 }}>
                         {comment.author_name ?? 'User'}
                       </Typography>
-                      <Typography sx={{ fontSize: fs(14), color: SLATE[600], lineHeight: 1.5 }}>
+                      <Typography sx={{ fontSize: fs(14), color: SLATE[500], lineHeight: 1.5 }}>
                         {comment.content}
                       </Typography>
                     </Box>
@@ -1055,8 +1113,17 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
         )}
         {isOwner && editMode && (
           <>
+            {saveError && (
+              <Typography sx={{ fontSize: 13, color: '#DC2626', fontWeight: 600, mr: 'auto' }}>
+                {saveError}
+              </Typography>
+            )}
             <Button
-              onClick={() => setEditMode(false)}
+              onClick={() => {
+                resetEditFields()
+                setSaveError(null)
+                setEditMode(false)
+              }}
               sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
             >
               Cancel
