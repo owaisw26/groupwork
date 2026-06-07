@@ -2,7 +2,6 @@ import {
   Box,
   Chip,
   CircularProgress,
-  Paper,
   Table,
   TableBody,
   TableCell,
@@ -13,7 +12,9 @@ import {
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { SURFACE_CARD_SX } from '../appTheme'
 import TaskDetailModal from '../components/TaskDetailModal'
+import PageHeader from '../components/layout/PageHeader'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { fetchProjects } from '../store/projectsSlice'
 import { fetchMyTasks } from '../store/tasksSlice'
@@ -49,61 +50,64 @@ export default function MyTasksPage() {
   }
 
   return (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        My Tasks
-      </Typography>
+    <Box>
+      <PageHeader
+        title="My Tasks"
+        subtitle="All tasks assigned to you across every project."
+      />
 
-      {myTasks.length === 0 ? (
-        <Typography color="text.secondary">No tasks assigned to you yet.</Typography>
-      ) : (
-        <TableContainer>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Project</TableCell>
-                <TableCell>Status</TableCell>
-                <TableCell>Priority</TableCell>
-                <TableCell>Due Date</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {myTasks.map((task) => (
-                <TableRow
-                  key={task.id}
-                  hover
-                  sx={{ cursor: 'pointer' }}
-                  onClick={() => setSelectedTaskId(task.id)}
-                >
-                  <TableCell>{task.title}</TableCell>
-                  <TableCell>
-                    <Typography
-                      variant="body2"
-                      color="primary"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(`/projects/${task.project_id}/tasks`)
-                      }}
-                    >
-                      {task.project_name ?? task.project_id}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={task.status.replace('_', ' ')}
-                      size="small"
-                      color={STATUS_COLORS[task.status] ?? 'default'}
-                    />
-                  </TableCell>
-                  <TableCell>{task.priority}</TableCell>
-                  <TableCell>{task.due_date ?? '—'}</TableCell>
+      <Box sx={SURFACE_CARD_SX}>
+        {myTasks.length === 0 ? (
+          <Typography color="text.secondary">No tasks assigned to you yet.</Typography>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Title</TableCell>
+                  <TableCell>Project</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Priority</TableCell>
+                  <TableCell>Due Date</TableCell>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      )}
+              </TableHead>
+              <TableBody>
+                {myTasks.map((task) => (
+                  <TableRow
+                    key={task.id}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => setSelectedTaskId(task.id)}
+                  >
+                    <TableCell sx={{ fontWeight: 600 }}>{task.title}</TableCell>
+                    <TableCell>
+                      <Typography
+                        variant="body2"
+                        color="primary"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/projects/${task.project_id}/tasks`)
+                        }}
+                      >
+                        {task.project_name ?? task.project_id}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={task.status.replace('_', ' ')}
+                        size="small"
+                        color={STATUS_COLORS[task.status] ?? 'default'}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ textTransform: 'capitalize' }}>{task.priority}</TableCell>
+                    <TableCell>{task.due_date ?? '—'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
+      </Box>
 
       {selectedTaskId && (
         <TaskDetailModal
@@ -114,6 +118,6 @@ export default function MyTasksPage() {
           onClose={() => setSelectedTaskId(null)}
         />
       )}
-    </Paper>
+    </Box>
   )
 }

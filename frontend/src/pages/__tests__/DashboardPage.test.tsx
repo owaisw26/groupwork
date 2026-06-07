@@ -57,13 +57,15 @@ describe('DashboardPage', () => {
     })
   })
 
-  it('renders four dashboard widgets', async () => {
+  it('renders dashboard summary cards and widgets', async () => {
     renderDashboard()
 
-    expect(await screen.findByText('My Tasks')).toBeInTheDocument()
-    expect(screen.getByText('Upcoming Deadlines')).toBeInTheDocument()
-    expect(screen.getByText('Recent Activity')).toBeInTheDocument()
-    expect(screen.getByText('Quick Actions')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument()
+    expect(screen.getByText('Projects')).toBeInTheDocument()
+    expect(screen.getAllByText('My Tasks').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Upcoming Deadlines').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Recent Activity').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByRole('button', { name: /create project/i })).toBeInTheDocument()
   })
 
   it('shows empty state for new user', async () => {

@@ -74,7 +74,7 @@ export default function NotificationDropdown() {
             items.map((notification) => (
               <Box
                 key={notification.id}
-                sx={{ py: 1, borderBottom: '1px solid #eee', cursor: 'pointer' }}
+                sx={{ py: 1, borderBottom: '1px solid', borderColor: 'divider', cursor: 'pointer' }}
                 onClick={() => !notification.is_read && handleMarkRead(notification.id)}
               >
                 <Typography variant="body2" sx={{ fontWeight: notification.is_read ? 400 : 600 }}>

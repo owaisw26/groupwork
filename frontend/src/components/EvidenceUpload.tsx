@@ -1,5 +1,6 @@
 import { Alert, Box, Button, LinearProgress, Typography } from '@mui/material'
 import { useRef, useState } from 'react'
+import { APP_BORDER, fs, SLATE } from '../appTheme'
 import api from '../services/api'
 
 const ALLOWED_EXTENSIONS = ['.pdf', '.png', '.jpg', '.jpeg', '.docx', '.xlsx', '.txt', '.zip']
@@ -88,13 +89,24 @@ export default function EvidenceUpload({ taskId, onUploaded }: EvidenceUploadPro
         size="small"
         disabled={uploading}
         onClick={() => inputRef.current?.click()}
+        sx={{
+          fontWeight: 700,
+          borderRadius: '10px',
+          textTransform: 'none',
+          borderColor: APP_BORDER,
+          color: SLATE[700],
+        }}
       >
         Upload Evidence
       </Button>
       {uploading && (
-        <Box sx={{ mt: 1 }}>
-          <LinearProgress variant="determinate" value={progress} />
-          <Typography variant="caption" color="text.secondary">
+        <Box sx={{ mt: 1.25 }}>
+          <LinearProgress
+            variant="determinate"
+            value={progress}
+            sx={{ height: 6, borderRadius: 999, bgcolor: '#E2E8F0' }}
+          />
+          <Typography sx={{ fontSize: fs(12), color: SLATE[500], mt: 0.5 }}>
             Uploading...
           </Typography>
         </Box>

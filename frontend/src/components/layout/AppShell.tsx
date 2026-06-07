@@ -1,17 +1,29 @@
-import { Box, Toolbar } from '@mui/material'
+import { Box } from '@mui/material'
 import { Outlet } from 'react-router-dom'
+import { HeaderBridgeProvider } from '../../contexts/HeaderBridgeContext'
 import Header from './Header'
 import Sidebar from './Sidebar'
 
 export default function AppShell() {
   return (
-    <Box sx={{ display: 'flex' }}>
-      <Header />
+    <HeaderBridgeProvider>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <Sidebar />
-      <Box component="main" sx={{ flexGrow: 1, p: 3, minHeight: '100vh', bgcolor: 'background.default' }}>
-        <Toolbar />
-        <Outlet />
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Header />
+        <Box
+          component="main"
+          sx={{
+            flex: 1,
+            px: { xs: 2, sm: 3, lg: 4 },
+            py: { xs: 2.5, md: 3 },
+            overflow: 'auto',
+          }}
+        >
+          <Outlet />
+        </Box>
       </Box>
     </Box>
+    </HeaderBridgeProvider>
   )
 }

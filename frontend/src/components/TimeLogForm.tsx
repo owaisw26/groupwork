@@ -1,5 +1,6 @@
 import { Alert, Box, Button, TextField } from '@mui/material'
 import { useState } from 'react'
+import { SLATE } from '../appTheme'
 import { useAppDispatch } from '../store/hooks'
 import { createTimeLog, fetchTimeLogs } from '../store/tasksSlice'
 
@@ -38,7 +39,20 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
   }
 
   return (
-    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+    <Box
+      component="form"
+      onSubmit={handleSubmit}
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1.5,
+        p: 1.5,
+        borderRadius: '12px',
+        bgcolor: SLATE[50],
+        border: '1px solid',
+        borderColor: 'divider',
+      }}
+    >
       {error && <Alert severity="error">{error}</Alert>}
       <Box sx={{ display: 'flex', gap: 1 }}>
         <TextField
@@ -48,7 +62,10 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           value={hours}
           onChange={(e) => setHours(e.target.value)}
           slotProps={{ htmlInput: { min: 0.25, max: 24, step: 0.25 } }}
-          sx={{ width: 100 }}
+          sx={{
+            width: 100,
+            '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#FFFFFF' },
+          }}
         />
         <TextField
           label="Date"
@@ -57,7 +74,10 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           value={date}
           onChange={(e) => setDate(e.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
-          sx={{ flex: 1 }}
+          sx={{
+            flex: 1,
+            '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#FFFFFF' },
+          }}
         />
       </Box>
       <TextField
@@ -67,8 +87,15 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
         onChange={(e) => setDescription(e.target.value)}
         multiline
         rows={2}
+        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#FFFFFF' } }}
       />
-      <Button type="submit" variant="contained" size="small" disabled={submitting}>
+      <Button
+        type="submit"
+        variant="contained"
+        size="small"
+        disabled={submitting}
+        sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none', alignSelf: 'flex-start' }}
+      >
         Log Time
       </Button>
     </Box>
