@@ -23,6 +23,11 @@ describe('Kanban board', () => {
     created_at: '2026-01-01T00:00:00Z',
   }
 
+  const members = [
+    { id: 'user-1', full_name: 'Kanban User', email: 'kanban@example.com', role: 'owner' },
+    { id: 'user-2', full_name: 'Second Member', email: 'member@example.com', role: 'member' },
+  ]
+
   const tasks = [
     {
       id: 'task-1',
@@ -65,6 +70,7 @@ describe('Kanban board', () => {
       'notifications',
     )
     cy.intercept('GET', '/api/v1/projects/proj-1', { statusCode: 200, body: project }).as('project')
+    cy.intercept('GET', '/api/v1/projects/proj-1/members', { statusCode: 200, body: members }).as('members')
     cy.intercept('GET', '/api/v1/projects/proj-1/tasks*', {
       statusCode: 200,
       body: { items: tasks, next_cursor: null },
@@ -133,5 +139,97 @@ describe('Kanban board', () => {
     })
     cy.wait('@createTask')
     cy.contains('New task')
+  })
+
+  it('creates a task with due date, priority, and second assignee', () => {
+    cy.intercept('POST', '/api/v1/projects/proj-1/tasks', (req) => {
+      expect(req.body).to.include({
+        title: 'Metadata task',
+        priority: 'high',
+        due_date: '2026-08-15',
+      })
+      expect(req.body.assignee_ids).to.deep.equal(['user-1', 'user-2'])
+      req.reply({
+        statusCode: 201,
+        body: {
+          id: 'task-meta',
+          project_id: 'proj-1',
+          title: 'Metadata task',
+          description: null,
+          status: 'todo',
+          priority: 'high',
+          due_date: '2026-08-15',
+          verification_status: 'unverified',
+          created_by: 'user-1',
+          created_at: '2026-01-03T00:00:00Z',
+          updated_at: '2026-01-03T00:00:00Z',
+          assignee_ids: ['user-1', 'user-2'],
+        },
+      })
+    }).as('createMetadataTask')
+
+    cy.visit('/projects/proj-1/tasks')
+    cy.wait('@tasks')
+    cy.wait('@members')
+
+    cy.contains('button', 'Add Task').click()
+    cy.get('[role="dialog"]').within(() => {
+      cy.get('label').contains(/^Title$/i).parent().find('input').type('Metadata task')
+      cy.get('label').contains(/Due Date/i).parent().find('input').type('2026-08-15')
+      cy.contains('[role="combobox"]', /Medium/i).click()
+    })
+    cy.contains('[role="option"]', 'High').click()
+    cy.get('[role="dialog"]').within(() => {
+      cy.get('label').contains(/Assignees/i).parent().find('[role="combobox"]').click()
+    })
+    cy.contains('[role="option"]', 'Second Member').click()
+    cy.get('body').click(0, 0)
+    cy.get('[role="dialog"]').contains('button', 'Create').click()
+    cy.wait('@createMetadataTask')
+
+    cy.contains('Metadata task')
+    cy.contains('15 Aug')
+    cy.contains('High')
+    cy.contains('SM')
+  })
+
+  it('updates priority and due date from the task modal as owner', () => {
+    const updatedTask = {
+      ...tasks[0],
+      priority: 'urgent',
+      due_date: '2026-09-01',
+    }
+
+    cy.intercept('PUT', '/api/v1/tasks/task-1', (req) => {
+      expect(req.body.priority).to.equal('urgent')
+      expect(req.body.due_date).to.equal('2026-09-01')
+      req.reply({ statusCode: 200, body: updatedTask })
+    }).as('updateTask')
+
+    cy.intercept('GET', '/api/v1/tasks/task-1/evidence', { statusCode: 200, body: { items: [] } }).as('evidence')
+    cy.intercept('GET', '/api/v1/tasks/task-1/verifications', { statusCode: 200, body: { items: [] } }).as('verifications')
+    cy.intercept('GET', '/api/v1/tasks/task-1/disputes', { statusCode: 200, body: { items: [] } }).as('disputes')
+    cy.intercept('GET', '/api/v1/projects/proj-1/members', { statusCode: 200, body: members }).as('membersModal')
+
+    cy.visit('/projects/proj-1/tasks')
+    cy.wait('@tasks')
+
+    cy.contains('Setup repo').click()
+    cy.wait('@taskDetail')
+    cy.wait('@membersModal')
+
+    cy.contains('button', 'Edit Task').click()
+    cy.get('[role="dialog"]').within(() => {
+      cy.contains('[role="combobox"]', /High/i).click()
+    })
+    cy.contains('[role="option"]', 'Urgent').click()
+    cy.get('[role="dialog"]').within(() => {
+      cy.get('label').contains(/Due Date/i).parent().find('input').clear().type('2026-09-01')
+      cy.contains('button', 'Save Changes').click()
+    })
+    cy.wait('@updateTask')
+
+    cy.contains('Urgent')
+    cy.contains('1 Sep')
   })
 })
