@@ -163,8 +163,9 @@ describe('TaskDetailModal task metadata', () => {
     const assigneesSelect = screen.getByLabelText(/assignees/i)
     await user.click(assigneesSelect)
     await user.click(await screen.findByRole('option', { name: 'Bob Member' }))
+    await user.keyboard('{Escape}')
 
-    await user.click(screen.getByRole('button', { name: 'Save Changes' }))
+    await user.click(await screen.findByRole('button', { name: 'Save Changes' }))
 
     await waitFor(() => {
       expect(api.put).toHaveBeenCalledWith('/tasks/task-1', {
