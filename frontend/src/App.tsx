@@ -21,6 +21,7 @@ import MeetingsTab from './pages/project/MeetingsTab'
 import PeerReviewPage from './pages/project/PeerReviewPage'
 import ProjectPlaceholderPage from './pages/project/ProjectPlaceholderPage'
 import ReportPreviewPage from './pages/project/ReportPreviewPage'
+import ActivityTab from './pages/project/ActivityTab'
 import TasksTab from './pages/project/TasksTab'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { fetchCurrentUser } from './store/authSlice'
@@ -88,7 +89,9 @@ function AppRoutes() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/projects/:id" element={<ProjectLayout />}>
+            <Route index element={<Navigate to="tasks" replace />} />
             <Route path="tasks" element={<TasksTab />} />
+            <Route path="activity" element={<ActivityTab />} />
             <Route path="meetings" element={<MeetingsTab />} />
             <Route path="members" element={<MembersTab />} />
             <Route path="evidence" element={<EvidenceTab />} />
