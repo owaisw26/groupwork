@@ -182,6 +182,11 @@ def create_task(
     resolved_assignees = assignee_ids or [user["id"]]
     _validate_assignees(conn, project_id, resolved_assignees)
 
+    if due_date is None:
+        project = project_queries.get_project(conn, project_id)
+        if project:
+            due_date = project.get("due_date")
+
     task = task_queries.create_task(
         conn,
         project_id=project_id,

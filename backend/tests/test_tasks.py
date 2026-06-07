@@ -22,6 +22,17 @@ def test_create_task_valid_returns_201(auth_client, email_outbox):
     assert data["status"] == "todo"
     assert data["priority"] == "medium"
     assert data["project_id"] == project["id"]
+    assert data["due_date"] == "2026-12-31"
+
+
+def test_create_task_inherits_project_due_date_when_omitted(auth_client, email_outbox):
+    headers, _ = verified_user(auth_client, email_outbox, email="task-due-default@example.com")
+    project = create_project(auth_client, headers, due_date="2026-08-15").json()
+
+    response = create_task(auth_client, headers, project["id"])
+
+    assert response.status_code == 201
+    assert response.json()["due_date"] == "2026-08-15"
 
 
 def test_create_task_non_member_returns_403(auth_client, email_outbox):
