@@ -94,7 +94,7 @@ def get_review_status(
     project_id: str | UUID,
     user_id: str | UUID,
 ) -> dict:
-    _require_member(conn, project_id, user_id)
+    project = _require_member(conn, project_id, user_id)
     members = project_queries.get_project_members(conn, project_id)
     submitted_ids = set(peer_review_queries.get_submitted_reviewer_ids(conn, project_id))
     submitted_by = [m["email"] for m in members if m["id"] in submitted_ids]
@@ -106,7 +106,14 @@ def get_review_status(
     if deadline and deadline < now:
         non_submitters = [m["email"] for m in pending_members]
 
+    reviewed_reviewee_ids = [
+        str(review["reviewee_id"])
+        for review in peer_review_queries.get_reviewer_submissions(conn, project_id, user_id)
+    ]
+
     return {
+        "project_status": project["status"],
+        "is_open": _is_peer_review_open(project),
         "submitted_count": len(submitted_ids),
         "total_members": len(members),
         "submitted_by": submitted_by,
@@ -114,6 +121,7 @@ def get_review_status(
             {"id": m["id"], "email": m["email"], "full_name": m["full_name"]}
             for m in pending_members
         ],
+        "reviewed_reviewee_ids": reviewed_reviewee_ids,
         "non_submitters": non_submitters,
         "peer_review_ends_at": deadline.isoformat() if deadline else None,
         "deadline_passed": bool(deadline and deadline < now),

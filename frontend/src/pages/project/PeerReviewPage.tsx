@@ -10,6 +10,7 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { isAxiosError } from 'axios'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../../services/api'
@@ -21,10 +22,13 @@ interface Member {
 }
 
 interface ReviewStatus {
+  project_status: string
+  is_open: boolean
   submitted_count: number
   total_members: number
   submitted_by: string[]
   pending_members: Member[]
+  reviewed_reviewee_ids: string[]
   non_submitters: string[]
   peer_review_ends_at: string | null
   deadline_passed: boolean
@@ -97,8 +101,11 @@ export default function PeerReviewPage() {
       })
       setSuccess('Review submitted')
       await loadData()
-    } catch {
-      setError('Failed to submit review')
+    } catch (err) {
+      const message = isAxiosError(err)
+        ? (err.response?.data as { detail?: string } | undefined)?.detail
+        : undefined
+      setError(message ?? 'Failed to submit review')
     }
   }
 
@@ -129,6 +136,12 @@ export default function PeerReviewPage() {
         </Typography>
         <LinearProgress variant="determinate" value={progress} sx={{ mt: 0.5 }} />
       </Box>
+      {status.is_open === false && (
+        <Alert severity="info">
+          Peer reviews open after the project owner marks the project complete and moves it into
+          the peer review phase. Right now this project is {status.project_status ?? 'active'}.
+        </Alert>
+      )}
       {status.deadline_passed && (
         <Alert severity="warning">Peer review deadline has passed.</Alert>
       )}
@@ -136,17 +149,18 @@ export default function PeerReviewPage() {
       {success && <Alert severity="success">{success}</Alert>}
       {reviewTargets.map((member) => {
         const form = forms[member.id] ?? defaultForm()
-        const isPending = status.pending_members.some((m) => m.id === member.id)
+        const alreadyReviewed = (status.reviewed_reviewee_ids ?? []).includes(member.id)
+        const canSubmit = status.is_open === true && !status.deadline_passed && !alreadyReviewed
         return (
           <Card key={member.id} variant="outlined">
             <CardContent>
               <Typography variant="subtitle1">{member.full_name}</Typography>
-              {!isPending && (
+              {alreadyReviewed && (
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                   Review submitted
                 </Typography>
               )}
-              {isPending && !status.deadline_passed && (
+              {canSubmit && (
                 <Stack spacing={1.5} sx={{ mt: 1 }}>
                   {(['contribution_quality', 'communication', 'reliability', 'overall'] as const).map(
                     (field) => (
