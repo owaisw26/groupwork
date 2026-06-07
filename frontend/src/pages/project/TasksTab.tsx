@@ -35,6 +35,7 @@ import {
   fetchProjectTasks,
   TASK_STATUSES,
   updateTaskStatus,
+  type Subtask,
   type Task,
   type TaskStatus,
 } from '../../store/tasksSlice'
@@ -86,7 +87,7 @@ function KanbanColumn({
   onTaskClick,
   onAddTask,
   members,
-  projectDueDate,
+  subtaskCounts,
   expanded,
   onViewAll,
 }: {
@@ -95,7 +96,7 @@ function KanbanColumn({
   onTaskClick: (task: Task) => void
   onAddTask: () => void
   members: ProjectMember[]
-  projectDueDate?: string | null
+  subtaskCounts: Record<string, { completed: number; total: number }>
   expanded: boolean
   onViewAll: () => void
 }) {
@@ -171,7 +172,8 @@ function KanbanColumn({
             key={task.id}
             task={task}
             members={members}
-            projectDueDate={projectDueDate}
+            completedSubtasks={subtaskCounts[task.id]?.completed}
+            totalSubtasks={subtaskCounts[task.id]?.total}
             onClick={() => onTaskClick(task)}
           />
         ))}
@@ -230,6 +232,7 @@ export default function TasksTab() {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [subtaskCounts, setSubtaskCounts] = useState<Record<string, { completed: number; total: number }>>({})
   const [expandedColumns, setExpandedColumns] = useState<Partial<Record<TaskStatus, boolean>>>({})
   const [activityExpanded, setActivityExpanded] = useState(false)
 
@@ -244,6 +247,45 @@ export default function TasksTab() {
         .catch(() => setMembers([]))
     }
   }, [dispatch, projectId])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadSubtaskCounts = async () => {
+      if (items.length === 0) {
+        if (!cancelled) setSubtaskCounts({})
+        return
+      }
+
+      const entries = await Promise.all(
+        items.map(async (task) => {
+          try {
+            const response = await api.get<Subtask[]>(`/tasks/${task.id}/subtasks`)
+            const subtasks = response.data
+            return [
+              task.id,
+              {
+                completed: subtasks.filter((subtask) => subtask.is_completed).length,
+                total: subtasks.length,
+              },
+            ] as const
+          } catch {
+            return [task.id, { completed: 0, total: 0 }] as const
+          }
+        }),
+      )
+
+      if (!cancelled) {
+        setSubtaskCounts(Object.fromEntries(entries))
+      }
+    }
+
+    void loadSubtaskCounts()
+
+    return () => {
+      cancelled = true
+    }
+  }, [items])
 
   const reviewTasks = useMemo(
     () => items.filter((task) => task.status === 'review' || task.verification_status === 'pending'),
@@ -324,7 +366,7 @@ export default function TasksTab() {
                   status={status}
                   tasks={items.filter((t) => t.status === status)}
                   members={members}
-                  projectDueDate={currentProject?.due_date}
+                  subtaskCounts={subtaskCounts}
                   onTaskClick={(task) => setSelectedTaskId(task.id)}
                   onAddTask={() => openCreateTask?.()}
                   expanded={!!expandedColumns[status]}
@@ -340,7 +382,8 @@ export default function TasksTab() {
               <TaskCard
                 task={activeTask}
                 members={members}
-                projectDueDate={currentProject?.due_date}
+                completedSubtasks={subtaskCounts[activeTask.id]?.completed}
+                totalSubtasks={subtaskCounts[activeTask.id]?.total}
                 onClick={() => {}}
               />
             ) : null}
