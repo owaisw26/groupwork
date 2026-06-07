@@ -24,6 +24,7 @@ import {
   Tab,
   Tabs,
   TextField,
+  Typography,
 } from '@mui/material'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
@@ -54,7 +55,7 @@ const TABS = [
 
 function formatDueDateSubtitle(dueDate: string | null): string | undefined {
   if (!dueDate) return undefined
-  const due = new Date(dueDate)
+  const due = new Date(`${dueDate}T00:00:00`)
   const now = new Date()
   now.setHours(0, 0, 0, 0)
   due.setHours(0, 0, 0, 0)
@@ -79,6 +80,7 @@ export default function ProjectLayout() {
   const [newPriority, setNewPriority] = useState('medium')
   const [newAssigneeIds, setNewAssigneeIds] = useState<string[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [createError, setCreateError] = useState<string | null>(null)
 
   useEffect(() => {
     if (id) {
@@ -121,22 +123,28 @@ export default function ProjectLayout() {
   const handleCreate = async () => {
     if (!id || !newTitle.trim()) return
     const assigneeIds = newAssigneeIds.length > 0 ? newAssigneeIds : user?.id ? [user.id] : []
-    await dispatch(
-      createTask({
-        projectId: id,
-        title: newTitle.trim(),
-        description: newDescription.trim() || undefined,
-        priority: newPriority,
-        due_date: newDueDate || undefined,
-        assignee_ids: assigneeIds,
-      }),
-    )
-    resetCreateForm()
-    setCreateOpen(false)
+    setCreateError(null)
+    try {
+      await dispatch(
+        createTask({
+          projectId: id,
+          title: newTitle.trim(),
+          description: newDescription.trim() || undefined,
+          priority: newPriority,
+          due_date: newDueDate || undefined,
+          assignee_ids: assigneeIds,
+        }),
+      ).unwrap()
+      resetCreateForm()
+      setCreateOpen(false)
+    } catch (error) {
+      setCreateError(typeof error === 'string' ? error : 'Failed to create task')
+    }
   }
 
   const handleCloseCreate = () => {
     resetCreateForm()
+    setCreateError(null)
     setCreateOpen(false)
   }
 
@@ -348,6 +356,11 @@ export default function ProjectLayout() {
                 ))}
               </Select>
             </FormControl>
+            {createError && (
+              <Typography sx={{ fontSize: 13, color: '#DC2626', fontWeight: 600 }}>
+                {createError}
+              </Typography>
+            )}
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>

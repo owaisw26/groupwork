@@ -230,6 +230,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
   const [disputes, setDisputes] = useState<DisputeItem[]>([])
   const [disputeReason, setDisputeReason] = useState('')
   const [showDisputeForm, setShowDisputeForm] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   const isOwner = user?.id === projectOwnerId
   const isAssignee = currentTask?.assignee_ids.includes(user?.id ?? '') ?? false
@@ -339,19 +340,34 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
     onClose()
   }
 
+  const resetEditFields = () => {
+    if (!currentTask) return
+    setEditTitle(currentTask.title)
+    setEditDescription(currentTask.description ?? '')
+    setEditPriority(currentTask.priority)
+    setEditDueDate(currentTask.due_date ?? '')
+    setEditAssigneeIds(currentTask.assignee_ids)
+  }
+
   const handleSave = async () => {
     if (!taskId) return
-    await dispatch(
-      updateTask({
-        taskId,
-        title: editTitle,
-        description: editDescription,
-        priority: editPriority,
-        due_date: editDueDate || undefined,
-        assignee_ids: editAssigneeIds,
-      }),
-    )
-    setEditMode(false)
+    const assigneeIds = editAssigneeIds.length > 0 ? editAssigneeIds : user?.id ? [user.id] : []
+    setSaveError(null)
+    try {
+      await dispatch(
+        updateTask({
+          taskId,
+          title: editTitle,
+          description: editDescription,
+          priority: editPriority,
+          due_date: editDueDate || undefined,
+          assignee_ids: assigneeIds,
+        }),
+      ).unwrap()
+      setEditMode(false)
+    } catch (error) {
+      setSaveError(typeof error === 'string' ? error : 'Failed to save task')
+    }
   }
 
   const handleAddSubtask = async () => {
@@ -1097,8 +1113,17 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
         )}
         {isOwner && editMode && (
           <>
+            {saveError && (
+              <Typography sx={{ fontSize: 13, color: '#DC2626', fontWeight: 600, mr: 'auto' }}>
+                {saveError}
+              </Typography>
+            )}
             <Button
-              onClick={() => setEditMode(false)}
+              onClick={() => {
+                resetEditFields()
+                setSaveError(null)
+                setEditMode(false)
+              }}
               sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
             >
               Cancel

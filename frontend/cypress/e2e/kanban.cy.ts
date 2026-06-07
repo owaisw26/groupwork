@@ -89,6 +89,7 @@ describe('Kanban board', () => {
       body: { items: [], total_hours_for_user_in_project: 0 },
     }).as('timeLogs')
     cy.intercept('GET', '/api/v1/tasks/task-1/edit-requests', { statusCode: 200, body: [] }).as('editRequests')
+    cy.intercept('GET', '/api/v1/tasks/*/subtasks', { statusCode: 200, body: [] }).as('boardSubtasks')
   })
 
   it('displays kanban columns and opens task detail', () => {
@@ -137,7 +138,11 @@ describe('Kanban board', () => {
       cy.get('input').type('New task')
       cy.contains('button', 'Create').click()
     })
-    cy.wait('@createTask')
+    cy.wait('@createTask').its('request.body').should('deep.include', {
+      title: 'New task',
+      priority: 'medium',
+      assignee_ids: ['user-1'],
+    })
     cy.contains('New task')
   })
 
