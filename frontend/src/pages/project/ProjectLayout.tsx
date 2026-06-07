@@ -13,20 +13,34 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
+  InputLabel,
   LinearProgress,
+  MenuItem,
+  OutlinedInput,
+  Select,
+  type SelectChangeEvent,
+  Stack,
   Tab,
   Tabs,
   TextField,
 } from '@mui/material'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
 import { APP_PRIMARY, APP_PRIMARY_LIGHT, fs, PAGE_CARD_SX, SLATE } from '../../appTheme'
+import { PRIORITY_OPTIONS, PRIORITY_STYLES } from '../../constants/taskFields'
 import { useHeaderBridge } from '../../contexts/HeaderBridgeContext'
 import PageHeader from '../../components/layout/PageHeader'
 import StatCard from '../../components/layout/StatCard'
+import api from '../../services/api'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { createTask } from '../../store/tasksSlice'
 import { fetchDashboard, fetchProject } from '../../store/projectsSlice'
+
+interface ProjectMember {
+  id: string
+  full_name: string
+}
 
 const TABS = [
   { label: 'Task Board', path: 'tasks' },
@@ -55,17 +69,44 @@ export default function ProjectLayout() {
   const location = useLocation()
   const dispatch = useAppDispatch()
   const { currentProject, isLoading } = useAppSelector((state) => state.projects)
+  const user = useAppSelector((state) => state.auth.user)
   const tasks = useAppSelector((state) => state.tasks.items)
   const { setCreateTaskHandler } = useHeaderBridge()
   const [createOpen, setCreateOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
+  const [newDescription, setNewDescription] = useState('')
+  const [newDueDate, setNewDueDate] = useState('')
+  const [newPriority, setNewPriority] = useState('medium')
+  const [newAssigneeIds, setNewAssigneeIds] = useState<string[]>([])
+  const [members, setMembers] = useState<ProjectMember[]>([])
 
   useEffect(() => {
     if (id) {
       dispatch(fetchProject(id))
       dispatch(fetchDashboard())
+      api
+        .get<ProjectMember[]>(`/projects/${id}/members`)
+        .then((response) => setMembers(response.data))
+        .catch(() => setMembers([]))
     }
   }, [dispatch, id])
+
+  const resetCreateForm = () => {
+    setNewTitle('')
+    setNewDescription('')
+    setNewDueDate('')
+    setNewPriority('medium')
+    setNewAssigneeIds(user?.id ? [user.id] : [])
+  }
+
+  const openCreateDialog = useCallback(() => {
+    setNewTitle('')
+    setNewDescription('')
+    setNewDueDate('')
+    setNewPriority('medium')
+    setNewAssigneeIds(user?.id ? [user.id] : [])
+    setCreateOpen(true)
+  }, [user])
 
   const projectTasks = useMemo(
     () => (id ? tasks.filter((task) => task.project_id === id) : []),
@@ -79,15 +120,29 @@ export default function ProjectLayout() {
 
   const handleCreate = async () => {
     if (!id || !newTitle.trim()) return
+    const assigneeIds = newAssigneeIds.length > 0 ? newAssigneeIds : user?.id ? [user.id] : []
     await dispatch(
       createTask({
         projectId: id,
         title: newTitle.trim(),
-        due_date: currentProject.due_date ?? undefined,
+        description: newDescription.trim() || undefined,
+        priority: newPriority,
+        due_date: newDueDate || undefined,
+        assignee_ids: assigneeIds,
       }),
     )
-    setNewTitle('')
+    resetCreateForm()
     setCreateOpen(false)
+  }
+
+  const handleCloseCreate = () => {
+    resetCreateForm()
+    setCreateOpen(false)
+  }
+
+  const handleAssigneeChange = (event: SelectChangeEvent<string[]>) => {
+    const value = event.target.value
+    setNewAssigneeIds(typeof value === 'string' ? value.split(',') : value)
   }
 
   const activeTab =
@@ -96,12 +151,12 @@ export default function ProjectLayout() {
 
   useEffect(() => {
     if (isTaskBoard) {
-      setCreateTaskHandler(() => setCreateOpen(true))
+      setCreateTaskHandler(() => openCreateDialog)
     } else {
       setCreateTaskHandler(null)
     }
     return () => setCreateTaskHandler(null)
-  }, [isTaskBoard, setCreateTaskHandler])
+  }, [isTaskBoard, setCreateTaskHandler, openCreateDialog])
 
   if (isLoading || !currentProject || currentProject.id !== id) {
     return (
@@ -226,23 +281,77 @@ export default function ProjectLayout() {
         </Box>
       )}
 
-      <Outlet context={{ openCreateTask: () => setCreateOpen(true) }} />
+      <Outlet context={{ openCreateTask: openCreateDialog }} />
 
-      <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog open={createOpen} onClose={handleCloseCreate} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 800 }}>New Task</DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            fullWidth
-            label="Title"
-            value={newTitle}
-            onChange={(e) => setNewTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-            sx={{ mt: 1 }}
-          />
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              autoFocus
+              fullWidth
+              label="Title"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              multiline
+              rows={3}
+              value={newDescription}
+              onChange={(e) => setNewDescription(e.target.value)}
+            />
+            <TextField
+              fullWidth
+              label="Due Date"
+              type="date"
+              value={newDueDate}
+              onChange={(e) => setNewDueDate(e.target.value)}
+              slotProps={{ inputLabel: { shrink: true } }}
+            />
+            <FormControl fullWidth>
+              <InputLabel id="create-task-priority-label">Priority</InputLabel>
+              <Select
+                labelId="create-task-priority-label"
+                label="Priority"
+                value={newPriority}
+                onChange={(e) => setNewPriority(e.target.value)}
+              >
+                {PRIORITY_OPTIONS.map((option) => (
+                  <MenuItem key={option} value={option}>
+                    {PRIORITY_STYLES[option].label}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+            <FormControl fullWidth>
+              <InputLabel id="create-task-assignees-label">Assignees</InputLabel>
+              <Select
+                labelId="create-task-assignees-label"
+                label="Assignees"
+                multiple
+                value={newAssigneeIds}
+                onChange={handleAssigneeChange}
+                input={<OutlinedInput label="Assignees" />}
+                renderValue={(selected) =>
+                  selected
+                    .map((memberId) => members.find((member) => member.id === memberId)?.full_name ?? memberId)
+                    .join(', ')
+                }
+              >
+                {members.map((member) => (
+                  <MenuItem key={member.id} value={member.id}>
+                    {member.full_name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setCreateOpen(false)}>Cancel</Button>
+          <Button onClick={handleCloseCreate}>Cancel</Button>
           <Button variant="contained" onClick={handleCreate}>
             Create
           </Button>
