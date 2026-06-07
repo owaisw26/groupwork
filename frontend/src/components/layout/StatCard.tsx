@@ -68,7 +68,8 @@ export default function StatCard({
           className="stat-card-action"
           component="span"
           sx={{
-            mt: footer ? 1.5 : 'auto',
+            mt: 'auto',
+            pt: 1.5,
             fontSize: fs(14),
             fontWeight: 700,
             color: accent === '#DC2626' ? '#DC2626' : APP_PRIMARY,

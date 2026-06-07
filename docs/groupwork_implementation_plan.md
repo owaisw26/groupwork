@@ -62,17 +62,17 @@ todos:
   - id: p5-m1-task-fields
     content: "P5.1: Task field UI (due date, assignees, priority on create/edit; real card data)"
     status: pending
-  - id: p5-m2-aws
-    content: "P5.2: AWS infrastructure (ECS, RDS, S3, API Gateway, Secrets Manager, CloudWatch)"
+  - id: p5-m2-r2
+    content: "P5.2: Cloudflare R2 evidence storage (S3-compatible presigned URLs)"
     status: pending
-  - id: p5-m3-cicd
-    content: "P5.3: CI/CD pipeline (GitHub Actions -> ECR -> ECS)"
+  - id: p5-m3-deploy
+    content: "P5.3: Free-tier deployment (Vercel frontend, Render backend, Neon Postgres)"
     status: pending
   - id: p5-m4-security
     content: "P5.4: Security hardening + SQL injection test suite (20+ attack vectors)"
     status: pending
   - id: p5-m5-monitoring
-    content: "P5.5: Monitoring, structured logging, CloudWatch alarms"
+    content: "P5.5: Monitoring, structured logging, production health checks"
     status: pending
 isProject: false
 ---
@@ -82,7 +82,7 @@ isProject: false
 ## Design Debt (Deferred)
 
 - **UI polish (post-Phase 4)**: Current frontend is functional but visually rigid. Target a more flowy, Jira-style experience — fluid Kanban columns, denser information hierarchy, smoother transitions, and board-first navigation. Track as a dedicated UI/UX pass after core product phases; do not block Phase 4 feature delivery.
-- **Task card field wiring (Phase 5.1)**: Kanban cards were restyled to match the login-page preview (assignee avatars, due date, priority pill, subtask progress bar), but create/edit flows still only collect a title. Backend and Redux already support `due_date`, `assignee_ids`, and `priority`; Phase 5.1 wires the UI before production/AWS work.
+- **Task card field wiring (Phase 5.1)**: Kanban cards were restyled to match the login-page preview (assignee avatars, due date, priority pill, subtask progress bar), but create/edit flows still only collect a title. Backend and Redux already support `due_date`, `assignee_ids`, and `priority`; Phase 5.1 wires the UI before production deployment work.
 
 ## Git Workflow & Practices
 
@@ -766,6 +766,21 @@ groupwork/
 
 ## Phase 5: Production Readiness
 
+**Hosting stack (free tier):** Production uses managed free-tier services instead of AWS. Evidence uploads are required for production and are backed by **Cloudflare R2** (S3-compatible API). Email remains optional via **Resend** (or stdout logging when unset).
+
+| Component | Service | Role |
+|-----------|---------|------|
+| Frontend | Vercel | Static Vite build, auto-deploy from `main` |
+| Backend API | Render (free web service) | Dockerized FastAPI, auto-deploy from `main` |
+| Database | Neon (free Postgres) | Managed PostgreSQL 16; avoid Render free Postgres (90-day expiry) |
+| Evidence files | Cloudflare R2 | Presigned upload/download via existing boto3 S3 client + custom endpoint |
+| Email (optional) | Resend | Invites and notifications; defer if not needed for demo |
+| CI | GitHub Actions | Lint + test on every push (existing); platforms handle CD on merge to `main` |
+
+**Prerequisites (user-owned):** Accounts on Vercel, Render, Neon, and Cloudflare; GitHub repo connected to Vercel and Render; production secrets set in each platform's env-var UI (never committed). Cold starts on Render free tier are acceptable for a course project.
+
+---
+
 ### Module 5.1: Task Field UI (Due Date, Assignees, Priority)
 
 **Branch**: `feat/task-field-ui`
@@ -828,42 +843,109 @@ groupwork/
 
 ---
 
-### Module 5.2: AWS Infrastructure
+### Module 5.2: Cloudflare R2 Evidence Storage
 
-**Branch**: `feat/aws-infrastructure`
+**Branch**: `feat/r2-evidence`
+
+**Context:** Evidence upload is required for production. The existing flow (presigned PUT from browser -> confirm metadata in API) stays unchanged. R2 exposes an S3-compatible API; boto3 works with a custom `endpoint_url`. Free tier: 10 GB storage, no egress fees — sufficient for per-project 50 MB quotas.
 
 **Tests (Step 1):**
-- Infrastructure tests: Terraform plan validates. Health check endpoint accessible via API Gateway. RDS connection works from ECS. S3 upload/download works with IAM role. CloudWatch receives logs.
+- `tests/test_s3_client.py`:
+  - When `S3_ENDPOINT_URL` is set, boto3 client is created with that endpoint (mock boto3).
+  - When unset, client uses default AWS endpoint (local/dev backward compatible).
+- Extend `tests/test_evidence.py`:
+  - Presigned upload URL host matches R2 endpoint when `S3_ENDPOINT_URL` configured.
+  - End-to-end upload + confirm still passes with mocked R2 responses.
+- Manual smoke test checklist (documented in deploy guide): upload PDF from task modal in staging -> file appears in R2 bucket -> download URL works.
 
 **Implementation (Step 3):**
-- `infra/ecs-task-definition.json`: Backend container definition. CPU/memory allocation. Environment variables from Secrets Manager. Log driver: awslogs -> CloudWatch.
-- `infra/ecs-service.json`: Service definition with desired count 2, ALB health check, deployment circuit breaker.
-- `infra/api-gateway.json`: REST API -> VPC Link -> ALB. Rate limiting plan: 100 req/sec burst.
-- RDS: PostgreSQL 16, db.t3.micro (dev), multi-AZ for production. Security group allowing traffic only from ECS.
-- S3: Bucket with CORS for presigned upload from frontend. Lifecycle rule: Standard -> Glacier after 1 year. Block public access.
-- Secrets Manager: JWT_SECRET, DB_PASSWORD, SES credentials.
-- CloudWatch: Log group for backend. Metric alarms for 5xx rate, latency p95, CPU utilization.
-- IAM: Task execution role with permissions for S3, SES, Secrets Manager, CloudWatch.
+- `app/config.py`: Add optional `S3_ENDPOINT_URL: str = ""`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (R2 API token credentials; reuse existing env names for boto3 compatibility).
+- `app/utils/s3.py`: Pass `endpoint_url` to `boto3.client("s3", ...)` when `S3_ENDPOINT_URL` is set.
+- `.env.example`: Document R2 variables and example endpoint format (`https://<account_id>.r2.cloudflarestorage.com`).
+- Cloudflare dashboard (manual, user-run):
+  - Create R2 bucket (e.g. `groupwork-evidence`).
+  - Create API token with Object Read & Write.
+  - Configure CORS on bucket: allow `PUT`, `GET`, `HEAD` from production frontend origin (`https://*.vercel.app` or custom domain).
+- No change to `EvidenceUpload.tsx` upload flow (still PUT to presigned URL returned by API).
 
-**Bug hunt focus:** IAM permissions (least privilege), security group rules, RDS public accessibility (must be private), S3 bucket policies, secrets rotation.
+**Production env vars (Render):**
+```
+AWS_S3_BUCKET=groupwork-evidence
+AWS_REGION=auto
+AWS_ACCESS_KEY_ID=<r2-access-key-id>
+AWS_SECRET_ACCESS_KEY=<r2-secret-access-key>
+S3_ENDPOINT_URL=https://<account_id>.r2.cloudflarestorage.com
+```
+
+**Commits for tests:**
+- `test(evidence): add R2 endpoint configuration tests`
+- `test(evidence): verify presigned URLs use custom S3 endpoint`
+
+**Commits for implementation:**
+- `feat(config): add S3_ENDPOINT_URL for S3-compatible storage`
+- `feat(evidence): wire boto3 client to Cloudflare R2 endpoint`
+- `docs(deploy): document R2 bucket and CORS setup`
+
+**Bug hunt focus:** R2 CORS misconfiguration (browser PUT fails silently), presigned URL expiry, bucket name mismatch, credentials scoped too broadly, upload path traversal still blocked by server-side key generation.
 
 ---
 
-### Module 5.3: CI/CD Deployment Pipeline
+### Module 5.3: Free-Tier Deployment (Vercel + Render + Neon)
 
-**Branch**: `feat/cd-pipeline`
+**Branch**: `feat/free-tier-deploy`
 
-Note: The basic CI pipeline (lint + test) was set up in Phase 1, Module 1.1. This module adds the CD (continuous deployment) part.
+Note: GitHub Actions CI (lint + test) already runs on every push (Phase 1). This module uses each platform's native GitHub integration for CD — no ECR/ECS pipeline.
 
 **Tests (Step 1):**
-- Pipeline test: Push to main triggers full build + deploy. Deployment health check passes.
+- Post-deploy smoke checklist (manual or scripted against staging URLs):
+  - `GET /api/v1/health` returns 200 from Render URL.
+  - Frontend on Vercel loads and calls API (no CORS errors).
+  - Register -> verify email (stdout/Resend) -> login -> create project -> upload evidence -> file stored in R2.
+- `docs/DEPLOY.md`: Step-by-step deploy runbook with verification commands.
 
 **Implementation (Step 3):**
-- `.github/workflows/deploy.yml`: On push to main (after merge). Jobs: build backend Docker -> push to ECR, build frontend Docker -> push to ECR, update ECS service (rolling deployment).
-- `backend/Dockerfile`: Multi-stage build. Python 3.12-slim base. Install system deps for weasyprint. Copy requirements.txt -> pip install -> copy app. Run with uvicorn.
-- `frontend/Dockerfile`: Multi-stage. Node 20 -> npm install -> npm run build -> nginx:alpine to serve static files.
 
-**Bug hunt focus:** Secrets in CI logs, Docker image size, health check timing during deployment, rollback strategy.
+**Neon (database):**
+- Create free Postgres 16 project.
+- Copy pooled `DATABASE_URL`; set on Render as `DATABASE_URL`.
+- Run migrations on deploy: Render start command runs `python -m app.db.migrate && uvicorn ...` (already in `docker-compose` pattern).
+
+**Render (backend):**
+- Connect GitHub repo; deploy from `backend/Dockerfile` (or Render native Python if preferred).
+- Service type: Web Service, free tier.
+- Start command: `python -m app.db.migrate && uvicorn app.main:create_app --factory --host 0.0.0.0 --port $PORT`
+- Environment variables:
+  - `DATABASE_URL` (Neon)
+  - `JWT_SECRET` (32+ chars)
+  - `ENVIRONMENT=production`
+  - `COOKIE_SECURE=true`
+  - `FRONTEND_URL=https://<vercel-app>.vercel.app`
+  - `CORS_ORIGINS=https://<vercel-app>.vercel.app`
+  - R2 vars from Module 5.2
+  - `RESEND_API_KEY` (optional; email falls back to stdout if unset)
+- Health check path: `/api/v1/health`
+
+**Vercel (frontend):**
+- Connect GitHub repo; root directory `frontend/`.
+- Build command: `npm run build`; output directory `dist`.
+- Environment variable: `VITE_API_URL=https://<render-service>.onrender.com` (or proxy via `vercel.json` rewrites to avoid CORS cookie issues — prefer same-site proxy if cookie auth causes problems).
+- Auto-deploy on push to `main`.
+
+**Optional — Resend (email):**
+- `app/utils/email.py`: Add Resend provider behind existing `send_email()` abstraction; keep stdout fallback for local dev.
+- Verify sender domain or use Resend onboarding address for demo.
+
+**Files to add/update:**
+- `docs/DEPLOY.md`: Full runbook (accounts, env vars, CORS, smoke tests, cold-start note).
+- `frontend/vercel.json` (if needed): API rewrite rules for cookie-based auth.
+- `README.md`: Replace AWS production reference with Vercel/Render/Neon/R2 stack.
+
+**Commits for implementation:**
+- `docs(deploy): add free-tier production deployment guide`
+- `feat(email): add optional Resend provider`
+- `chore(vercel): add frontend deploy config`
+
+**Bug hunt focus:** CORS/cookie auth across Vercel and Render origins, `COOKIE_SECURE` + HTTPS requirements, Neon connection pooling vs direct URL, Render cold-start timeouts on first request, migration idempotency on redeploy, secrets never in repo or build logs.
 
 ---
 
@@ -889,12 +971,23 @@ Note: The basic CI pipeline (lint + test) was set up in Phase 1, Module 1.1. Thi
 
 **Branch**: `feat/monitoring-logging`
 
+**Context:** No CloudWatch on the free-tier stack. Use structured application logs (stdout → Render log stream), platform dashboards, and a health endpoint for uptime checks.
+
 **Tests (Step 1):**
-- `tests/test_logging.py`: Every request generates a structured JSON log with request_id, method, path, status, duration.
+- `tests/test_logging.py`: Every request generates a structured JSON log with `request_id`, `method`, `path`, `status`, `duration_ms`.
+- `tests/test_health.py`: `GET /api/v1/health` returns 200 and includes DB connectivity check (or lightweight `SELECT 1`).
 
 **Implementation (Step 3):**
-- `app/middleware/logging.py`: Finalize structured logging. Include user_id when authenticated.
-- CloudWatch dashboard: Request count, error rate, latency percentiles, active DB connections.
-- CloudWatch alarms: 5xx rate > 5% -> alert, p95 latency > 500ms -> alert, CPU > 80% -> alert.
+- `app/middleware/logging.py`: Finalize structured JSON logging to stdout. Include `user_id` when authenticated. Never log passwords, tokens, or presigned URLs.
+- `app/api/health.py` (or extend existing): Return `{ "status": "ok", "db": "ok" }`; used by Render health check.
+- **Render:** Enable log retention on free tier; document how to tail logs from dashboard.
+- **Neon:** Use Neon console for connection count and query insights (free tier metrics).
+- **Uptime (optional, free):** UptimeRobot or Better Stack free tier pinging `/api/v1/health` every 5 min.
+- **Frontend errors (optional):** Console-only for MVP; skip paid error tracking.
 
-**Bug hunt focus:** Sensitive data in logs (passwords, tokens), log volume/cost, alarm thresholds.
+**Commits for implementation:**
+- `feat(health): add database-aware health check endpoint`
+- `feat(logging): finalize structured JSON request logs`
+- `docs(ops): document Render/Neon monitoring and uptime checks`
+
+**Bug hunt focus:** Sensitive data in logs (passwords, JWT, R2 keys), log volume on free tier, health check false positives when DB is briefly unreachable, PII in error messages.

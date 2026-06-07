@@ -8,9 +8,10 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core'
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined'
 import AddIcon from '@mui/icons-material/Add'
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined'
-import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined'
+import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined'
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined'
 import {
   Box,
@@ -55,7 +56,7 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
 
 const BOARD_HEIGHT = 'calc(100vh - 360px)'
 const KANBAN_TASK_PREVIEW = 4
-const ACTIVITY_PREVIEW = 4
+const ACTIVITY_PREVIEW = 6
 const REVIEW_PREVIEW = 3
 
 interface ProjectMember {
@@ -65,6 +66,18 @@ interface ProjectMember {
 
 interface TasksOutletContext {
   openCreateTask?: () => void
+}
+
+function getMemberName(members: ProjectMember[], userId: string | undefined): string {
+  if (!userId) return 'Team member'
+  return members.find((member) => member.id === userId)?.full_name ?? 'Team member'
+}
+
+function formatCompletedAt(isoDate: string): string {
+  const date = new Date(isoDate)
+  const dateLabel = date.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })
+  const timeLabel = date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return `${dateLabel} at ${timeLabel}`
 }
 
 function KanbanColumn({
@@ -122,7 +135,7 @@ function KanbanColumn({
           {status === 'done' && (
             <CheckCircleOutlineOutlinedIcon sx={{ fontSize: 22, color: '#16A34A' }} />
           )}
-          <Typography sx={{ fontSize: 20, fontWeight: 800, color: SLATE[900] }}>
+          <Typography sx={{ fontSize: fs(20), fontWeight: 800, color: SLATE[900] }}>
             {STATUS_LABELS[status]}
           </Typography>
           <Box
@@ -218,6 +231,7 @@ export default function TasksTab() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [expandedColumns, setExpandedColumns] = useState<Partial<Record<TaskStatus, boolean>>>({})
+  const [activityExpanded, setActivityExpanded] = useState(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -344,14 +358,11 @@ export default function TasksTab() {
             sx={{
               ...SURFACE_CARD_SX,
               flexShrink: 0,
-              borderStyle: featuredReviewTask ? 'dashed' : 'solid',
-              borderColor: featuredReviewTask ? '#F59E0B' : APP_BORDER,
-              bgcolor: featuredReviewTask ? '#FFFBEB' : '#FFFFFF',
             }}
           >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
-              <VerifiedOutlinedIcon sx={{ color: '#D97706' }} />
-              <Typography sx={{ fontSize: fs(15), fontWeight: 800, color: SLATE[900] }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+              <VerifiedOutlinedIcon sx={{ fontSize: fs(22), color: APP_PRIMARY }} />
+              <Typography sx={{ fontSize: fs(16), fontWeight: 800, color: SLATE[900] }}>
                 Peer Verification
               </Typography>
             </Box>
@@ -365,52 +376,67 @@ export default function TasksTab() {
                 sx={{
                   p: 2,
                   borderRadius: '14px',
-                  bgcolor: '#FFFFFF',
-                  border: `1px solid ${APP_BORDER}`,
+                  bgcolor: '#FFFBEB',
+                  border: '1px solid #FDE68A',
                 }}
               >
-                <Typography
-                  sx={{
-                    display: 'inline-block',
-                    px: 1.25,
-                    py: 0.5,
-                    mb: 1.25,
-                    borderRadius: '999px',
-                    bgcolor: '#FEF3C7',
-                    color: '#B45309',
-                    fontSize: fs(11),
-                    fontWeight: 700,
-                  }}
-                >
-                  Waiting for verification
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                  <AccessTimeOutlinedIcon sx={{ fontSize: fs(18), color: '#D97706' }} />
+                  <Typography sx={{ fontSize: fs(14), fontWeight: 700, color: '#D97706' }}>
+                    Waiting for verification
+                  </Typography>
+                </Box>
                 <Typography sx={{ fontSize: fs(15), fontWeight: 700, color: SLATE[900], mb: 0.5 }}>
                   {featuredReviewTask.title}
                 </Typography>
-                <Typography sx={{ fontSize: fs(13), color: SLATE[500], mb: 2 }}>
-                  Ready for team review
+                <Typography sx={{ fontSize: fs(13), color: SLATE[500] }}>
+                  Completed by{' '}
+                  {getMemberName(
+                    members,
+                    featuredReviewTask.assignee_ids[0] ?? featuredReviewTask.created_by,
+                  )}
                 </Typography>
-                <Stack direction="row" spacing={1}>
+                <Typography sx={{ fontSize: fs(12), color: SLATE[500], mb: 2.5 }}>
+                  {formatCompletedAt(featuredReviewTask.updated_at)}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1.5 }}>
                   <Button
                     variant="outlined"
-                    size="small"
-                    startIcon={<VerifiedOutlinedIcon />}
+                    fullWidth
                     onClick={() => handleVerify(featuredReviewTask.id)}
-                    sx={{ fontWeight: 700 }}
+                    startIcon={<CheckCircleOutlineOutlinedIcon sx={{ fontSize: fs(18) }} />}
+                    sx={{
+                      py: 1.25,
+                      borderRadius: 2.5,
+                      borderWidth: 2,
+                      borderColor: APP_PRIMARY,
+                      color: APP_PRIMARY,
+                      fontSize: fs(14),
+                      fontWeight: 700,
+                      '&:hover': { borderWidth: 2, bgcolor: APP_PRIMARY_LIGHT },
+                    }}
                   >
                     Verify
                   </Button>
                   <Button
                     variant="outlined"
-                    size="small"
-                    color="error"
-                    startIcon={<GavelOutlinedIcon />}
+                    fullWidth
                     onClick={() => handleDispute(featuredReviewTask.id)}
-                    sx={{ fontWeight: 700 }}
+                    startIcon={<ReportProblemOutlinedIcon sx={{ fontSize: fs(18) }} />}
+                    sx={{
+                      py: 1.25,
+                      borderRadius: 2.5,
+                      borderWidth: 2,
+                      borderColor: '#FCA5A5',
+                      color: '#DC2626',
+                      fontSize: fs(14),
+                      fontWeight: 700,
+                      '&:hover': { borderWidth: 2, bgcolor: '#FEF2F2' },
+                    }}
                   >
                     Dispute
                   </Button>
-                </Stack>
+                </Box>
               </Box>
             )}
 
@@ -465,29 +491,32 @@ export default function TasksTab() {
             <Typography sx={{ fontSize: fs(15), fontWeight: 800, color: SLATE[900], mb: 2 }}>
               Team Activity
             </Typography>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: activityExpanded ? 'auto' : 'hidden', display: 'flex' }}>
               <ActivityFeed
                 items={allProjectActivity}
-                limit={ACTIVITY_PREVIEW}
+                limit={activityExpanded ? undefined : ACTIVITY_PREVIEW}
+                variant="comfortable"
+                fillHeight={!activityExpanded}
                 emptyMessage="Activity for this project will appear here."
               />
             </Box>
             {hasMoreActivity && (
-              <Link
-                component={RouterLink}
-                to={`/projects/${projectId}/activity`}
+              <Button
+                onClick={() => setActivityExpanded((prev) => !prev)}
                 sx={{
-                  display: 'inline-block',
+                  justifyContent: 'flex-start',
                   mt: 1.5,
+                  px: 0,
                   fontSize: fs(13),
                   fontWeight: 700,
                   color: APP_PRIMARY,
-                  textDecoration: 'none',
-                  '&:hover': { textDecoration: 'underline' },
+                  '&:hover': { bgcolor: 'transparent', textDecoration: 'underline' },
                 }}
               >
-                View all ({allProjectActivity.length} events)
-              </Link>
+                {activityExpanded
+                  ? 'Show less'
+                  : `View all (${allProjectActivity.length} events)`}
+              </Button>
             )}
           </Box>
         </Stack>
