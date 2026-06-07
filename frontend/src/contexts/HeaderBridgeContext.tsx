@@ -22,6 +22,7 @@ export function HeaderBridgeProvider({ children }: { children: ReactNode }) {
   return <HeaderBridgeContext.Provider value={value}>{children}</HeaderBridgeContext.Provider>
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook is co-located with its provider
 export function useHeaderBridge() {
   const context = useContext(HeaderBridgeContext)
   if (!context) {

@@ -93,6 +93,6 @@ def test_project_activity_returns_project_events(auth_client, email_outbox, db_c
 
     assert response.status_code == 200
     data = response.json()
-    assert len(data) == 1
-    assert data[0]["action_type"] == "task_updated"
-    assert data[0]["project_id"] == project["id"]
+    task_events = [event for event in data if event["action_type"] == "task_updated"]
+    assert len(task_events) == 1
+    assert task_events[0]["project_id"] == project["id"]

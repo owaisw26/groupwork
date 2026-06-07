@@ -1,4 +1,5 @@
 import { Box, Typography } from '@mui/material'
+import type { SxProps, Theme } from '@mui/material/styles'
 import { Link as RouterLink } from 'react-router-dom'
 import { APP_PRIMARY, APP_PRIMARY_LIGHT, fs, SLATE, SURFACE_CARD_SX } from '../../appTheme'
 
@@ -81,7 +82,7 @@ export default function StatCard({
     </>
   )
 
-  const cardSx = {
+  const cardSx: SxProps<Theme> = {
     ...SURFACE_CARD_SX,
     height: '100%',
     display: 'flex',
