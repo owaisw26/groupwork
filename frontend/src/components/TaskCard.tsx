@@ -7,6 +7,7 @@ import {
   formatTaskDueDate,
   getEffectiveDueDate,
   memberInitials,
+  PRIORITY_PILL_WIDTH,
   PRIORITY_STYLES,
 } from '../constants/taskFields'
 import type { Task } from '../store/tasksSlice'
@@ -168,6 +169,7 @@ export default function TaskCard({ task, onClick, members = [], projectDueDate =
         </Box>
         <Box
           sx={{
+            width: PRIORITY_PILL_WIDTH,
             px: 1.5,
             py: 0.5,
             borderRadius: 2,
@@ -177,6 +179,9 @@ export default function TaskCard({ task, onClick, members = [], projectDueDate =
             fontWeight: 700,
             flexShrink: 0,
             lineHeight: 1.2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           {priority.label}

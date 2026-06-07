@@ -23,6 +23,7 @@ import {
   AVATAR_COLORS,
   memberInitials,
   PRIORITY_OPTIONS,
+  PRIORITY_SELECT_WIDTH,
   PRIORITY_STYLES,
   STATUS_LABELS,
   STATUS_STYLES,
@@ -115,10 +116,12 @@ function MetaPill({
   label,
   bg,
   color,
+  width,
 }: {
   label: string
   bg: string
   color: string
+  width?: number
 }) {
   return (
     <Box
@@ -133,6 +136,12 @@ function MetaPill({
         lineHeight: 1.2,
         whiteSpace: 'nowrap',
         flexShrink: 0,
+        ...(width != null && {
+          width,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }),
       }}
     >
       {label}
@@ -157,10 +166,15 @@ const COMPACT_SELECT_SX: SxProps<Theme> = {
   },
   '& .MuiSelect-select': {
     py: 0.5,
-    px: 1.5,
+    pl: 1.5,
+    pr: '22px !important',
     display: 'flex',
     alignItems: 'center',
     minHeight: 'unset',
+  },
+  '& .MuiSelect-icon': {
+    right: 6,
+    color: 'inherit',
   },
 }
 
@@ -427,7 +441,8 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                         onChange={(e) => setEditPriority(e.target.value)}
                         sx={{
                           ...COMPACT_SELECT_SX,
-                          minWidth: 108,
+                          width: PRIORITY_SELECT_WIDTH,
+                          flexShrink: 0,
                           bgcolor: (PRIORITY_STYLES[editPriority] ?? PRIORITY_STYLES.medium).bg,
                           color: (PRIORITY_STYLES[editPriority] ?? PRIORITY_STYLES.medium).color,
                           '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
@@ -470,6 +485,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                         label={priorityStyle.label}
                         bg={priorityStyle.bg}
                         color={priorityStyle.color}
+                        width={PRIORITY_SELECT_WIDTH}
                       />
                       {effectiveDueDate && (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, color: SLATE[500] }}>

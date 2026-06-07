@@ -9,12 +9,8 @@ import {
   type DragStartEvent,
 } from '@dnd-kit/core'
 import AddIcon from '@mui/icons-material/Add'
-import ArrowForwardOutlinedIcon from '@mui/icons-material/ArrowForwardOutlined'
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined'
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined'
-import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined'
-import NoteAltOutlinedIcon from '@mui/icons-material/NoteAltOutlined'
-import ScheduleOutlinedIcon from '@mui/icons-material/ScheduleOutlined'
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined'
 import {
   Box,
@@ -41,6 +37,7 @@ import {
   type Task,
   type TaskStatus,
 } from '../../store/tasksSlice'
+import ActivityFeed from '../../components/ActivityFeed'
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   todo: 'To Do',
@@ -56,12 +53,10 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
   done: '#16A34A',
 }
 
-const ACTIVITY_ICONS: Record<string, React.ReactNode> = {
-  time_logged: <ScheduleOutlinedIcon sx={{ fontSize: fs(16) }} />,
-  meeting_note: <NoteAltOutlinedIcon sx={{ fontSize: fs(16) }} />,
-  task_created: <AddIcon sx={{ fontSize: fs(16) }} />,
-  task_updated: <HistoryOutlinedIcon sx={{ fontSize: fs(16) }} />,
-}
+const BOARD_HEIGHT = 'calc(100vh - 360px)'
+const KANBAN_TASK_PREVIEW = 4
+const ACTIVITY_PREVIEW = 4
+const REVIEW_PREVIEW = 3
 
 interface ProjectMember {
   id: string
@@ -79,6 +74,8 @@ function KanbanColumn({
   onAddTask,
   members,
   projectDueDate,
+  expanded,
+  onViewAll,
 }: {
   status: TaskStatus
   tasks: Task[]
@@ -86,8 +83,12 @@ function KanbanColumn({
   onAddTask: () => void
   members: ProjectMember[]
   projectDueDate?: string | null
+  expanded: boolean
+  onViewAll: () => void
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status })
+  const hasOverflow = tasks.length > KANBAN_TASK_PREVIEW
+  const visibleTasks = expanded || !hasOverflow ? tasks : tasks.slice(0, KANBAN_TASK_PREVIEW)
 
   return (
     <Paper
@@ -96,7 +97,10 @@ function KanbanColumn({
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 520,
+        flex: 1,
+        width: '100%',
+        height: { xs: 'auto', xl: '100%' },
+        minHeight: { xs: 400, xl: 0 },
         bgcolor: isOver ? APP_PRIMARY_LIGHT : '#FFFFFF',
         border: `1px solid ${isOver ? APP_PRIMARY : '#E2E8F0'}`,
         borderRadius: '18px',
@@ -148,8 +152,8 @@ function KanbanColumn({
         </IconButton>
       </Box>
 
-      <Box sx={{ flex: 1, px: 2.25, pb: 1.5, overflowY: 'auto' }}>
-        {tasks.map((task) => (
+      <Box sx={{ flex: 1, minHeight: 0, px: 2.25, pb: 1, overflowY: expanded ? 'auto' : 'hidden' }}>
+        {visibleTasks.map((task) => (
           <TaskCard
             key={task.id}
             task={task}
@@ -160,7 +164,26 @@ function KanbanColumn({
         ))}
       </Box>
 
-      <Box sx={{ px: 1.5, pb: 1.5 }}>
+      {hasOverflow && !expanded && (
+        <Box sx={{ px: 2.25, pb: 0.5 }}>
+          <Button
+            fullWidth
+            onClick={onViewAll}
+            sx={{
+              justifyContent: 'flex-start',
+              color: APP_PRIMARY,
+              fontWeight: 700,
+              fontSize: fs(13),
+              py: 0.75,
+              '&:hover': { bgcolor: APP_PRIMARY_LIGHT },
+            }}
+          >
+            View all ({tasks.length} tasks)
+          </Button>
+        </Box>
+      )}
+
+      <Box sx={{ px: 1.5, pb: 1.5, mt: 'auto' }}>
         <Button
           fullWidth
           startIcon={<AddIcon />}
@@ -194,6 +217,7 @@ export default function TasksTab() {
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [members, setMembers] = useState<ProjectMember[]>([])
+  const [expandedColumns, setExpandedColumns] = useState<Partial<Record<TaskStatus, boolean>>>({})
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
@@ -214,11 +238,11 @@ export default function TasksTab() {
 
   const featuredReviewTask = reviewTasks[0] ?? null
 
-  const projectActivity = useMemo(
-    () =>
-      (dashboard?.recent_activity ?? []).filter((item) => item.project_id === projectId).slice(0, 5),
+  const allProjectActivity = useMemo(
+    () => (dashboard?.recent_activity ?? []).filter((item) => item.project_id === projectId),
     [dashboard?.recent_activity, projectId],
   )
+  const hasMoreActivity = allProjectActivity.length > ACTIVITY_PREVIEW
 
   const handleDragStart = (event: DragStartEvent) => {
     const task = items.find((t) => t.id === event.active.id)
@@ -260,12 +284,28 @@ export default function TasksTab() {
   }
 
   return (
-    <Grid container spacing={2.5}>
-      <Grid size={{ xs: 12, xl: 9 }}>
+    <Grid
+      container
+      spacing={2.5}
+      sx={{
+        height: { xs: 'auto', xl: BOARD_HEIGHT },
+        minHeight: { xl: 480 },
+        alignItems: 'stretch',
+      }}
+    >
+      <Grid
+        size={{ xs: 12, xl: 9 }}
+        sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
+      >
+        <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, height: '100%' }}>
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <Grid container spacing={2}>
+          <Grid container spacing={2} sx={{ flex: 1, minHeight: 0, height: '100%', alignItems: 'stretch' }}>
             {TASK_STATUSES.map((status) => (
-              <Grid key={status} size={{ xs: 12, sm: 6, lg: 3 }}>
+              <Grid
+                key={status}
+                size={{ xs: 12, sm: 6, lg: 3 }}
+                sx={{ display: 'flex', minHeight: { xs: 400, xl: 0 } }}
+              >
                 <KanbanColumn
                   status={status}
                   tasks={items.filter((t) => t.status === status)}
@@ -273,6 +313,10 @@ export default function TasksTab() {
                   projectDueDate={currentProject?.due_date}
                   onTaskClick={(task) => setSelectedTaskId(task.id)}
                   onAddTask={() => openCreateTask?.()}
+                  expanded={!!expandedColumns[status]}
+                  onViewAll={() =>
+                    setExpandedColumns((prev) => ({ ...prev, [status]: true }))
+                  }
                 />
               </Grid>
             ))}
@@ -288,13 +332,18 @@ export default function TasksTab() {
             ) : null}
           </DragOverlay>
         </DndContext>
+        </Box>
       </Grid>
 
-      <Grid size={{ xs: 12, xl: 3 }}>
-        <Stack spacing={2.5}>
+      <Grid
+        size={{ xs: 12, xl: 3 }}
+        sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
+      >
+        <Stack spacing={2.5} sx={{ flex: 1, minHeight: 0, height: '100%' }}>
           <Box
             sx={{
               ...SURFACE_CARD_SX,
+              flexShrink: 0,
               borderStyle: featuredReviewTask ? 'dashed' : 'solid',
               borderColor: featuredReviewTask ? '#F59E0B' : APP_BORDER,
               bgcolor: featuredReviewTask ? '#FFFBEB' : '#FFFFFF',
@@ -365,9 +414,27 @@ export default function TasksTab() {
               </Box>
             )}
 
-            {reviewTasks.length > 1 && (
+            {reviewTasks.length > REVIEW_PREVIEW && (
+              <Link
+                component={RouterLink}
+                to={`/projects/${projectId}/peer-review`}
+                sx={{
+                  display: 'inline-block',
+                  mt: 1.5,
+                  fontSize: fs(13),
+                  fontWeight: 700,
+                  color: APP_PRIMARY,
+                  textDecoration: 'none',
+                  '&:hover': { textDecoration: 'underline' },
+                }}
+              >
+                View all ({reviewTasks.length} tasks)
+              </Link>
+            )}
+
+            {reviewTasks.length > 1 && reviewTasks.length <= REVIEW_PREVIEW && (
               <Stack spacing={1} sx={{ mt: 1.5 }}>
-                {reviewTasks.slice(1, 3).map((task) => (
+                {reviewTasks.slice(1, REVIEW_PREVIEW).map((task) => (
                   <Box
                     key={task.id}
                     sx={{
@@ -386,63 +453,42 @@ export default function TasksTab() {
             )}
           </Box>
 
-          <Box sx={SURFACE_CARD_SX}>
+          <Box
+            sx={{
+              ...SURFACE_CARD_SX,
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              minHeight: 0,
+            }}
+          >
             <Typography sx={{ fontSize: fs(15), fontWeight: 800, color: SLATE[900], mb: 2 }}>
               Team Activity
             </Typography>
-            {projectActivity.length === 0 ? (
-              <Typography sx={{ fontSize: fs(14), color: SLATE[500] }}>
-                Activity for this project will appear here.
-              </Typography>
-            ) : (
-              <Stack spacing={1.75}>
-                {projectActivity.map((item) => (
-                  <Box key={item.id} sx={{ display: 'flex', gap: 1.25, alignItems: 'flex-start' }}>
-                    <Box
-                      sx={{
-                        width: 28,
-                        height: 28,
-                        borderRadius: '8px',
-                        bgcolor: APP_PRIMARY_LIGHT,
-                        color: APP_PRIMARY,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {ACTIVITY_ICONS[item.action_type] ?? <HistoryOutlinedIcon sx={{ fontSize: fs(16) }} />}
-                    </Box>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography sx={{ fontSize: fs(13), fontWeight: 700, color: SLATE[900] }}>
-                        {item.user_name}
-                      </Typography>
-                      <Typography sx={{ fontSize: fs(12), color: SLATE[500], lineHeight: 1.45 }}>
-                        {item.action_type.replace(/_/g, ' ')}
-                      </Typography>
-                    </Box>
-                  </Box>
-                ))}
-              </Stack>
+            <Box sx={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+              <ActivityFeed
+                items={allProjectActivity}
+                limit={ACTIVITY_PREVIEW}
+                emptyMessage="Activity for this project will appear here."
+              />
+            </Box>
+            {hasMoreActivity && (
+              <Link
+                component={RouterLink}
+                to={`/projects/${projectId}/activity`}
+                sx={{
+                  display: 'inline-block',
+                  mt: 1.5,
+                  fontSize: fs(13),
+                  fontWeight: 700,
+                  color: APP_PRIMARY,
+                  textDecoration: 'none',
+                  '&:hover': { textDecoration: 'underline' },
+                }}
+              >
+                View all ({allProjectActivity.length} events)
+              </Link>
             )}
-            <Link
-              component={RouterLink}
-              to="/notifications"
-              sx={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 0.5,
-                mt: 2,
-                fontSize: fs(13),
-                fontWeight: 700,
-                color: APP_PRIMARY,
-                textDecoration: 'none',
-                '&:hover': { textDecoration: 'underline' },
-              }}
-            >
-              View full activity log
-              <ArrowForwardOutlinedIcon sx={{ fontSize: fs(14) }} />
-            </Link>
           </Box>
         </Stack>
       </Grid>

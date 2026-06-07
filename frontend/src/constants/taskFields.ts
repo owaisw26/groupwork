@@ -7,6 +7,12 @@ export const PRIORITY_STYLES: Record<string, { bg: string; color: string; label:
 
 export const PRIORITY_OPTIONS = ['low', 'medium', 'high', 'urgent'] as const
 
+/** Fixed width for priority pills — sized to fit the longest label ("Urgent"). */
+export const PRIORITY_PILL_WIDTH = 80
+
+/** Select is slightly wider to accommodate the dropdown chevron. */
+export const PRIORITY_SELECT_WIDTH = 96
+
 export const STATUS_LABELS: Record<string, string> = {
   todo: 'To Do',
   in_progress: 'In Progress',

@@ -1,4 +1,4 @@
-import { Box, Link, Typography } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { Link as RouterLink } from 'react-router-dom'
 import { APP_PRIMARY, APP_PRIMARY_LIGHT, fs, SLATE, SURFACE_CARD_SX } from '../../appTheme'
 
@@ -25,8 +25,10 @@ export default function StatCard({
   accent = APP_PRIMARY,
   footer,
 }: StatCardProps) {
-  return (
-    <Box sx={{ ...SURFACE_CARD_SX, height: '100%', display: 'flex', flexDirection: 'column' }}>
+  const isInteractive = Boolean(actionTo || onActionClick)
+
+  const content = (
+    <>
       <Box
         sx={{
           width: 40,
@@ -61,28 +63,69 @@ export default function StatCard({
         </Typography>
       )}
       {footer}
-      {actionLabel && (actionTo || onActionClick) && (
-        <Link
-          component={onActionClick ? 'button' : RouterLink}
-          to={onActionClick ? undefined : actionTo}
-          onClick={onActionClick}
+      {actionLabel && isInteractive && (
+        <Typography
+          className="stat-card-action"
+          component="span"
           sx={{
-            mt: footer ? 1.5 : 0,
+            mt: footer ? 1.5 : 'auto',
             fontSize: fs(14),
             fontWeight: 700,
             color: accent === '#DC2626' ? '#DC2626' : APP_PRIMARY,
-            textDecoration: 'none',
-            border: 'none',
-            background: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            fontFamily: 'inherit',
-            '&:hover': { textDecoration: 'underline' },
           }}
         >
           {actionLabel}
-        </Link>
+        </Typography>
       )}
-    </Box>
+    </>
   )
+
+  const cardSx = {
+    ...SURFACE_CARD_SX,
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    ...(isInteractive && {
+      cursor: 'pointer',
+      textDecoration: 'none',
+      color: 'inherit',
+      transition: 'border-color 150ms ease, box-shadow 150ms ease',
+      '&:hover': {
+        borderColor: APP_PRIMARY,
+        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+      },
+      '&:hover .stat-card-action': {
+        textDecoration: 'underline',
+      },
+    }),
+  }
+
+  if (actionTo) {
+    return (
+      <Box component={RouterLink} to={actionTo} sx={cardSx}>
+        {content}
+      </Box>
+    )
+  }
+
+  if (onActionClick) {
+    return (
+      <Box
+        component="button"
+        type="button"
+        onClick={onActionClick}
+        sx={{
+          ...cardSx,
+          width: '100%',
+          textAlign: 'left',
+          fontFamily: 'inherit',
+          appearance: 'none',
+        }}
+      >
+        {content}
+      </Box>
+    )
+  }
+
+  return <Box sx={cardSx}>{content}</Box>
 }
