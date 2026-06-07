@@ -133,6 +133,16 @@ def list_members(
     return project_service.list_members(conn, project_id, user["id"])
 
 
+@router.get("/{project_id}/activity")
+def list_project_activity(
+    project_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return project_service.list_project_activity(conn, project_id, user["id"])
+
+
 @router.post("/{project_id}/leave")
 def leave_project(
     project_id: UUID,

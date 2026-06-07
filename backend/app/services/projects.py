@@ -7,6 +7,7 @@ import psycopg2
 from fastapi import HTTPException, status
 from psycopg2.extensions import connection
 
+from app.db.queries import dashboard as dashboard_queries
 from app.db.queries import projects as project_queries
 
 JOIN_CODE_CHARS = string.ascii_uppercase + string.digits
@@ -221,6 +222,17 @@ def transfer_ownership(
 def list_members(conn: connection, project_id: str | UUID, user_id: str | UUID) -> list[dict]:
     _require_member(conn, project_id, user_id)
     return project_queries.get_project_members(conn, project_id)
+
+
+def list_project_activity(
+    conn: connection,
+    project_id: str | UUID,
+    user_id: str | UUID,
+    *,
+    limit: int = 50,
+) -> list[dict]:
+    _require_member(conn, project_id, user_id)
+    return dashboard_queries.get_project_activity(conn, project_id, user_id, limit=limit)
 
 
 def _log_activity(

@@ -108,3 +108,41 @@ def get_recent_activity(
         }
         for row in rows
     ]
+
+
+def get_project_activity(
+    conn: connection,
+    project_id: str | UUID,
+    user_id: str | UUID,
+    *,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT al.id, al.action_type, al.entity_type, al.entity_id,
+                   al.created_at, al.project_id, p.name, u.full_name
+            FROM activity_log al
+            JOIN projects p ON p.id = al.project_id
+            JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = %s
+            JOIN users u ON u.id = al.user_id
+            WHERE al.project_id = %s AND p.deleted_at IS NULL
+            ORDER BY al.created_at DESC
+            LIMIT %s
+            """,
+            (str(user_id), str(project_id), limit),
+        )
+        rows = cur.fetchall()
+    return [
+        {
+            "id": str(row[0]),
+            "action_type": row[1],
+            "entity_type": row[2],
+            "entity_id": str(row[3]),
+            "created_at": row[4].isoformat(),
+            "project_id": str(row[5]),
+            "project_name": row[6],
+            "user_name": row[7],
+        }
+        for row in rows
+    ]

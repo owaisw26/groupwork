@@ -71,3 +71,28 @@ def test_dashboard_empty_for_new_user(auth_client, email_outbox):
     assert data["my_tasks"] == []
     assert data["upcoming_deadlines"] == []
     assert data["recent_activity"] == []
+
+
+def test_project_activity_returns_project_events(auth_client, email_outbox, db_conn):
+    headers, email = _verified_user(auth_client, email_outbox, email="activity@example.com")
+    project = _create_project(auth_client, headers, name="Activity Project")
+
+    with db_conn.cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        user_id = cur.fetchone()[0]
+        cur.execute(
+            """
+            INSERT INTO activity_log (project_id, user_id, action_type, entity_type, entity_id)
+            VALUES (%s, %s, 'task_updated', 'task', %s)
+            """,
+            (project["id"], user_id, project["id"]),
+        )
+    db_conn.commit()
+
+    response = auth_client.get(f"/api/v1/projects/{project['id']}/activity", headers=headers)
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 1
+    assert data[0]["action_type"] == "task_updated"
+    assert data[0]["project_id"] == project["id"]
