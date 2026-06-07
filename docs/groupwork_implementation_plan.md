@@ -59,17 +59,20 @@ todos:
   - id: p4-m5-emails
     content: "P4.5: Email notifications (SES templates, 7 notification types)"
     status: pending
-  - id: p5-m1-aws
-    content: "P5.1: AWS infrastructure (ECS, RDS, S3, API Gateway, Secrets Manager, CloudWatch)"
+  - id: p5-m1-task-fields
+    content: "P5.1: Task field UI (due date, assignees, priority on create/edit; real card data)"
     status: pending
-  - id: p5-m2-cicd
-    content: "P5.2: CI/CD pipeline (GitHub Actions -> ECR -> ECS)"
+  - id: p5-m2-aws
+    content: "P5.2: AWS infrastructure (ECS, RDS, S3, API Gateway, Secrets Manager, CloudWatch)"
     status: pending
-  - id: p5-m3-security
-    content: "P5.3: Security hardening + SQL injection test suite (20+ attack vectors)"
+  - id: p5-m3-cicd
+    content: "P5.3: CI/CD pipeline (GitHub Actions -> ECR -> ECS)"
     status: pending
-  - id: p5-m4-monitoring
-    content: "P5.4: Monitoring, structured logging, CloudWatch alarms"
+  - id: p5-m4-security
+    content: "P5.4: Security hardening + SQL injection test suite (20+ attack vectors)"
+    status: pending
+  - id: p5-m5-monitoring
+    content: "P5.5: Monitoring, structured logging, CloudWatch alarms"
     status: pending
 isProject: false
 ---
@@ -79,6 +82,7 @@ isProject: false
 ## Design Debt (Deferred)
 
 - **UI polish (post-Phase 4)**: Current frontend is functional but visually rigid. Target a more flowy, Jira-style experience — fluid Kanban columns, denser information hierarchy, smoother transitions, and board-first navigation. Track as a dedicated UI/UX pass after core product phases; do not block Phase 4 feature delivery.
+- **Task card field wiring (Phase 5.1)**: Kanban cards were restyled to match the login-page preview (assignee avatars, due date, priority pill, subtask progress bar), but create/edit flows still only collect a title. Backend and Redux already support `due_date`, `assignee_ids`, and `priority`; Phase 5.1 wires the UI before production/AWS work.
 
 ## Git Workflow & Practices
 
@@ -762,7 +766,69 @@ groupwork/
 
 ## Phase 5: Production Readiness
 
-### Module 5.1: AWS Infrastructure
+### Module 5.1: Task Field UI (Due Date, Assignees, Priority)
+
+**Branch**: `feat/task-field-ui`
+
+**Context:** The task board API and data model already support `due_date`, `assignee_ids`, and `priority` (backend defaults: `priority = "medium"`, `due_date = null`, assignees default to the creator). The Kanban card UI renders these fields when present, but the frontend never collects or edits them — the "New Task" dialog is title-only, and `TaskDetailModal` edit mode has no controls for priority, due date, or assignees. Cards currently show placeholder avatar circles and mock subtask progress derived from status instead of real member/subtask data.
+
+**Tests (Step 1):**
+- `frontend/src/pages/project/__tests__/ProjectLayout.test.tsx`:
+  - Create-task dialog renders due date picker, priority select, and assignee multi-select.
+  - Submitting create sends `due_date`, `priority`, and `assignee_ids` to the API (mocked).
+  - Default priority is `"medium"` when not changed; creator is pre-selected as assignee.
+- `frontend/src/components/__tests__/TaskDetailModal.test.tsx`:
+  - Owner edit mode shows priority select, due date picker, and assignee multi-select.
+  - Save dispatches `updateTask` with changed priority, due date, and assignees.
+  - Non-owner cannot edit these fields directly (edit-request flow unchanged for title/description).
+  - Assignee list displays member names in view mode.
+- `frontend/src/components/__tests__/TaskCard.test.tsx`:
+  - Renders due date when `task.due_date` is set; omits row when null.
+  - Renders real assignee initials from `members` prop (not placeholder circles).
+  - Subtask progress reflects `completedSubtasks / totalSubtasks` when provided.
+- `cypress/e2e/kanban.cy.ts` (extend existing):
+  - Create task with due date, high priority, and second assignee -> card shows all three on board.
+  - Open task modal as owner -> change priority and due date -> save -> card updates.
+
+**Implementation (Step 3):**
+- **Shared constants** (`src/constants/taskFields.ts` or inline in components):
+  - Priority options: `low`, `medium`, `high`, `urgent` with pill colors matching login preview / `TaskCard`.
+- **Create task dialog** (`src/pages/project/ProjectLayout.tsx`):
+  - Extend dialog beyond title-only: description (optional), due date (`TextField` type `date`), priority (`Select`), assignees (`Select` multiple or `Autocomplete` multi).
+  - Load project members from `currentProject.members` (or fetch via existing members endpoint if not on project object).
+  - Pre-select current user in assignees; pass all fields to `createTask` thunk.
+  - Reset form state on close/success.
+- **Task detail modal** (`src/components/TaskDetailModal.tsx`):
+  - View mode: show assignee chips/avatars with names, due date, priority pill (styled like board card).
+  - Owner edit mode: add `Select` for priority, date picker for due date, multi-select for assignees alongside title/description.
+  - Wire `handleSave` to pass `due_date`, `assignee_ids`, and `priority` to `updateTask`.
+  - Sync `editDueDate` and `editAssigneeIds` state from `currentTask` on open.
+- **Task card** (`src/components/TaskCard.tsx`):
+  - Accept optional `members: { id: string; full_name: string }[]` prop (or resolve from project context in `TasksTab`).
+  - Map `task.assignee_ids` to real avatars with initials; hide avatar row when no assignees.
+  - Replace `STATUS_CHECKLIST` mock with real subtask counts passed from parent (fetch subtasks per task on board load, or include subtask summary in task list API response if added later).
+- **Tasks tab** (`src/pages/project/TasksTab.tsx`):
+  - Pass project members into `TaskCard`; optionally batch-fetch subtask counts for visible tasks.
+- **Redux** (`src/store/tasksSlice.ts`):
+  - No API changes required; ensure `createTask` / `updateTask` payloads include new fields and fulfilled reducers update list + `currentTask`.
+
+**Commits for tests:**
+- `test(tasks): add create dialog field tests for due date, priority, assignees`
+- `test(tasks): add task detail modal edit field tests`
+- `test(tasks): add task card real assignee and subtask progress tests`
+- `test(e2e): extend kanban flow with task metadata`
+
+**Commits for implementation:**
+- `feat(tasks): extend create-task dialog with due date, priority, and assignees`
+- `feat(tasks): add priority, due date, and assignee controls to task detail edit mode`
+- `feat(tasks): show real assignees and subtask progress on task cards`
+- `feat(tasks): pass project members into kanban task cards`
+
+**Bug hunt focus:** Assignee validation (non-member IDs rejected by API — handle 422 gracefully), timezone/date formatting on due date input, empty assignee list vs creator default, optimistic UI desync after edit, drag-and-drop still working with expanded card layout.
+
+---
+
+### Module 5.2: AWS Infrastructure
 
 **Branch**: `feat/aws-infrastructure`
 
@@ -783,7 +849,7 @@ groupwork/
 
 ---
 
-### Module 5.2: CI/CD Deployment Pipeline
+### Module 5.3: CI/CD Deployment Pipeline
 
 **Branch**: `feat/cd-pipeline`
 
@@ -801,7 +867,7 @@ Note: The basic CI pipeline (lint + test) was set up in Phase 1, Module 1.1. Thi
 
 ---
 
-### Module 5.3: Security Hardening & SQL Injection Test Suite
+### Module 5.4: Security Hardening & SQL Injection Test Suite
 
 **Branch**: `feat/security-hardening`
 
@@ -819,7 +885,7 @@ Note: The basic CI pipeline (lint + test) was set up in Phase 1, Module 1.1. Thi
 
 ---
 
-### Module 5.4: Monitoring & Logging
+### Module 5.5: Monitoring & Logging
 
 **Branch**: `feat/monitoring-logging`
 
