@@ -107,13 +107,19 @@ const FIELD_SX: SxProps<Theme> = {
     borderRadius: '10px',
     bgcolor: '#FFFFFF',
   },
+  '& .MuiOutlinedInput-root:not(.MuiInputBase-multiline)': {
+    height: 34,
+  },
+  '& .MuiInputBase-input': {
+    py: 0.75,
+  },
 }
 
 const SECTION_SX: SxProps<Theme> = {
   border: `1px solid ${APP_BORDER}`,
-  borderRadius: '12px',
+  borderRadius: '10px',
   bgcolor: '#FFFFFF',
-  p: { xs: 1.25, sm: 1.5 },
+  p: 1.25,
 }
 
 function MetaPill({
@@ -131,11 +137,11 @@ function MetaPill({
     <Box
       sx={{
         px: 1.5,
-        py: 0.5,
+        py: 0.35,
         borderRadius: 2,
         bgcolor: bg,
         color,
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: 700,
         lineHeight: 1.2,
         whiteSpace: 'nowrap',
@@ -193,7 +199,7 @@ function SectionBlock({
 }) {
   return (
     <Box sx={[SECTION_SX, ...(Array.isArray(sx) ? sx : sx ? [sx] : [])]}>
-      <Typography sx={{ fontSize: fs(14), fontWeight: 800, color: SLATE[900], mb: 1 }}>
+      <Typography sx={{ fontSize: fs(13), fontWeight: 800, color: SLATE[900], mb: 0.75 }}>
         {title}
       </Typography>
       {children}
@@ -426,7 +432,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
         },
       }}
     >
-      <Box sx={{ px: { xs: 2, sm: 2.5 }, pt: { xs: 2, sm: 2.25 }, pb: 1.5, bgcolor: '#FFFFFF' }}>
+      <Box sx={{ px: { xs: 1.75, sm: 2.25 }, pt: { xs: 1.5, sm: 1.75 }, pb: 1.25, bgcolor: '#FFFFFF' }}>
         <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
           <Box sx={{ flex: 1, minWidth: 0 }}>
             {editMode ? (
@@ -439,11 +445,11 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
             ) : (
               <Typography
                 sx={{
-                  fontSize: fs(20),
+                  fontSize: fs(18),
                   fontWeight: 800,
                   color: SLATE[900],
                   lineHeight: 1.25,
-                  mb: 1,
+                  mb: 0.75,
                 }}
               >
                 {currentTask?.title ?? 'Task'}
@@ -452,7 +458,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
 
             {currentTask && (
               <>
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.75, mb: 1.25 }}>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.6, mb: 0.75 }}>
                   {!editMode && (
                     <MetaPill
                       label={STATUS_LABELS[currentTask.status] ?? currentTask.status}
@@ -497,7 +503,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                           ...FIELD_SX,
                           width: 148,
                           '& .MuiOutlinedInput-root': {
-                            height: 28,
+                            height: 26,
                             borderRadius: 2,
                             fontSize: 12,
                             fontWeight: 600,
@@ -585,11 +591,11 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
-                    gap: 2,
+                    gap: 1,
                     flexWrap: 'wrap',
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, minWidth: 0 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
                     {assignees.length > 0 ? (
                       <>
                         <Box sx={{ display: 'flex' }}>
@@ -597,13 +603,13 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                             <Avatar
                               key={assignee.id}
                               sx={{
-                                width: 28,
-                                height: 28,
+                                width: 24,
+                                height: 24,
                                 fontSize: 11,
                                 fontWeight: 700,
                                 bgcolor: AVATAR_COLORS[index % AVATAR_COLORS.length],
                                 border: '2px solid #FFFFFF',
-                                ml: index > 0 ? '-8px' : 0,
+                                ml: index > 0 ? '-7px' : 0,
                                 color: SLATE[800],
                               }}
                             >
@@ -611,12 +617,12 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                             </Avatar>
                           ))}
                         </Box>
-                        <Typography sx={{ fontSize: fs(13), color: SLATE[500], fontWeight: 600 }}>
+                        <Typography sx={{ fontSize: fs(12), color: SLATE[500], fontWeight: 600 }}>
                           {assignees.map((member) => member.full_name).join(', ')}
                         </Typography>
                       </>
                     ) : (
-                      <Typography sx={{ fontSize: fs(13), color: SLATE[400], fontStyle: 'italic' }}>
+                      <Typography sx={{ fontSize: fs(12), color: SLATE[400], fontStyle: 'italic' }}>
                         No assignees yet
                       </Typography>
                     )}
@@ -658,8 +664,8 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
             sx={{
               border: `1px solid ${APP_BORDER}`,
               borderRadius: '12px',
-              width: 38,
-              height: 38,
+              width: 34,
+              height: 34,
               flexShrink: 0,
             }}
           >
@@ -668,16 +674,10 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
         </Box>
       </Box>
 
-      <Box sx={{ px: { xs: 2, sm: 2.5 }, py: 1.5 }}>
+      <Box sx={{ px: { xs: 1.75, sm: 2.25 }, py: 1.25 }}>
         {currentTask && (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) minmax(0, 1fr)' },
-              gap: 1.25,
-            }}
-          >
-            <Box sx={{ ...SECTION_SX, gridColumn: '1 / -1' }}>
+          <Stack spacing={1}>
+            <Box sx={SECTION_SX}>
               {editMode ? (
                 <TextField
                   label="Description"
@@ -689,7 +689,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                   sx={FIELD_SX}
                 />
               ) : (
-                <Typography sx={{ fontSize: fs(14), color: SLATE[500], lineHeight: 1.45 }}>
+                <Typography sx={{ fontSize: fs(13), color: SLATE[500], lineHeight: 1.35 }}>
                   {currentTask.description || 'No description provided.'}
                 </Typography>
               )}
@@ -699,14 +699,13 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
               <Box
                 sx={{
                   ...SECTION_SX,
-                  gridColumn: '1 / -1',
                   bgcolor: APP_PRIMARY_LIGHT,
                   borderColor: 'rgba(37, 99, 235, 0.12)',
                 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                   <VerifiedOutlinedIcon sx={{ color: APP_PRIMARY, fontSize: 18 }} />
-                  <Typography sx={{ fontSize: fs(14), fontWeight: 800, color: SLATE[900] }}>
+                  <Typography sx={{ fontSize: fs(13), fontWeight: 800, color: SLATE[900] }}>
                     Peer Verification
                   </Typography>
                 </Box>
@@ -750,7 +749,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                 )}
 
                 {showDisputeForm && (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, mt: 1.5 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
                     <TextField
                       size="small"
                       label="Dispute reason"
@@ -790,7 +789,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                         <Box
                           key={dispute.id}
                           sx={{
-                            p: 1.25,
+                            p: 1,
                             borderRadius: '10px',
                             bgcolor: '#FFFFFF',
                             border: `1px solid ${APP_BORDER}`,
@@ -844,7 +843,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                       alignItems: 'center',
                       gap: 1,
                       px: 1,
-                      py: 0.5,
+                      py: 0.4,
                       borderRadius: '8px',
                       bgcolor: SLATE[50],
                     }}
@@ -879,7 +878,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                   </Box>
                 ))}
               </Stack>
-              <Box sx={{ display: 'flex', gap: 0.75, mt: 1 }}>
+              <Box sx={{ display: 'flex', gap: 0.75, mt: 0.75 }}>
                 <TextField
                   size="small"
                   placeholder="Add subtask"
@@ -919,14 +918,14 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                       <Typography sx={{ fontSize: fs(13), fontWeight: 700, color: SLATE[900], mb: 0.25 }}>
                         {comment.author_name ?? 'User'}
                       </Typography>
-                      <Typography sx={{ fontSize: fs(13), color: SLATE[500], lineHeight: 1.4 }}>
+                      <Typography sx={{ fontSize: fs(13), color: SLATE[500], lineHeight: 1.35 }}>
                         {comment.content}
                       </Typography>
                     </Box>
                   ))
                 )}
               </Stack>
-              <Box sx={{ display: 'flex', gap: 0.75, mt: 1 }}>
+              <Box sx={{ display: 'flex', gap: 0.75, mt: 0.75 }}>
                 <TextField
                   size="small"
                   placeholder="Add comment"
@@ -948,11 +947,11 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
 
             <SectionBlock title="Evidence">
               {evidence.length === 0 ? (
-                <Typography sx={{ fontSize: fs(13), color: SLATE[400], fontStyle: 'italic', mb: 1 }}>
+                <Typography sx={{ fontSize: fs(13), color: SLATE[400], fontStyle: 'italic', mb: 0.75 }}>
                   No files uploaded yet.
                 </Typography>
               ) : (
-                <Stack spacing={0.75} sx={{ mb: 1 }}>
+                <Stack spacing={0.5} sx={{ mb: 0.75 }}>
                   {evidence.map((file) => (
                     <Box
                       key={file.id}
@@ -961,7 +960,8 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                         justifyContent: 'space-between',
                         alignItems: 'center',
                         gap: 1,
-                        p: 1,
+                        px: 1,
+                        py: 0.75,
                         borderRadius: '8px',
                         bgcolor: SLATE[50],
                       }}
@@ -992,22 +992,23 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
             </SectionBlock>
 
             <SectionBlock title="Time Logs">
-              <Typography sx={{ fontSize: fs(13), color: SLATE[500], mb: 1 }}>
+              <Typography sx={{ fontSize: fs(12), color: SLATE[500], mb: 0.75 }}>
                 Your total hours on this project: {totalProjectHours}h
               </Typography>
               {timeLogs.length === 0 ? (
-                <Typography sx={{ fontSize: fs(13), color: SLATE[400], fontStyle: 'italic', mb: 1 }}>
+                <Typography sx={{ fontSize: fs(13), color: SLATE[400], fontStyle: 'italic', mb: 0.75 }}>
                   No time logged yet.
                 </Typography>
               ) : (
-                <Stack spacing={0.5} sx={{ mb: 1 }}>
+                <Stack spacing={0.5} sx={{ mb: 0.75 }}>
                   {timeLogs.map((log) => (
                     <Box
                       key={log.id}
                       sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
-                        p: 1,
+                        px: 1,
+                        py: 0.75,
                         borderRadius: '8px',
                         bgcolor: SLATE[50],
                       }}
@@ -1026,7 +1027,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
             </SectionBlock>
 
             {isOwner && editRequests.length > 0 && (
-              <SectionBlock title="Pending Edit Requests" sx={{ gridColumn: '1 / -1' }}>
+              <SectionBlock title="Pending Edit Requests">
                 {editRequests.map((request) => (
                   <Box key={request.id} sx={{ mb: editRequests.length > 1 ? 2 : 0 }}>
                     <EditRequestDiff current={currentTask} proposed={request.proposed_changes} />
@@ -1056,7 +1057,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
             )}
 
             {!isOwner && requestEditOpen && currentTask && (
-              <SectionBlock title="Request Edit" sx={{ gridColumn: '1 / -1' }}>
+              <SectionBlock title="Request Edit">
                 <TextField
                   label="Proposed title"
                   size="small"
@@ -1071,7 +1072,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                 />
               </SectionBlock>
             )}
-          </Box>
+          </Stack>
         )}
       </Box>
 
@@ -1081,8 +1082,8 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
           justifyContent: 'flex-end',
           flexWrap: 'wrap',
           gap: 1,
-          px: { xs: 2, sm: 2.5 },
-          py: 1.5,
+          px: { xs: 1.75, sm: 2.25 },
+          py: 1.25,
           bgcolor: '#FFFFFF',
           borderTop: `1px solid ${APP_BORDER}`,
         }}

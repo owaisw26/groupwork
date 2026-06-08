@@ -45,9 +45,9 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 1,
-        p: 1,
-        borderRadius: '10px',
+        gap: 0.75,
+        p: 0.75,
+        borderRadius: '8px',
         bgcolor: SLATE[50],
         border: `1px solid ${APP_BORDER}`,
       }}
@@ -62,8 +62,9 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           onChange={(e) => setHours(e.target.value)}
           slotProps={{ htmlInput: { min: 0.25, max: 24, step: 0.25 } }}
           sx={{
-            width: { xs: 'calc(42% - 4px)', sm: 88 },
-            '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#FFFFFF' },
+            width: { xs: 'calc(42% - 4px)', sm: 84 },
+            '& .MuiOutlinedInput-root': { height: 34, borderRadius: '8px', bgcolor: '#FFFFFF' },
+            '& .MuiInputBase-input': { py: 0.75 },
           }}
         />
         <TextField
@@ -74,8 +75,9 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           onChange={(e) => setDate(e.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
           sx={{
-            width: { xs: 'calc(58% - 4px)', sm: 150 },
-            '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#FFFFFF' },
+            width: { xs: 'calc(58% - 4px)', sm: 146 },
+            '& .MuiOutlinedInput-root': { height: 34, borderRadius: '8px', bgcolor: '#FFFFFF' },
+            '& .MuiInputBase-input': { py: 0.75 },
           }}
         />
         <TextField
@@ -86,7 +88,8 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           sx={{
             minWidth: { xs: '100%', sm: 0 },
             flex: 1,
-            '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#FFFFFF' },
+            '& .MuiOutlinedInput-root': { height: 34, borderRadius: '8px', bgcolor: '#FFFFFF' },
+            '& .MuiInputBase-input': { py: 0.75 },
           }}
         />
         <Button
@@ -96,10 +99,11 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           disabled={submitting}
           sx={{
             fontWeight: 700,
-            borderRadius: '10px',
+            borderRadius: '8px',
             textTransform: 'none',
-            px: 1.75,
-            minWidth: { xs: '100%', sm: 74 },
+            minHeight: 34,
+            px: 1.5,
+            minWidth: { xs: '100%', sm: 68 },
           }}
         >
           Log
