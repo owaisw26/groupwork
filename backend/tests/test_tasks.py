@@ -134,8 +134,26 @@ def test_list_tasks_cursor_pagination(auth_client, email_outbox):
     assert second_data["next_cursor"] is None
 
 
-def test_update_task_status_moving_to_done_sets_verification(auth_client, email_outbox):
+def test_update_task_status_moving_to_review_sets_verification(auth_client, email_outbox):
     headers, _ = verified_user(auth_client, email_outbox, email="task-status@example.com")
+    project = create_project(auth_client, headers).json()
+    task = create_task(auth_client, headers, project["id"]).json()
+
+    response = auth_client.patch(
+        f"/api/v1/tasks/{task['id']}/status",
+        json={"status": "review"},
+        headers=headers,
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "review"
+    assert response.json()["verification_status"] == "pending"
+
+
+def test_update_task_status_unverified_done_returns_409(auth_client, email_outbox):
+    headers, _ = verified_user(
+        auth_client, email_outbox, email="task-status-done-block@example.com"
+    )
     project = create_project(auth_client, headers).json()
     task = create_task(auth_client, headers, project["id"]).json()
 
@@ -145,9 +163,7 @@ def test_update_task_status_moving_to_done_sets_verification(auth_client, email_
         headers=headers,
     )
 
-    assert response.status_code == 200
-    assert response.json()["status"] == "done"
-    assert response.json()["verification_status"] == "pending"
+    assert response.status_code == 409
 
 
 def test_update_task_non_owner_returns_403(auth_client, email_outbox, db_conn):
@@ -472,12 +488,12 @@ def test_review_edit_request_approve_applies_status_change(auth_client, email_ou
     assert updated["status"] == "in_progress"
 
 
-def test_update_task_status_leaving_done_resets_verification(auth_client, email_outbox):
+def test_update_task_status_leaving_review_resets_verification(auth_client, email_outbox):
     headers, _ = verified_user(
         auth_client, email_outbox, email="task-verification-reset@example.com"
     )
     project = create_project(auth_client, headers).json()
-    task = create_task(auth_client, headers, project["id"], status="done").json()
+    task = create_task(auth_client, headers, project["id"], status="review").json()
     assert task["verification_status"] == "pending"
 
     response = auth_client.patch(

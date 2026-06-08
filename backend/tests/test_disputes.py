@@ -50,7 +50,7 @@ def _member_two_headers(auth_client, ctx):
     return switch_user(auth_client, ctx["member_two_email"])
 
 
-def _create_done_task(auth_client, ctx):
+def _create_review_task(auth_client, ctx):
     task = create_task(
         auth_client,
         _owner_headers(auth_client, ctx),
@@ -59,7 +59,7 @@ def _create_done_task(auth_client, ctx):
     ).json()
     auth_client.patch(
         f"/api/v1/tasks/{task['id']}/status",
-        json={"status": "done"},
+        json={"status": "review"},
         headers=_owner_headers(auth_client, ctx),
     )
     return task
@@ -96,7 +96,7 @@ def _vote(auth_client, ctx, dispute_id, vote, *, as_email):
 
 def test_file_dispute_valid_returns_201(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
 
     response = _file_dispute(auth_client, ctx, task["id"])
 
@@ -109,7 +109,7 @@ def test_file_dispute_valid_returns_201(auth_client, email_outbox, db_conn):
 
 def test_file_dispute_missing_reason_returns_422(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
 
     response = auth_client.post(
         f"/api/v1/tasks/{task['id']}/dispute",
@@ -122,7 +122,7 @@ def test_file_dispute_missing_reason_returns_422(auth_client, email_outbox, db_c
 
 def test_file_dispute_non_member_returns_403(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     outsider_headers, _ = verified_user(
         auth_client, email_outbox, email="dispute-outsider@example.com"
     )
@@ -138,7 +138,7 @@ def test_file_dispute_non_member_returns_403(auth_client, email_outbox, db_conn)
 
 def test_multiple_disputes_on_same_task_allowed(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
 
     first = _file_dispute(auth_client, ctx, task["id"], reason="First dispute")
     second = _file_dispute(
@@ -160,7 +160,7 @@ def test_multiple_disputes_on_same_task_allowed(auth_client, email_outbox, db_co
 
 def test_member_can_cast_uphold_vote(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(auth_client, ctx, task["id"]).json()
 
     response = _vote(
@@ -177,7 +177,7 @@ def test_member_can_cast_uphold_vote(auth_client, email_outbox, db_conn):
 
 def test_member_can_cast_reject_vote(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(auth_client, ctx, task["id"]).json()
 
     response = _vote(
@@ -194,7 +194,7 @@ def test_member_can_cast_reject_vote(auth_client, email_outbox, db_conn):
 
 def test_vote_non_member_returns_403(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(auth_client, ctx, task["id"]).json()
     outsider_headers, _ = verified_user(
         auth_client, email_outbox, email="dispute-vote-outsider@example.com"
@@ -211,7 +211,7 @@ def test_vote_non_member_returns_403(auth_client, email_outbox, db_conn):
 
 def test_cannot_vote_twice(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(auth_client, ctx, task["id"]).json()
 
     first = _vote(
@@ -235,7 +235,7 @@ def test_cannot_vote_twice(auth_client, email_outbox, db_conn):
 
 def test_dispute_resolved_on_majority_uphold(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(
         auth_client, ctx, task["id"], as_member="member_two"
     ).json()
@@ -255,7 +255,7 @@ def test_dispute_resolved_on_majority_uphold(auth_client, email_outbox, db_conn)
 
 def test_dispute_resolved_on_majority_reject(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(
         auth_client, ctx, task["id"], as_member="member_two"
     ).json()
@@ -275,7 +275,7 @@ def test_dispute_resolved_on_majority_reject(auth_client, email_outbox, db_conn)
 
 def test_dispute_resolved_when_all_members_voted(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(
         auth_client, ctx, task["id"], as_member="member_two"
     ).json()
@@ -296,7 +296,7 @@ def test_dispute_resolved_when_all_members_voted(auth_client, email_outbox, db_c
 
 def test_notification_sent_on_dispute_resolution(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(
         auth_client, ctx, task["id"], as_member="member_two"
     ).json()
@@ -317,7 +317,7 @@ def test_notification_sent_on_dispute_resolution(auth_client, email_outbox, db_c
 
 def test_list_task_disputes_returns_history(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     _file_dispute(auth_client, ctx, task["id"], reason="First")
     _file_dispute(auth_client, ctx, task["id"], reason="Second", as_member="member_two")
 
@@ -334,7 +334,7 @@ def test_list_task_disputes_returns_history(auth_client, email_outbox, db_conn):
 
 def test_cannot_vote_on_resolved_dispute(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
-    task = _create_done_task(auth_client, ctx)
+    task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(
         auth_client, ctx, task["id"], as_member="member_two"
     ).json()

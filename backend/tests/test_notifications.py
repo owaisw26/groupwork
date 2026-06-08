@@ -61,7 +61,7 @@ def test_notification_on_task_assignment(auth_client, email_outbox, db_conn):
     assert _count_notifications(db_conn, member_email, "task_assigned") >= 1
 
 
-def test_notification_on_task_done(auth_client, email_outbox, db_conn):
+def test_notification_on_task_review(auth_client, email_outbox, db_conn):
     owner_email, member_email, project = _setup_two_member_project(
         auth_client, email_outbox, db_conn
     )
@@ -69,7 +69,7 @@ def test_notification_on_task_done(auth_client, email_outbox, db_conn):
     task = create_task(auth_client, owner_headers, project["id"]).json()
     auth_client.patch(
         f"/api/v1/tasks/{task['id']}/status",
-        json={"status": "done"},
+        json={"status": "review"},
         headers=owner_headers,
     )
     assert _count_notifications(db_conn, member_email, "task_completed") >= 1
@@ -86,7 +86,7 @@ def test_notification_on_dispute_filed(auth_client, email_outbox, db_conn):
     owner_headers = switch_user(auth_client, owner_email)
     auth_client.patch(
         f"/api/v1/tasks/{task['id']}/status",
-        json={"status": "done"},
+        json={"status": "review"},
         headers=owner_headers,
     )
     member_headers = switch_user(auth_client, member_email)

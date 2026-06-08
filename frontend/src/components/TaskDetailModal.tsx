@@ -252,9 +252,10 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
   const isOwner = user?.id === projectOwnerId
   const isAssignee = currentTask?.assignee_ids.includes(user?.id ?? '') ?? false
   const canVerify =
-    currentTask?.status === 'done'
+    currentTask?.status === 'review'
     && !isAssignee
     && !verifications.some((v) => v.user_id === user?.id)
+  const showVerification = currentTask?.status === 'review' || currentTask?.status === 'done'
 
   const assignees = useMemo(
     () =>
@@ -574,7 +575,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
                     </>
                   )}
 
-                  {currentTask.status === 'done' && (
+                  {showVerification && (
                     <MetaPill
                       label={`Verification: ${currentTask.verification_status}`}
                       bg={
@@ -704,7 +705,7 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
               )}
             </Box>
 
-            {currentTask.status === 'done' && (
+            {showVerification && (
               <Box
                 sx={{
                   ...SECTION_SX,

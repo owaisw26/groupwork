@@ -98,6 +98,18 @@ def _validate_priority(priority: str) -> None:
         )
 
 
+def _validate_status_transition(task: dict, status_value: str) -> None:
+    if (
+        status_value == "done"
+        and task["status"] != "done"
+        and task["verification_status"] != "verified"
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Task must be verified by another member before it can be moved to done",
+        )
+
+
 def _validate_assignees(
     conn: connection,
     project_id: str | UUID,
@@ -135,8 +147,16 @@ def _apply_approved_edit_changes(
             )
 
     if "status" in changes:
-        _validate_status(changes["status"])
-        status_updated = task_queries.update_task_status(conn, task_id, changes["status"])
+        status_value = changes["status"]
+        _validate_status(status_value)
+        task = task_queries.get_task(conn, task_id)
+        if not task:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Task not found while applying status change",
+            )
+        _validate_status_transition(task, status_value)
+        status_updated = task_queries.update_task_status(conn, task_id, status_value)
         if not status_updated:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -302,10 +322,11 @@ def update_task_status(
 ) -> dict:
     task = _require_task_access(conn, task_id, user_id)
     _validate_status(status_value)
+    _validate_status_transition(task, status_value)
     updated = task_queries.update_task_status(conn, task_id, status_value)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-    if status_value == "done" and task["status"] != "done":
+    if status_value == "review" and task["status"] != "review":
         from app.services.verification import notify_verification_needed
 
         notify_verification_needed(conn, updated)

@@ -30,7 +30,7 @@ def create_task(
     created_by: str | UUID,
     assignee_ids: list[str | UUID] | None = None,
 ) -> dict[str, Any]:
-    verification_status = "pending" if status == "done" else "none"
+    verification_status = "pending" if status == "review" else "none"
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -367,9 +367,11 @@ def update_task_status(
     current = get_task(conn, task_id)
     if not current:
         return None
-    if status == "done":
+    if status == "review":
         verification_status = "pending"
-    elif current["status"] == "done":
+    elif status == "done":
+        verification_status = current["verification_status"]
+    elif current["status"] in {"review", "done"} and status != current["status"]:
         verification_status = "none"
     else:
         verification_status = current["verification_status"]

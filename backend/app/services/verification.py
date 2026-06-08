@@ -95,14 +95,14 @@ def notify_verification_needed(conn: connection, task: dict) -> None:
             user_id=member["id"],
             notification_type="task_completed",
             title="Task verification needed",
-            message=f"Task '{task['title']}' was marked done and needs your verification.",
+            message=f"Task '{task['title']}' is in review and needs your verification.",
             entity_type="task",
             entity_id=task["id"],
         )
 
 
 def _ensure_task_awaiting_verification(task: dict) -> None:
-    if task["status"] != "done":
+    if task["status"] != "review":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Task is not awaiting verification",
