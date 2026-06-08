@@ -1,6 +1,6 @@
 import { Alert, Box, Button, TextField } from '@mui/material'
 import { useState } from 'react'
-import { SLATE } from '../appTheme'
+import { APP_BORDER, SLATE } from '../appTheme'
 import { useAppDispatch } from '../store/hooks'
 import { createTimeLog, fetchTimeLogs } from '../store/tasksSlice'
 
@@ -45,16 +45,15 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
       sx={{
         display: 'flex',
         flexDirection: 'column',
-        gap: 1.5,
-        p: 1.5,
-        borderRadius: '12px',
+        gap: 1,
+        p: 1,
+        borderRadius: '10px',
         bgcolor: SLATE[50],
-        border: '1px solid',
-        borderColor: 'divider',
+        border: `1px solid ${APP_BORDER}`,
       }}
     >
       {error && <Alert severity="error">{error}</Alert>}
-      <Box sx={{ display: 'flex', gap: 1 }}>
+      <Box sx={{ display: 'flex', gap: 0.75, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
         <TextField
           label="Hours"
           type="number"
@@ -63,8 +62,8 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           onChange={(e) => setHours(e.target.value)}
           slotProps={{ htmlInput: { min: 0.25, max: 24, step: 0.25 } }}
           sx={{
-            width: 100,
-            '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#FFFFFF' },
+            width: { xs: 'calc(42% - 4px)', sm: 88 },
+            '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#FFFFFF' },
           }}
         />
         <TextField
@@ -75,29 +74,37 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           onChange={(e) => setDate(e.target.value)}
           slotProps={{ inputLabel: { shrink: true } }}
           sx={{
-            flex: 1,
-            '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#FFFFFF' },
+            width: { xs: 'calc(58% - 4px)', sm: 150 },
+            '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#FFFFFF' },
           }}
         />
+        <TextField
+          label="Description"
+          size="small"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          sx={{
+            minWidth: { xs: '100%', sm: 0 },
+            flex: 1,
+            '& .MuiOutlinedInput-root': { borderRadius: '10px', bgcolor: '#FFFFFF' },
+          }}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          size="small"
+          disabled={submitting}
+          sx={{
+            fontWeight: 700,
+            borderRadius: '10px',
+            textTransform: 'none',
+            px: 1.75,
+            minWidth: { xs: '100%', sm: 74 },
+          }}
+        >
+          Log
+        </Button>
       </Box>
-      <TextField
-        label="Description"
-        size="small"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        multiline
-        rows={2}
-        sx={{ '& .MuiOutlinedInput-root': { borderRadius: '12px', bgcolor: '#FFFFFF' } }}
-      />
-      <Button
-        type="submit"
-        variant="contained"
-        size="small"
-        disabled={submitting}
-        sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none', alignSelf: 'flex-start' }}
-      >
-        Log Time
-      </Button>
     </Box>
   )
 }
