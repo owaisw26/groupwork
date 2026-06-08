@@ -6,7 +6,7 @@ University group assignment accountability platform. Students plan tasks, log wo
 
 - **Backend**: FastAPI, Python 3.12, PostgreSQL, psycopg2
 - **Frontend**: React 18, Vite, Material UI, Redux Toolkit
-- **Infrastructure**: Docker Compose (local), AWS ECS/RDS/S3 (production)
+- **Infrastructure**: Docker Compose (local); production on [Vercel](https://groupwork-rho.vercel.app) (frontend), [Render](https://groupwork-dr2n.onrender.com) (API), [Neon](https://neon.tech) (Postgres)
 
 ## Prerequisites
 
@@ -69,7 +69,14 @@ groupwork/
   .github/          # CI/CD workflows
 ```
 
+## Production
+
+Live app: https://groupwork-rho.vercel.app
+
+See [Deployment Guide](docs/DEPLOY.md) for env vars, smoke tests, and troubleshooting.
+
 ## Documentation
 
 - [Product Requirements Document](docs/groupwork_prd.md)
 - [Implementation Plan](docs/groupwork_implementation_plan.md)
+- [Deployment Guide](docs/DEPLOY.md)
