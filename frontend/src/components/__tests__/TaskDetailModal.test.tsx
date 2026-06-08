@@ -38,13 +38,21 @@ const members = [
   { id: 'user-2', full_name: 'Bob Member', email: 'bob@example.com', role: 'member' },
 ]
 
+let currentApiTask = task
+
 function renderModal({
   ownerId = 'user-1',
   userId = 'user-1',
+  taskOverride = {},
+  initialDisputeOpen = false,
 }: {
   ownerId?: string
   userId?: string
+  taskOverride?: Partial<Task>
+  initialDisputeOpen?: boolean
 } = {}) {
+  const modalTask = { ...task, ...taskOverride }
+  currentApiTask = modalTask
   const store = configureStore({
     reducer: {
       tasks: tasksReducer,
@@ -65,10 +73,10 @@ function renderModal({
     },
     preloadedState: {
       tasks: {
-        items: [task],
+        items: [modalTask],
         myTasks: [],
         searchResults: [],
-        currentTask: task,
+        currentTask: modalTask,
         activeDetailTaskId: 'task-1',
         lastSearchQuery: '',
         myTasksLoading: false,
@@ -104,7 +112,12 @@ function renderModal({
 
   return render(
     <Provider store={store}>
-      <TaskDetailModal taskId="task-1" projectOwnerId={ownerId} onClose={() => {}} />
+      <TaskDetailModal
+        taskId="task-1"
+        projectOwnerId={ownerId}
+        initialDisputeOpen={initialDisputeOpen}
+        onClose={() => {}}
+      />
     </Provider>,
   )
 }
@@ -112,7 +125,7 @@ function renderModal({
 describe('TaskDetailModal task metadata', () => {
   beforeEach(() => {
     vi.mocked(api.get).mockImplementation((url: string) => {
-      if (url === '/tasks/task-1') return Promise.resolve({ data: task })
+      if (url === '/tasks/task-1') return Promise.resolve({ data: currentApiTask })
       if (url === '/tasks/task-1/subtasks') return Promise.resolve({ data: [] })
       if (url === '/tasks/task-1/comments') return Promise.resolve({ data: [] })
       if (url === '/tasks/task-1/time-logs') {
@@ -186,5 +199,19 @@ describe('TaskDetailModal task metadata', () => {
     await user.click(screen.getByRole('button', { name: 'Request Edit' }))
     expect(screen.getByLabelText(/proposed title/i)).toBeInTheDocument()
     expect(screen.queryByLabelText(/assignees/i)).not.toBeInTheDocument()
+  })
+
+  it('opens dispute reason field when requested by the task board shortcut', async () => {
+    renderModal({
+      ownerId: 'user-1',
+      userId: 'user-2',
+      initialDisputeOpen: true,
+      taskOverride: {
+        status: 'review',
+        verification_status: 'pending',
+      },
+    })
+
+    expect(await screen.findByLabelText(/dispute reason/i)).toBeInTheDocument()
   })
 })

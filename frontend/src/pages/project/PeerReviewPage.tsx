@@ -4,6 +4,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   LinearProgress,
   Rating,
   Stack,
@@ -11,9 +12,10 @@ import {
   Typography,
 } from '@mui/material'
 import { isAxiosError } from 'axios'
-import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { useCallback, useEffect, useState } from 'react'
+import { Link as RouterLink, useParams } from 'react-router-dom'
 import api from '../../services/api'
+import type { Task } from '../../store/tasksSlice'
 
 interface Member {
   id: string
@@ -42,6 +44,30 @@ interface ReviewForm {
   comment: string
 }
 
+interface DisputeVote {
+  id: string
+  user_id: string
+  user_name?: string
+  vote: string
+}
+
+interface TaskDispute {
+  id: string
+  task_id: string
+  reason: string
+  status: string
+  outcome: string | null
+  created_at: string
+  votes: DisputeVote[]
+  vote_summary: {
+    uphold: number
+    reject: number
+    total_members: number
+  }
+  taskTitle: string
+  taskStatus: string
+}
+
 const defaultForm = (): ReviewForm => ({
   contribution_quality: 3,
   communication: 3,
@@ -56,35 +82,53 @@ export default function PeerReviewPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [status, setStatus] = useState<ReviewStatus | null>(null)
   const [forms, setForms] = useState<Record<string, ReviewForm>>({})
+  const [taskDisputes, setTaskDisputes] = useState<TaskDispute[]>([])
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
 
-  useEffect(() => {
+  const loadData = useCallback(async () => {
     if (!projectId) return
-    Promise.all([
+    const [membersRes, statusRes, meRes, tasksRes] = await Promise.all([
       api.get(`/projects/${projectId}/members`),
       api.get(`/projects/${projectId}/peer-review/status`),
       api.get('/users/me'),
-    ])
-      .then(([membersRes, statusRes, meRes]) => {
-        setMembers(membersRes.data)
-        setStatus(statusRes.data)
-        setCurrentUserId(meRes.data.id)
-      })
-      .catch(() => setError('Unable to load peer review data'))
-  }, [projectId])
-
-  const loadData = async () => {
-    if (!projectId) return
-    const [membersRes, statusRes, meRes] = await Promise.all([
-      api.get(`/projects/${projectId}/members`),
-      api.get(`/projects/${projectId}/peer-review/status`),
-      api.get('/users/me'),
+      api.get<{ items: Task[] }>(`/projects/${projectId}/tasks`, { params: { limit: 100 } }),
     ])
     setMembers(membersRes.data)
     setStatus(statusRes.data)
     setCurrentUserId(meRes.data.id)
-  }
+
+    const tasks = tasksRes.data.items ?? []
+    const disputeResults = await Promise.all(
+      tasks.map(async (task) => {
+        try {
+          const response = await api.get<{ items: Omit<TaskDispute, 'taskTitle' | 'taskStatus'>[] }>(
+            `/tasks/${task.id}/disputes`,
+          )
+          return response.data.items.map((dispute) => ({
+            ...dispute,
+            taskTitle: task.title,
+            taskStatus: task.status,
+          }))
+        } catch {
+          return []
+        }
+      }),
+    )
+    setTaskDisputes(
+      disputeResults
+        .flat()
+        .sort((a, b) => Date.parse(b.created_at) - Date.parse(a.created_at)),
+    )
+  }, [projectId])
+
+  useEffect(() => {
+    if (!projectId) return
+    const timer = window.setTimeout(() => {
+      loadData().catch(() => setError('Unable to load peer review data'))
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [loadData, projectId])
 
   const reviewTargets = members.filter((m) => m.id !== currentUserId)
 
@@ -147,6 +191,67 @@ export default function PeerReviewPage() {
       )}
       {error && <Alert severity="error">{error}</Alert>}
       {success && <Alert severity="success">{success}</Alert>}
+      <Card variant="outlined">
+        <CardContent>
+          <Stack spacing={1.5}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+              <Typography variant="h6">Task Disputes</Typography>
+              <Chip
+                size="small"
+                label={`${taskDisputes.filter((item) => item.status === 'open').length} open`}
+                color={taskDisputes.some((item) => item.status === 'open') ? 'error' : 'default'}
+              />
+            </Box>
+            {taskDisputes.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                No task disputes have been filed.
+              </Typography>
+            ) : (
+              <Stack spacing={1}>
+                {taskDisputes.map((dispute) => (
+                  <Box
+                    key={dispute.id}
+                    sx={{
+                      p: 1.5,
+                      border: '1px solid',
+                      borderColor: 'divider',
+                      borderRadius: 2,
+                      bgcolor: '#FFFFFF',
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                      <Typography
+                        component={RouterLink}
+                        to={`/projects/${projectId}/tasks`}
+                        sx={{
+                          fontWeight: 700,
+                          color: 'primary.main',
+                          textDecoration: 'none',
+                          '&:hover': { textDecoration: 'underline' },
+                        }}
+                      >
+                        {dispute.taskTitle}
+                      </Typography>
+                      <Chip
+                        size="small"
+                        label={dispute.status === 'resolved' ? `resolved: ${dispute.outcome}` : 'open'}
+                        color={dispute.status === 'open' ? 'error' : 'default'}
+                      />
+                    </Box>
+                    <Typography variant="body2" sx={{ mt: 1 }}>
+                      {dispute.reason}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                      Task status: {dispute.taskStatus.replace('_', ' ')} · Votes:{' '}
+                      {dispute.vote_summary.uphold} uphold / {dispute.vote_summary.reject} reject
+                    </Typography>
+                  </Box>
+                ))}
+              </Stack>
+            )}
+          </Stack>
+        </CardContent>
+      </Card>
       {reviewTargets.map((member) => {
         const form = forms[member.id] ?? defaultForm()
         const alreadyReviewed = (status.reviewed_reviewee_ids ?? []).includes(member.id)

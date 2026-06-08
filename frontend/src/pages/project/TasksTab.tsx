@@ -232,6 +232,7 @@ export default function TasksTab() {
 
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [disputeTaskId, setDisputeTaskId] = useState<string | null>(null)
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [subtaskCounts, setSubtaskCounts] = useState<Record<string, { completed: number; total: number }>>({})
   const [expandedColumns, setExpandedColumns] = useState<Partial<Record<TaskStatus, boolean>>>({})
@@ -341,6 +342,7 @@ export default function TasksTab() {
 
   const handleTaskClick = (task: Task) => {
     if (suppressTaskClickRef.current) return
+    setDisputeTaskId(null)
     setSelectedTaskId(task.id)
   }
 
@@ -352,6 +354,7 @@ export default function TasksTab() {
   }
 
   const handleDispute = (taskId: string) => {
+    setDisputeTaskId(taskId)
     setSelectedTaskId(taskId)
   }
 
@@ -589,7 +592,11 @@ export default function TasksTab() {
       <TaskDetailModal
         taskId={selectedTaskId}
         projectOwnerId={currentProject?.owner_id ?? ''}
-        onClose={() => setSelectedTaskId(null)}
+        initialDisputeOpen={selectedTaskId === disputeTaskId}
+        onClose={() => {
+          setSelectedTaskId(null)
+          setDisputeTaskId(null)
+        }}
       />
       <Snackbar
         open={Boolean(moveError)}

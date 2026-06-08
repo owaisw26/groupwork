@@ -100,6 +100,7 @@ interface TaskDetailModalProps {
   taskId: string | null
   projectOwnerId: string
   onClose: () => void
+  initialDisputeOpen?: boolean
 }
 
 const FIELD_SX: SxProps<Theme> = {
@@ -216,7 +217,12 @@ function SectionBlock({
   )
 }
 
-export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: TaskDetailModalProps) {
+export default function TaskDetailModal({
+  taskId,
+  projectOwnerId,
+  onClose,
+  initialDisputeOpen = false,
+}: TaskDetailModalProps) {
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
   const { currentTask, subtasks, comments, timeLogs, totalProjectHours, editRequests } =
@@ -289,6 +295,13 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
   }, [dispatch, taskId])
 
   useEffect(() => {
+    if (taskId && initialDisputeOpen) {
+      const timer = window.setTimeout(() => setShowDisputeForm(true), 0)
+      return () => window.clearTimeout(timer)
+    }
+  }, [initialDisputeOpen, taskId])
+
+  useEffect(() => {
     if (!currentTask?.project_id) return
     api
       .get<ProjectMember[]>(`/projects/${currentTask.project_id}/members`)
@@ -355,6 +368,8 @@ export default function TaskDetailModal({ taskId, projectOwnerId, onClose }: Tas
     dispatch(clearTaskDetail())
     setEditMode(false)
     setRequestEditOpen(false)
+    setShowDisputeForm(false)
+    setDisputeReason('')
     onClose()
   }
 
