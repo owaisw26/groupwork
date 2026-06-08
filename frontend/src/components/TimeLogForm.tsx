@@ -9,9 +9,9 @@ interface TimeLogFormProps {
 }
 
 const COMPACT_FIELD_SX = {
-  '& .MuiOutlinedInput-root': { height: 34, borderRadius: '8px', bgcolor: '#FFFFFF' },
+  '& .MuiOutlinedInput-root': { height: 38, borderRadius: '8px', bgcolor: '#FFFFFF' },
   '& .MuiInputBase-input': {
-    py: 0.75,
+    py: 1,
     fontSize: 13,
     lineHeight: 1.25,
     '&::placeholder': {
@@ -62,14 +62,14 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
         display: 'flex',
         flexDirection: 'column',
         gap: 0.75,
-        p: 0.75,
+        p: 1,
         borderRadius: '8px',
         bgcolor: SLATE[50],
         border: `1px solid ${APP_BORDER}`,
       }}
     >
       {error && <Alert severity="error">{error}</Alert>}
-      <Box sx={{ display: 'flex', gap: 0.75, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
+      <Box sx={{ display: 'flex', gap: 0.75, flexWrap: { xs: 'wrap', sm: 'nowrap' }, pt: 0.25 }}>
         <TextField
           label="Hours"
           size="small"
@@ -114,7 +114,7 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
             borderRadius: '8px',
             textTransform: 'none',
             fontSize: 13,
-            minHeight: 34,
+            minHeight: 38,
             px: 1.5,
             minWidth: { xs: '100%', sm: 68 },
           }}
