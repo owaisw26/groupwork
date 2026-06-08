@@ -55,7 +55,6 @@ const STATUS_COLORS: Record<TaskStatus, string> = {
   done: '#16A34A',
 }
 
-const BOARD_HEIGHT = 'calc(100vh - 360px)'
 const KANBAN_TASK_PREVIEW = 4
 const ACTIVITY_PREVIEW = 6
 const REVIEW_PREVIEW = 3
@@ -113,7 +112,7 @@ function KanbanColumn({
         flexDirection: 'column',
         flex: 1,
         width: '100%',
-        height: { xs: 'auto', xl: '100%' },
+        height: 'auto',
         minHeight: { xs: 400, xl: 0 },
         bgcolor: isOver ? APP_PRIMARY_LIGHT : '#FFFFFF',
         border: `1px solid ${isOver ? APP_PRIMARY : '#E2E8F0'}`,
@@ -166,7 +165,7 @@ function KanbanColumn({
         </IconButton>
       </Box>
 
-      <Box sx={{ flex: 1, minHeight: 0, px: 2.25, pb: 1, overflowY: expanded ? 'auto' : 'hidden' }}>
+      <Box sx={{ flex: 1, minHeight: 0, px: 2.25, pb: 1, overflowY: 'hidden' }}>
         {visibleTasks.map((task) => (
           <TaskCard
             key={task.id}
@@ -356,7 +355,6 @@ export default function TasksTab() {
       container
       spacing={2.5}
       sx={{
-        height: { xs: 'auto', xl: BOARD_HEIGHT },
         minHeight: { xl: 480 },
         alignItems: 'stretch',
       }}
@@ -365,9 +363,9 @@ export default function TasksTab() {
         size={{ xs: 12, xl: 9 }}
         sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
-        <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0, height: '100%' }}>
+        <Box sx={{ display: 'flex', flex: 1, flexDirection: 'column', minHeight: 0 }}>
         <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-          <Grid container spacing={2} sx={{ flex: 1, minHeight: 0, height: '100%', alignItems: 'stretch' }}>
+          <Grid container spacing={2} sx={{ flex: 1, minHeight: 0, alignItems: 'stretch' }}>
             {TASK_STATUSES.map((status) => (
               <Grid
                 key={status}
@@ -408,7 +406,7 @@ export default function TasksTab() {
         size={{ xs: 12, xl: 3 }}
         sx={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}
       >
-        <Stack spacing={2.5} sx={{ flex: 1, minHeight: 0, height: '100%' }}>
+        <Stack spacing={2.5} sx={{ flex: 1, minHeight: 0 }}>
           <Box
             sx={{
               ...SURFACE_CARD_SX,
@@ -537,16 +535,14 @@ export default function TasksTab() {
           <Box
             sx={{
               ...SURFACE_CARD_SX,
-              flex: 1,
               display: 'flex',
               flexDirection: 'column',
-              minHeight: 0,
             }}
           >
             <Typography sx={{ fontSize: fs(15), fontWeight: 800, color: SLATE[900], mb: 2 }}>
               Team Activity
             </Typography>
-            <Box sx={{ flex: 1, minHeight: 0, overflow: activityExpanded ? 'auto' : 'hidden', display: 'flex' }}>
+            <Box sx={{ overflow: activityExpanded ? 'visible' : 'hidden', display: 'flex' }}>
               <ActivityFeed
                 items={allProjectActivity}
                 limit={activityExpanded ? undefined : ACTIVITY_PREVIEW}
