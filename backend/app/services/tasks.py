@@ -9,6 +9,7 @@ from app.db.queries import projects as project_queries
 from app.db.queries import subtasks as subtask_queries
 from app.db.queries import task_edit_requests as edit_request_queries
 from app.db.queries import tasks as task_queries
+from app.db.queries import verifications as verification_queries
 from app.db.queries.tasks import VALID_PRIORITIES, VALID_STATUSES, _public_task
 from app.services import lifecycle as lifecycle_service
 from app.utils.pagination import decode_cursor
@@ -156,6 +157,8 @@ def _apply_approved_edit_changes(
                 detail="Task not found while applying status change",
             )
         _validate_status_transition(task, status_value)
+        if status_value == "review" and task["status"] != "review":
+            verification_queries.delete_task_verifications(conn, task_id)
         status_updated = task_queries.update_task_status(conn, task_id, status_value)
         if not status_updated:
             raise HTTPException(
@@ -323,6 +326,8 @@ def update_task_status(
     task = _require_task_access(conn, task_id, user_id)
     _validate_status(status_value)
     _validate_status_transition(task, status_value)
+    if status_value == "review" and task["status"] != "review":
+        verification_queries.delete_task_verifications(conn, task_id)
     updated = task_queries.update_task_status(conn, task_id, status_value)
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")

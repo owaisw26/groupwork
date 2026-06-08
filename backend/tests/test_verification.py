@@ -180,6 +180,43 @@ def test_verified_review_task_can_move_to_done(auth_client, email_outbox, db_con
     assert response.json()["verification_status"] == "verified"
 
 
+def test_moving_done_task_back_to_review_clears_verifications(auth_client, email_outbox, db_conn):
+    ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
+    task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
+    _mark_task_review(auth_client, _owner_headers(auth_client, ctx), task["id"])
+
+    auth_client.post(
+        f"/api/v1/tasks/{task['id']}/verify",
+        headers=_member_one_headers(auth_client, ctx),
+    )
+    auth_client.post(
+        f"/api/v1/tasks/{task['id']}/verify",
+        headers=_member_two_headers(auth_client, ctx),
+    )
+    auth_client.patch(
+        f"/api/v1/tasks/{task['id']}/status",
+        json={"status": "done"},
+        headers=_owner_headers(auth_client, ctx),
+    )
+
+    response = auth_client.patch(
+        f"/api/v1/tasks/{task['id']}/status",
+        json={"status": "review"},
+        headers=_owner_headers(auth_client, ctx),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "review"
+    assert response.json()["verification_status"] == "pending"
+
+    verifications = auth_client.get(
+        f"/api/v1/tasks/{task['id']}/verifications",
+        headers=_owner_headers(auth_client, ctx),
+    )
+    assert verifications.status_code == 200
+    assert verifications.json()["items"] == []
+
+
 def test_dispute_creates_dispute_record(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_task_checked(auth_client, _owner_headers(auth_client, ctx), ctx["project"]["id"])
