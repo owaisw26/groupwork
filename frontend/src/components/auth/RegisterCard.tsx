@@ -108,21 +108,21 @@ export default function RegisterCard({
       showMobileLogo={showMobileLogo}
       securityMessage="Secure signup - Your data is protected with enterprise-grade security."
     >
-      <Box sx={{ textAlign: 'center', mb: { xs: 4, lg: 5 } }}>
+      <Box sx={{ textAlign: 'center', mb: { xs: 4, lg: 3 } }}>
           <Typography
             component="h2"
             sx={{
-              fontSize: { xs: 32, sm: 42, lg: 48, xl: 52 },
+              fontSize: { xs: 32, sm: 42, lg: 29, xl: 32 },
               lineHeight: 1.12,
               fontWeight: 800,
               letterSpacing: 0,
               color: SLATE[900],
-              mb: 2,
+              mb: { xs: 2, lg: 1.7 },
             }}
           >
             Create your account
           </Typography>
-          <Typography sx={{ fontSize: { xs: 17, lg: 19, xl: 20 }, color: SLATE[500], m: 0 }}>
+          <Typography sx={{ fontSize: { xs: 17, lg: 12, xl: 13 }, color: SLATE[500], m: 0 }}>
             Join GroupWork and start collaborating with your team.
           </Typography>
         </Box>
@@ -248,11 +248,11 @@ export default function RegisterCard({
               fullWidth
               disabled={isLoading}
               sx={{
-                height: { xs: 68, lg: 74, xl: 78 },
+                height: { xs: 68, lg: 44, xl: 48 },
                 borderRadius: '12px',
                 bgcolor: PRIMARY,
                 color: '#FFFFFF',
-                fontSize: { xs: 17, lg: 19 },
+                fontSize: { xs: 17, lg: 12 },
                 fontWeight: 800,
                 textTransform: 'none',
                 boxShadow: '0 12px 24px rgba(37, 99, 235, 0.24)',

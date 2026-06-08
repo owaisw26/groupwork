@@ -29,14 +29,14 @@ export default function AuthTextField({
   onChange,
 }: AuthTextFieldProps) {
   return (
-    <Box sx={{ mb: '24px' }}>
+    <Box sx={{ mb: { xs: '24px', lg: '15px' } }}>
       <Typography
         component="label"
         htmlFor={id}
         sx={{
           display: 'block',
-          mb: '12px',
-          fontSize: { xs: 16, lg: 18 },
+          mb: { xs: '12px', lg: '7px' },
+          fontSize: { xs: 16, lg: 11 },
           fontWeight: 650,
           color: SLATE[900],
         }}
@@ -45,11 +45,11 @@ export default function AuthTextField({
       </Typography>
       <Box
         sx={{
-          height: { xs: 68, lg: 74, xl: 78 },
+          height: { xs: 68, lg: 44, xl: 48 },
           display: 'flex',
           alignItems: 'center',
-          gap: 1.5,
-          px: { xs: '20px', lg: '22px' },
+          gap: { xs: 1.5, lg: 1 },
+          px: { xs: '20px', lg: '14px' },
           border: `1px solid ${hasError ? '#EF4444' : '#DDE3EC'}`,
           borderRadius: '12px',
           bgcolor: '#FFFFFF',
@@ -63,7 +63,7 @@ export default function AuthTextField({
           },
         }}
       >
-        <Box sx={{ color: SLATE[500], display: 'flex', flexShrink: 0, fontSize: { xs: 22, lg: 24 } }}>
+        <Box sx={{ color: SLATE[500], display: 'flex', flexShrink: 0, fontSize: { xs: 22, lg: 15 } }}>
           {icon}
         </Box>
         <Box
@@ -82,7 +82,7 @@ export default function AuthTextField({
             outline: 'none',
             bgcolor: 'transparent',
             color: SLATE[900],
-            fontSize: { xs: 18, sm: 19, lg: 20, xl: 21 },
+            fontSize: { xs: 18, sm: 19, lg: 13, xl: 14 },
             fontFamily: 'inherit',
             '&::placeholder': {
               color: SLATE[400],

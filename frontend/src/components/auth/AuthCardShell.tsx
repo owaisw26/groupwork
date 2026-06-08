@@ -26,8 +26,8 @@ export default function AuthCardShell({
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        px: { xs: 2.5, sm: 4, lg: 3.5, xl: 4.5 },
-        py: { xs: 4, lg: 5 },
+        px: { xs: 2.5, sm: 4, lg: 3.5, xl: 4 },
+        py: { xs: 4, lg: 3 },
         bgcolor: '#FFFFFF',
         minHeight: { xs: '100vh', lg: '100vh' },
       }}
@@ -66,17 +66,17 @@ export default function AuthCardShell({
           display: 'inline-flex',
           alignItems: 'center',
           gap: 1,
-          minHeight: 48,
-          px: '24px',
-          mb: { xs: 3, lg: 5.25 },
+          minHeight: { xs: 48, lg: 29 },
+          px: { xs: '24px', lg: '15px' },
+          mb: { xs: 3, lg: 3.4 },
           borderRadius: '999px',
           bgcolor: '#EFF6FF',
           color: PRIMARY,
-          fontSize: 16,
+          fontSize: { xs: 16, lg: 11 },
           fontWeight: 700,
         }}
       >
-        <SchoolOutlinedIcon sx={{ fontSize: 22 }} />
+        <SchoolOutlinedIcon sx={{ fontSize: { xs: 22, lg: 14 } }} />
         <span>Built for university group projects</span>
       </Box>
 
@@ -84,16 +84,16 @@ export default function AuthCardShell({
 
       <Box
         sx={{
-          mt: '38px',
+          mt: { xs: '38px', lg: '32px' },
           display: 'flex',
           alignItems: 'center',
           gap: 1,
           color: '#64748B',
-          fontSize: { xs: 15, lg: 17 },
+          fontSize: { xs: 15, lg: 10 },
           textAlign: 'center',
         }}
       >
-        <LockOutlinedIcon sx={{ fontSize: { xs: 16, lg: 18 } }} />
+        <LockOutlinedIcon sx={{ fontSize: { xs: 16, lg: 12 } }} />
         <span>{securityMessage}</span>
       </Box>
     </Box>

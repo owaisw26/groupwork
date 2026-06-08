@@ -56,21 +56,21 @@ export default function LoginCard({
       showMobileLogo={showMobileLogo}
       securityMessage="Secure login - Your data is protected with enterprise-grade security."
     >
-      <Box sx={{ textAlign: 'center', mb: { xs: 4, lg: 5 } }}>
+      <Box sx={{ textAlign: 'center', mb: { xs: 4, lg: 3 } }}>
           <Typography
             component="h2"
             sx={{
-              fontSize: { xs: 32, sm: 42, lg: 48, xl: 52 },
+              fontSize: { xs: 32, sm: 42, lg: 29, xl: 32 },
               lineHeight: 1.12,
               fontWeight: 800,
               letterSpacing: 0,
               color: SLATE[900],
-              mb: 2,
+              mb: { xs: 2, lg: 1.7 },
             }}
           >
             Welcome back
           </Typography>
-          <Typography sx={{ fontSize: { xs: 17, lg: 19, xl: 20 }, color: SLATE[500], m: 0 }}>
+          <Typography sx={{ fontSize: { xs: 17, lg: 12, xl: 13 }, color: SLATE[500], m: 0 }}>
             Log in to continue to your GroupWork workspace.
           </Typography>
         </Box>
@@ -153,7 +153,7 @@ export default function LoginCard({
               alignItems: 'center',
               justifyContent: 'space-between',
               mt: '4px',
-              mb: { xs: '40px', lg: '48px' },
+              mb: { xs: '40px', lg: '29px' },
             }}
           >
             <Box
@@ -161,8 +161,8 @@ export default function LoginCard({
               sx={{
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: { xs: '14px', lg: '16px' },
-                fontSize: { xs: 16, lg: 18 },
+                gap: { xs: '14px', lg: '9px' },
+                fontSize: { xs: 16, lg: 11 },
                 color: SLATE[700],
                 cursor: 'pointer',
               }}
@@ -173,8 +173,8 @@ export default function LoginCard({
                 size="small"
                 sx={{
                   p: 0,
-                  width: { xs: 18, lg: 22 },
-                  height: { xs: 18, lg: 22 },
+                  width: { xs: 18, lg: 14 },
+                  height: { xs: 18, lg: 14 },
                   color: SLATE[300],
                   '&.Mui-checked': { color: PRIMARY },
                 }}
@@ -185,7 +185,7 @@ export default function LoginCard({
               component={RouterLink}
               to="/forgot-password"
               sx={{
-                fontSize: { xs: 16, lg: 18 },
+                fontSize: { xs: 16, lg: 11 },
                 fontWeight: 700,
                 color: PRIMARY,
                 textDecoration: 'none',
@@ -219,11 +219,11 @@ export default function LoginCard({
             fullWidth
             disabled={isLoading}
             sx={{
-              height: { xs: 68, lg: 74, xl: 78 },
+              height: { xs: 68, lg: 44, xl: 48 },
               borderRadius: '12px',
               bgcolor: PRIMARY,
               color: '#FFFFFF',
-              fontSize: { xs: 17, lg: 19 },
+              fontSize: { xs: 17, lg: 12 },
               fontWeight: 800,
               textTransform: 'none',
               boxShadow: '0 12px 24px rgba(37, 99, 235, 0.24)',

@@ -32,10 +32,10 @@ function FeatureCard({
       sx={{
         display: 'flex',
         alignItems: 'center',
-        gap: { lg: 3.25, xl: 3.5 },
-        width: { lg: 562, xl: 603 },
-        height: { lg: 203, xl: 216 },
-        p: { lg: '34px 36px', xl: '36px 39px' },
+        gap: { lg: 2, xl: 2.25 },
+        width: { lg: 378, xl: 414 },
+        minHeight: { lg: 119, xl: 133 },
+        p: { lg: '22px 23px', xl: '23px 25px' },
         bgcolor: 'rgba(255, 255, 255, 0.95)',
         border: '1px solid rgba(203, 213, 225, 0.74)',
         borderRadius: '18px',
@@ -45,25 +45,25 @@ function FeatureCard({
     >
       <Box
         sx={{
-          width: { lg: 94, xl: 96 },
-          height: { lg: 94, xl: 96 },
-          borderRadius: '22px',
+          width: { lg: 58, xl: 65 },
+          height: { lg: 58, xl: 65 },
+          borderRadius: '14px',
           bgcolor: iconBg,
           color: iconColor,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          '& .MuiSvgIcon-root': { fontSize: { lg: 44, xl: 47 } },
+          '& .MuiSvgIcon-root': { fontSize: { lg: 29, xl: 32 } },
         }}
       >
         {icon}
       </Box>
       <Box>
-        <Typography sx={{ fontSize: { lg: 24, xl: 25 }, fontWeight: 800, color: SLATE[900], mb: 1 }}>
+        <Typography sx={{ fontSize: { lg: 15, xl: 16 }, fontWeight: 800, color: SLATE[900], mb: 0.5 }}>
           {title}
         </Typography>
-        <Typography sx={{ fontSize: { lg: 21, xl: 22 }, lineHeight: 1.45, color: SLATE[600] }}>
+        <Typography sx={{ fontSize: { lg: 14, xl: 14 }, lineHeight: 1.4, color: SLATE[600] }}>
           {description}
         </Typography>
       </Box>
@@ -82,8 +82,8 @@ export default function LoginHeroPanel() {
         minHeight: '100vh',
         display: { xs: 'none', lg: 'flex' },
         flexDirection: 'column',
-        px: { lg: 5.5, xl: 7 },
-        py: { lg: 4.5, xl: 6 },
+        px: { lg: 4, xl: 5 },
+        py: { lg: 3.5, xl: 4 },
         background: `
           linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(239, 246, 255, 0.88) 54%, rgba(248, 250, 252, 0.98) 100%)
         `,
@@ -135,11 +135,11 @@ export default function LoginHeroPanel() {
         <AutoAwesomeOutlinedIcon sx={{ fontSize: 24, mt: 3 }} />
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: { lg: 8, xl: 9 }, position: 'relative', zIndex: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: { lg: 5, xl: 6 }, position: 'relative', zIndex: 1 }}>
         <Box
           sx={{
-            width: 48,
-            height: 48,
+            width: { lg: 36, xl: 40 },
+            height: { lg: 36, xl: 40 },
             borderRadius: '11px',
             bgcolor: PRIMARY,
             color: '#fff',
@@ -148,34 +148,34 @@ export default function LoginHeroPanel() {
             justifyContent: 'center',
           }}
         >
-          <GroupsOutlinedIcon sx={{ fontSize: 30 }} />
+          <GroupsOutlinedIcon sx={{ fontSize: { lg: 23, xl: 25 } }} />
         </Box>
-        <Typography sx={{ fontSize: 34, fontWeight: 800, color: PRIMARY, letterSpacing: 0 }}>
+        <Typography sx={{ fontSize: { lg: 24, xl: 26 }, fontWeight: 800, color: PRIMARY, letterSpacing: 0 }}>
           GroupWork
         </Typography>
       </Box>
 
-      <Box sx={{ mb: { lg: 5.5, xl: 6.5 }, position: 'relative', zIndex: 1, maxWidth: 980 }}>
+      <Box sx={{ mb: { lg: 3.5, xl: 4.5 }, position: 'relative', zIndex: 1, maxWidth: 740 }}>
         <Typography
           component="h1"
           sx={{
-            mb: 3,
-            fontSize: { lg: 86, xl: 103 },
+            mb: 2,
+            maxWidth: 720,
+            fontSize: { lg: 52, xl: 65 },
             lineHeight: 1.12,
             fontWeight: 800,
             letterSpacing: 0,
             color: SLATE[900],
           }}
         >
-          <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
-            Organise group work
-          </Box>
+          Organise group work
           <br />
           with clarity.
         </Typography>
-        <Typography sx={{ maxWidth: 936, fontSize: { lg: 29, xl: 34 }, lineHeight: 1.45, color: SLATE[700] }}>
-          Manage tasks, track contributions, verify evidence and generate
-          accountability reports - all in one place.
+        <Typography sx={{ maxWidth: 650, fontSize: { lg: 17, xl: 20 }, lineHeight: 1.45, color: SLATE[700] }}>
+          Manage tasks, track contributions, verify evidence and
+          <br />
+          generate accountability reports - all in one place.
         </Typography>
       </Box>
 
@@ -188,7 +188,7 @@ export default function LoginHeroPanel() {
           zIndex: 1,
         }}
       >
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { lg: 4.25, xl: 4.5 } }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: { lg: 2.25, xl: 2.5 } }}>
           <FeatureCard
             icon={<GroupsOutlinedIcon />}
             iconBg="#DBEAFE"
@@ -215,11 +215,11 @@ export default function LoginHeroPanel() {
         <Box
           sx={{
             position: 'absolute',
-            right: { lg: '-1%', xl: '5%' },
-            top: { lg: '-19%', xl: '-23%' },
-            width: { lg: 470, xl: 540 },
-            transform: 'scale(1.2)',
+            right: { lg: 'clamp(18px, 3vw, 44px)', xl: 'clamp(24px, 3vw, 56px)' },
+            top: { lg: '-32%', xl: '-36%' },
+            width: { lg: 'min(333px, 42vw)', xl: 'min(387px, 42vw)' },
             transformOrigin: 'top center',
+            transform: 'translateX(10%)',
           }}
         >
           <ProductPreviewStack />
@@ -230,17 +230,17 @@ export default function LoginHeroPanel() {
         sx={{
           display: 'flex',
           alignItems: 'center',
-          gap: 2.75,
-          mt: 5,
+          gap: 1.35,
+          mt: { lg: 3, xl: 3.5 },
           position: 'relative',
           zIndex: 1,
         }}
       >
         <Box
           sx={{
-            width: 84,
-            height: 84,
-            borderRadius: '20px',
+            width: { lg: 42, xl: 48 },
+            height: { lg: 42, xl: 48 },
+            borderRadius: '11px',
             bgcolor: '#DBEAFE',
             color: PRIMARY,
             display: 'flex',
@@ -249,12 +249,12 @@ export default function LoginHeroPanel() {
             flexShrink: 0,
           }}
         >
-          <ShieldOutlinedIcon sx={{ fontSize: 44 }} />
+          <ShieldOutlinedIcon sx={{ fontSize: { lg: 23, xl: 26 } }} />
         </Box>
-        <Typography sx={{ fontSize: 21, lineHeight: 1.5, color: SLATE[600] }}>
-          Trusted by students and educators
+        <Typography sx={{ fontSize: { lg: 11, xl: 12 }, lineHeight: 1.45, color: SLATE[600] }}>
+          Crafted to combat the issues
           <br />
-          to build fairer, more accountable teams.
+          surrounding groupwork.
         </Typography>
       </Box>
     </Box>
