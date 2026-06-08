@@ -32,34 +32,35 @@ export default function StatCard({
     <>
       <Box
         sx={{
-          width: 40,
-          height: 40,
-          borderRadius: '12px',
+          width: 34,
+          height: 34,
+          borderRadius: '10px',
           bgcolor: accent === APP_PRIMARY ? APP_PRIMARY_LIGHT : 'rgba(15, 23, 42, 0.06)',
           color: accent,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          mb: 2,
+          mb: 1.25,
         }}
       >
         {icon}
       </Box>
-      <Typography sx={{ fontSize: fs(13), fontWeight: 700, color: SLATE[500], mb: 0.5 }}>
+      <Typography sx={{ fontSize: fs(12), fontWeight: 700, color: SLATE[500], mb: 0.35 }}>
         {label}
       </Typography>
       <Typography
         sx={{
-          fontSize: { xs: fs(22), md: fs(26) },
+          fontSize: { xs: fs(20), md: fs(23) },
           fontWeight: 800,
           color: SLATE[900],
-          mb: subtitle ? 0.5 : 1.5,
+          mb: subtitle ? 0.35 : 1,
+          lineHeight: 1.15,
         }}
       >
         {value}
       </Typography>
       {subtitle && (
-        <Typography sx={{ fontSize: fs(13), color: SLATE[500], mb: 1.5 }}>
+        <Typography sx={{ fontSize: fs(12), color: SLATE[500], mb: 1 }}>
           {subtitle}
         </Typography>
       )}
@@ -70,8 +71,8 @@ export default function StatCard({
           component="span"
           sx={{
             mt: 'auto',
-            pt: 1.5,
-            fontSize: fs(14),
+            pt: 1,
+            fontSize: fs(13),
             fontWeight: 700,
             color: accent === '#DC2626' ? '#DC2626' : APP_PRIMARY,
           }}
@@ -84,6 +85,7 @@ export default function StatCard({
 
   const cardSx: SxProps<Theme> = {
     ...SURFACE_CARD_SX,
+    p: { xs: 2, md: 2.25 },
     height: '100%',
     display: 'flex',
     flexDirection: 'column',

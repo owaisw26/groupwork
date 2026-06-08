@@ -222,11 +222,11 @@ export default function ProjectLayout() {
             <AvatarGroup
               max={5}
               sx={{
-                mt: 1,
+                mt: 0.5,
                 '& .MuiAvatar-root': {
-                  width: 28,
-                  height: 28,
-                  fontSize: fs(12),
+                  width: 24,
+                  height: 24,
+                  fontSize: fs(11),
                   bgcolor: SLATE[300],
                   color: SLATE[700],
                 },
@@ -259,7 +259,7 @@ export default function ProjectLayout() {
               variant="determinate"
               value={verifiedRatio}
               color="success"
-              sx={{ mt: 1 }}
+              sx={{ mt: 0.5, height: 5, borderRadius: 999 }}
             />
           }
         />
