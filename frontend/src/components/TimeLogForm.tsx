@@ -8,6 +8,22 @@ interface TimeLogFormProps {
   taskId: string
 }
 
+const COMPACT_FIELD_SX = {
+  '& .MuiOutlinedInput-root': { height: 34, borderRadius: '8px', bgcolor: '#FFFFFF' },
+  '& .MuiInputBase-input': {
+    py: 0.75,
+    fontSize: 13,
+    lineHeight: 1.25,
+    '&::placeholder': {
+      fontSize: 13,
+      opacity: 0.75,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontSize: 13,
+  },
+}
+
 export default function TimeLogForm({ taskId }: TimeLogFormProps) {
   const dispatch = useAppDispatch()
   const [hours, setHours] = useState('')
@@ -56,15 +72,13 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
       <Box sx={{ display: 'flex', gap: 0.75, flexWrap: { xs: 'wrap', sm: 'nowrap' } }}>
         <TextField
           label="Hours"
-          type="number"
           size="small"
           value={hours}
           onChange={(e) => setHours(e.target.value)}
-          slotProps={{ htmlInput: { min: 0.25, max: 24, step: 0.25 } }}
+          slotProps={{ htmlInput: { inputMode: 'decimal', pattern: '[0-9]*[.]?[0-9]*' } }}
           sx={{
             width: { xs: 'calc(42% - 4px)', sm: 84 },
-            '& .MuiOutlinedInput-root': { height: 34, borderRadius: '8px', bgcolor: '#FFFFFF' },
-            '& .MuiInputBase-input': { py: 0.75 },
+            ...COMPACT_FIELD_SX,
           }}
         />
         <TextField
@@ -76,8 +90,7 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           slotProps={{ inputLabel: { shrink: true } }}
           sx={{
             width: { xs: 'calc(58% - 4px)', sm: 146 },
-            '& .MuiOutlinedInput-root': { height: 34, borderRadius: '8px', bgcolor: '#FFFFFF' },
-            '& .MuiInputBase-input': { py: 0.75 },
+            ...COMPACT_FIELD_SX,
           }}
         />
         <TextField
@@ -88,8 +101,7 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
           sx={{
             minWidth: { xs: '100%', sm: 0 },
             flex: 1,
-            '& .MuiOutlinedInput-root': { height: 34, borderRadius: '8px', bgcolor: '#FFFFFF' },
-            '& .MuiInputBase-input': { py: 0.75 },
+            ...COMPACT_FIELD_SX,
           }}
         />
         <Button
@@ -101,6 +113,7 @@ export default function TimeLogForm({ taskId }: TimeLogFormProps) {
             fontWeight: 700,
             borderRadius: '8px',
             textTransform: 'none',
+            fontSize: 13,
             minHeight: 34,
             px: 1.5,
             minWidth: { xs: '100%', sm: 68 },

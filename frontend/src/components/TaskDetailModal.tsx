@@ -112,6 +112,15 @@ const FIELD_SX: SxProps<Theme> = {
   },
   '& .MuiInputBase-input': {
     py: 0.75,
+    fontSize: fs(13),
+    lineHeight: 1.25,
+    '&::placeholder': {
+      fontSize: fs(13),
+      opacity: 0.75,
+    },
+  },
+  '& .MuiInputLabel-root': {
+    fontSize: fs(13),
   },
 }
 
