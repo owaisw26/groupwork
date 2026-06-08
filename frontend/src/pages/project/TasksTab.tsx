@@ -14,6 +14,7 @@ import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutli
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined'
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined'
 import {
+  Alert,
   Box,
   Button,
   CircularProgress,
@@ -21,6 +22,7 @@ import {
   IconButton,
   Link,
   Paper,
+  Snackbar,
   Stack,
   Typography,
 } from '@mui/material'
@@ -234,6 +236,7 @@ export default function TasksTab() {
   const [subtaskCounts, setSubtaskCounts] = useState<Record<string, { completed: number; total: number }>>({})
   const [expandedColumns, setExpandedColumns] = useState<Partial<Record<TaskStatus, boolean>>>({})
   const [activityExpanded, setActivityExpanded] = useState(false)
+  const [moveError, setMoveError] = useState<string | null>(null)
   const suppressTaskClickRef = useRef(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
@@ -307,7 +310,7 @@ export default function TasksTab() {
     setActiveTask(task ?? null)
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     setActiveTask(null)
     const { active, over } = event
     if (!over) return
@@ -322,7 +325,17 @@ export default function TasksTab() {
       window.setTimeout(() => {
         suppressTaskClickRef.current = false
       }, 0)
-      dispatch(updateTaskStatus({ taskId, status: newStatus }))
+      try {
+        await dispatch(updateTaskStatus({ taskId, status: newStatus })).unwrap()
+      } catch {
+        if (newStatus === 'done') {
+          setMoveError(
+            `Cannot move '${task.title}' into 'Done' as it has not been verified yet`,
+          )
+        } else {
+          setMoveError('Could not move task. Please try again.')
+        }
+      }
     }
   }
 
@@ -578,6 +591,16 @@ export default function TasksTab() {
         projectOwnerId={currentProject?.owner_id ?? ''}
         onClose={() => setSelectedTaskId(null)}
       />
+      <Snackbar
+        open={Boolean(moveError)}
+        autoHideDuration={4500}
+        onClose={() => setMoveError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="warning" variant="filled" onClose={() => setMoveError(null)}>
+          {moveError}
+        </Alert>
+      </Snackbar>
     </Grid>
   )
 }
