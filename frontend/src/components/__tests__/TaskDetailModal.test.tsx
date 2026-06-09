@@ -138,6 +138,7 @@ describe('TaskDetailModal task metadata', () => {
     vi.mocked(api.put).mockResolvedValue({
       data: { ...task, priority: 'high', due_date: '2026-09-10', assignee_ids: ['user-1', 'user-2'] },
     })
+    vi.mocked(api.post).mockResolvedValue({ data: { status: 'ok' } })
   })
 
   it('shows assignee names in view mode', async () => {
@@ -211,5 +212,21 @@ describe('TaskDetailModal task metadata', () => {
     expect(await screen.findByText(/no verification votes yet/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /dispute/i })).not.toBeInTheDocument()
     expect(screen.queryByLabelText(/dispute reason/i)).not.toBeInTheDocument()
+  })
+
+  it('shows a success popup after verifying inside the task modal', async () => {
+    const user = userEvent.setup()
+    renderModal({
+      ownerId: 'user-1',
+      userId: 'user-2',
+      taskOverride: {
+        status: 'review',
+        verification_status: 'pending',
+      },
+    })
+
+    await user.click(await screen.findByRole('button', { name: /^verify$/i }))
+
+    expect(await screen.findByText(/original title.*verified/i)).toBeInTheDocument()
   })
 })

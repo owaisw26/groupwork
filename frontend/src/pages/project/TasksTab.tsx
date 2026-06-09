@@ -246,6 +246,7 @@ export default function TasksTab() {
   const [expandedColumns, setExpandedColumns] = useState<Partial<Record<TaskStatus, boolean>>>({})
   const [activityExpanded, setActivityExpanded] = useState(false)
   const [moveError, setMoveError] = useState<string | null>(null)
+  const [verifySuccess, setVerifySuccess] = useState<string | null>(null)
   const suppressTaskClickRef = useRef(false)
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
@@ -354,7 +355,9 @@ export default function TasksTab() {
   }
 
   const handleVerify = async (taskId: string) => {
+    const task = items.find((item) => item.id === taskId)
     await api.post(`/tasks/${taskId}/verify`)
+    setVerifySuccess(task ? `"${task.title}" was verified` : 'Task was verified')
     if (projectId) {
       dispatch(fetchProjectTasks(projectId))
     }
@@ -669,6 +672,16 @@ export default function TasksTab() {
       >
         <Alert severity="warning" variant="filled" onClose={() => setMoveError(null)}>
           {moveError}
+        </Alert>
+      </Snackbar>
+      <Snackbar
+        open={Boolean(verifySuccess)}
+        autoHideDuration={3500}
+        onClose={() => setVerifySuccess(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="success" variant="filled" onClose={() => setVerifySuccess(null)}>
+          {verifySuccess}
         </Alert>
       </Snackbar>
     </Grid>

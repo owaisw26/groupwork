@@ -14,11 +14,13 @@ import {
   MenuItem,
   OutlinedInput,
   Select,
+  Snackbar,
   type SelectChangeEvent,
   Stack,
   TextField,
   Typography,
 } from '@mui/material'
+import Alert from '@mui/material/Alert'
 import type { SxProps, Theme } from '@mui/material'
 import { useEffect, useMemo, useState } from 'react'
 import { APP_BORDER, APP_PRIMARY, APP_PRIMARY_LIGHT, fs, SLATE } from '../appTheme'
@@ -249,6 +251,7 @@ export default function TaskDetailModal({
   const [verifications, setVerifications] = useState<VerificationItem[]>([])
   const [disputes, setDisputes] = useState<DisputeItem[]>([])
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [verifySuccess, setVerifySuccess] = useState<string | null>(null)
 
   const isOwner = user?.id === projectOwnerId
   const isAssignee = currentTask?.assignee_ids.includes(user?.id ?? '') ?? false
@@ -311,6 +314,7 @@ export default function TaskDetailModal({
   const handleVerify = async () => {
     if (!taskId) return
     await api.post(`/tasks/${taskId}/verify`)
+    setVerifySuccess(currentTask ? `"${currentTask.title}" was verified` : 'Task was verified')
     await refreshTaskAndVerifications()
   }
 
@@ -343,6 +347,7 @@ export default function TaskDetailModal({
     dispatch(clearTaskDetail())
     setEditMode(false)
     setRequestEditOpen(false)
+    setVerifySuccess(null)
     onClose()
   }
 
@@ -412,6 +417,7 @@ export default function TaskDetailModal({
   const priorityStyle = PRIORITY_STYLES[currentTask?.priority ?? 'medium'] ?? PRIORITY_STYLES.medium
 
   return (
+    <>
     <Dialog
       open={Boolean(taskId)}
       onClose={handleClose}
@@ -1078,5 +1084,16 @@ export default function TaskDetailModal({
         )}
       </Box>
     </Dialog>
+    <Snackbar
+      open={Boolean(verifySuccess)}
+      autoHideDuration={3500}
+      onClose={() => setVerifySuccess(null)}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+    >
+      <Alert severity="success" variant="filled" onClose={() => setVerifySuccess(null)}>
+        {verifySuccess}
+      </Alert>
+    </Snackbar>
+    </>
   )
 }

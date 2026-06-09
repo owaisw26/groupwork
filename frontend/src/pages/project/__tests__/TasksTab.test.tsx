@@ -145,4 +145,13 @@ describe('TasksTab dispute flow', () => {
     expect(screen.getByLabelText(/reason for dispute/i)).toBeInTheDocument()
     expect(screen.queryByText('Task detail modal opened')).not.toBeInTheDocument()
   })
+
+  it('shows a success popup after verifying from the peer verification card', async () => {
+    const user = userEvent.setup()
+    renderTasksTab()
+
+    await user.click(await screen.findByRole('button', { name: /verify/i }))
+
+    expect(await screen.findByText(/review task.*verified/i)).toBeInTheDocument()
+  })
 })
