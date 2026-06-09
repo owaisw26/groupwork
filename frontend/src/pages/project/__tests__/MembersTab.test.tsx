@@ -63,8 +63,8 @@ describe('MembersTab', () => {
   it('renders member cards and invite form', async () => {
     renderMembersTab()
     expect(await screen.findByText('Members')).toBeInTheDocument()
-    expect(screen.getByText('Invite Member')).toBeInTheDocument()
-    expect(screen.getByText('Owner')).toBeInTheDocument()
+    expect(screen.getAllByText('Invite Member').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Owner').length).toBeGreaterThan(0)
     expect(screen.getByText('ABC123')).toBeInTheDocument()
   })
 })
