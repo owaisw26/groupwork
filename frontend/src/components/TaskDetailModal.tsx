@@ -474,84 +474,9 @@ export default function TaskDetailModal({
                   )}
 
                   {editMode ? (
-                    <>
-                      <FormControl size="small" sx={{ width: PRIORITY_SELECT_WIDTH, flexShrink: 0 }}>
-                        <InputLabel id="edit-task-priority-label" shrink>
-                          Priority
-                        </InputLabel>
-                        <Select
-                          labelId="edit-task-priority-label"
-                          label="Priority"
-                          value={editPriority}
-                          onChange={(e) => setEditPriority(e.target.value)}
-                          sx={{
-                            ...COMPACT_SELECT_SX,
-                            bgcolor: (PRIORITY_STYLES[editPriority] ?? PRIORITY_STYLES.medium).bg,
-                            color: (PRIORITY_STYLES[editPriority] ?? PRIORITY_STYLES.medium).color,
-                            '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                          }}
-                        >
-                          {PRIORITY_OPTIONS.map((option) => (
-                            <MenuItem key={option} value={option} sx={{ fontSize: 13, fontWeight: 600 }}>
-                              {PRIORITY_STYLES[option].label}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <TextField
-                        label="Due Date"
-                        type="date"
-                        size="small"
-                        value={editDueDate}
-                        onChange={(e) => setEditDueDate(e.target.value)}
-                        slotProps={{ inputLabel: { shrink: true } }}
-                        sx={{
-                          ...FIELD_SX,
-                          width: 148,
-                          '& .MuiOutlinedInput-root': {
-                            height: 26,
-                            borderRadius: 2,
-                            fontSize: 12,
-                            fontWeight: 600,
-                          },
-                          '& .MuiOutlinedInput-input': {
-                            py: 0.5,
-                            px: 1.25,
-                          },
-                        }}
-                      />
-                      <FormControl size="small" sx={{ minWidth: 180, flex: 1 }}>
-                        <InputLabel id="edit-task-assignees-label">Assignees</InputLabel>
-                        <Select<string[]>
-                          labelId="edit-task-assignees-label"
-                          label="Assignees"
-                          multiple
-                          value={editAssigneeIds}
-                          onChange={(event: SelectChangeEvent<string[]>) => {
-                            const value = event.target.value
-                            setEditAssigneeIds(typeof value === 'string' ? value.split(',') : value)
-                          }}
-                          input={<OutlinedInput label="Assignees" />}
-                          renderValue={(selected) =>
-                            selected
-                              .map((memberId: string) =>
-                                members.find((member) => member.id === memberId)?.full_name ?? memberId,
-                              )
-                              .join(', ')
-                          }
-                          sx={COMPACT_SELECT_SX}
-                        >
-                          {members.map((member) => (
-                            <MenuItem key={member.id} value={member.id} sx={{ fontSize: 13, fontWeight: 600 }}>
-                              {member.full_name}
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                      <Typography sx={{ fontSize: 12, color: SLATE[400], fontWeight: 600, width: '100%' }}>
-                        {STATUS_LABELS[currentTask.status]} · move on board to change status
-                      </Typography>
-                    </>
+                    <Typography sx={{ fontSize: 12, color: SLATE[400], fontWeight: 600 }}>
+                      {STATUS_LABELS[currentTask.status]} · move on board to change status
+                    </Typography>
                   ) : (
                     <>
                       <MetaPill
@@ -679,6 +604,66 @@ export default function TaskDetailModal({
           </IconButton>
         </Box>
       </Box>
+
+      {editMode && currentTask && (
+        <Box sx={{ px: { xs: 1.75, sm: 2.25 }, pt: 1.25, pb: 0.5, display: 'flex', gap: 1.5 }}>
+          <FormControl size="small" sx={{ flex: 1 }}>
+            <InputLabel id="edit-task-priority-label" shrink>Priority</InputLabel>
+            <Select
+              labelId="edit-task-priority-label"
+              label="Priority"
+              notched
+              value={editPriority}
+              onChange={(e) => setEditPriority(e.target.value)}
+              sx={{ borderRadius: '10px', fontSize: fs(13), fontWeight: 600 }}
+            >
+              {PRIORITY_OPTIONS.map((option) => (
+                <MenuItem key={option} value={option} sx={{ fontSize: 13, fontWeight: 600 }}>
+                  {PRIORITY_STYLES[option].label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Due Date"
+            type="date"
+            size="small"
+            value={editDueDate}
+            onChange={(e) => setEditDueDate(e.target.value)}
+            slotProps={{ inputLabel: { shrink: true } }}
+            sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: fs(13) } }}
+          />
+          <FormControl size="small" sx={{ flex: 2 }}>
+            <InputLabel id="edit-task-assignees-label" shrink>Assignees</InputLabel>
+            <Select<string[]>
+              labelId="edit-task-assignees-label"
+              label="Assignees"
+              multiple
+              notched
+              value={editAssigneeIds}
+              onChange={(event: SelectChangeEvent<string[]>) => {
+                const value = event.target.value
+                setEditAssigneeIds(typeof value === 'string' ? value.split(',') : value)
+              }}
+              input={<OutlinedInput label="Assignees" notched />}
+              renderValue={(selected) =>
+                selected
+                  .map((memberId: string) =>
+                    members.find((member) => member.id === memberId)?.full_name ?? memberId,
+                  )
+                  .join(', ')
+              }
+              sx={{ borderRadius: '10px', fontSize: fs(13) }}
+            >
+              {members.map((member) => (
+                <MenuItem key={member.id} value={member.id} sx={{ fontSize: 13, fontWeight: 600 }}>
+                  {member.full_name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </Box>
+      )}
 
       <Box sx={{ px: { xs: 1.75, sm: 2.25 }, py: 1.25 }}>
         {currentTask && (
