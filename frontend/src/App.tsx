@@ -1,32 +1,33 @@
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material'
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import AppShell from './components/layout/AppShell'
 import ProtectedRoute from './components/ProtectedRoute'
-import DashboardPage from './pages/DashboardPage'
-import MyTasksPage from './pages/MyTasksPage'
-import NotificationsPage from './pages/NotificationsPage'
-import ProfilePage from './pages/ProfilePage'
-import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
-import LoginPage from './pages/auth/LoginPage'
-import RegisterPage from './pages/auth/RegisterPage'
-import ResetPasswordPage from './pages/auth/ResetPasswordPage'
-import VerifyEmailPage from './pages/auth/VerifyEmailPage'
-import AcceptInvitationPage from './pages/AcceptInvitationPage'
-import OnboardingFlow from './pages/onboarding/OnboardingFlow'
-import ProjectLayout from './pages/project/ProjectLayout'
-import MembersTab from './pages/project/MembersTab'
-import EvidenceTab from './pages/project/EvidenceTab'
-import MeetingsTab from './pages/project/MeetingsTab'
-import PeerReviewPage from './pages/project/PeerReviewPage'
-import DisputesPage from './pages/project/DisputesPage'
-import ProjectSettingsPage from './pages/project/ProjectSettingsPage'
-import ReportPreviewPage from './pages/project/ReportPreviewPage'
-import ActivityTab from './pages/project/ActivityTab'
-import TasksTab from './pages/project/TasksTab'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { fetchCurrentUser } from './store/authSlice'
 import theme from './theme'
+
+const AppShell = lazy(() => import('./components/layout/AppShell'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const MyTasksPage = lazy(() => import('./pages/MyTasksPage'))
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
+const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const ForgotPasswordPage = lazy(() => import('./pages/auth/ForgotPasswordPage'))
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'))
+const RegisterPage = lazy(() => import('./pages/auth/RegisterPage'))
+const ResetPasswordPage = lazy(() => import('./pages/auth/ResetPasswordPage'))
+const VerifyEmailPage = lazy(() => import('./pages/auth/VerifyEmailPage'))
+const AcceptInvitationPage = lazy(() => import('./pages/AcceptInvitationPage'))
+const OnboardingFlow = lazy(() => import('./pages/onboarding/OnboardingFlow'))
+const ProjectLayout = lazy(() => import('./pages/project/ProjectLayout'))
+const MembersTab = lazy(() => import('./pages/project/MembersTab'))
+const EvidenceTab = lazy(() => import('./pages/project/EvidenceTab'))
+const MeetingsTab = lazy(() => import('./pages/project/MeetingsTab'))
+const PeerReviewPage = lazy(() => import('./pages/project/PeerReviewPage'))
+const DisputesPage = lazy(() => import('./pages/project/DisputesPage'))
+const ProjectSettingsPage = lazy(() => import('./pages/project/ProjectSettingsPage'))
+const ReportPreviewPage = lazy(() => import('./pages/project/ReportPreviewPage'))
+const ActivityTab = lazy(() => import('./pages/project/ActivityTab'))
+const TasksTab = lazy(() => import('./pages/project/TasksTab'))
 
 const PUBLIC_PATHS = new Set([
   '/login',
@@ -42,6 +43,14 @@ function isPublicPath(pathname: string): boolean {
     pathname.startsWith('/reset-password/')
     || pathname.startsWith('/verify-email/')
     || pathname.startsWith('/invitations/accept/')
+  )
+}
+
+function RouteFallback() {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
+      <CircularProgress />
+    </Box>
   )
 }
 
@@ -68,6 +77,7 @@ function AppRoutes() {
   }
 
   return (
+    <Suspense fallback={<RouteFallback />}>
     <Routes>
       <Route
         path="/login"
@@ -107,6 +117,7 @@ function AppRoutes() {
       <Route path="/" element={<Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   )
 }
 
