@@ -119,7 +119,9 @@ describe('DisputesPage', () => {
     const user = userEvent.setup()
     renderDisputesPage()
 
-    await user.click(await screen.findByRole('button', { name: /dispute resolved/i }))
+    const menuButton = await screen.findByRole('button', { name: /dispute actions/i })
+    await user.click(menuButton)
+    await user.click(await screen.findByRole('menuitem', { name: /mark resolved/i }))
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/disputes/dispute-1/resolve')

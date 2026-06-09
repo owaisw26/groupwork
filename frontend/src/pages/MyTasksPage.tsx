@@ -4,21 +4,25 @@ import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PlayCircleOutlineOutlinedIcon from '@mui/icons-material/PlayCircleOutlineOutlined'
 import RadioButtonUncheckedOutlinedIcon from '@mui/icons-material/RadioButtonUncheckedOutlined'
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined'
 import {
   Box,
   CircularProgress,
   IconButton,
+  InputAdornment,
   Menu,
   MenuItem,
+  Select,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { APP_PRIMARY, fs, SLATE, SURFACE_CARD_SX } from '../appTheme'
 import TaskDetailModal from '../components/TaskDetailModal'
@@ -120,6 +124,8 @@ export default function MyTasksPage() {
   const { myTasks, myTasksLoading } = useAppSelector((state) => state.tasks)
   const projects = useAppSelector((state) => state.projects.items)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
   const [page, setPage] = useState(1)
 
   useEffect(() => {
@@ -130,9 +136,23 @@ export default function MyTasksPage() {
   const getProjectOwnerId = (projectId: string) =>
     projects.find((p) => p.id === projectId)?.owner_id ?? ''
 
-  const totalPages = Math.max(1, Math.ceil(myTasks.length / PAGE_SIZE))
+  const filtered = useMemo(() => {
+    let list = [...myTasks]
+    if (search.trim()) {
+      const q = search.toLowerCase()
+      list = list.filter((t) =>
+        t.title.toLowerCase().includes(q) ||
+        (t.project_name ?? '').toLowerCase().includes(q),
+      )
+    }
+    if (sortBy === 'oldest') list.reverse()
+    if (sortBy === 'due_date') list.sort((a, b) => (a.due_date ?? '9999') < (b.due_date ?? '9999') ? -1 : 1)
+    return list
+  }, [myTasks, search, sortBy])
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const start = (page - 1) * PAGE_SIZE
-  const visibleTasks = myTasks.slice(start, start + PAGE_SIZE)
+  const visibleTasks = filtered.slice(start, start + PAGE_SIZE)
 
   if (myTasksLoading && myTasks.length === 0) {
     return (
@@ -150,8 +170,41 @@ export default function MyTasksPage() {
       />
 
       <Box sx={SURFACE_CARD_SX}>
+        <Box sx={{ display: 'flex', gap: 1.5, mb: 2.5, flexWrap: 'wrap' }}>
+          <TextField
+            size="small"
+            placeholder="Search tasks..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+            slotProps={{
+              input: {
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchOutlinedIcon sx={{ fontSize: 18, color: SLATE[400] }} />
+                  </InputAdornment>
+                ),
+              },
+            }}
+            sx={{ flex: 1, minWidth: 200, '& .MuiOutlinedInput-root': { borderRadius: '10px' } }}
+          />
+          <Select
+            size="small"
+            value={sortBy}
+            onChange={(e) => { setSortBy(e.target.value); setPage(1) }}
+            sx={{ minWidth: 160, borderRadius: '10px', fontSize: fs(13) }}
+          >
+            <MenuItem value="newest">Newest first</MenuItem>
+            <MenuItem value="oldest">Oldest first</MenuItem>
+            <MenuItem value="due_date">Due date</MenuItem>
+          </Select>
+        </Box>
+
         {myTasks.length === 0 ? (
           <Typography color="text.secondary">No tasks assigned to you yet.</Typography>
+        ) : filtered.length === 0 ? (
+          <Typography sx={{ fontSize: fs(14), color: SLATE[400], fontStyle: 'italic', py: 2 }}>
+            No tasks match your search.
+          </Typography>
         ) : (
           <>
             <TableContainer>
@@ -222,7 +275,7 @@ export default function MyTasksPage() {
 
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 2.5, px: 0.5 }}>
               <Typography sx={{ fontSize: fs(13), color: SLATE[500] }}>
-                Showing {start + 1} to {Math.min(start + PAGE_SIZE, myTasks.length)} of {myTasks.length} tasks
+                Showing {start + 1} to {Math.min(start + PAGE_SIZE, filtered.length)} of {filtered.length} task{filtered.length !== 1 ? 's' : ''}
               </Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                 <IconButton

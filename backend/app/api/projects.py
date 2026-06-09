@@ -67,15 +67,16 @@ def update_project(
     conn: connection = Depends(_get_db),
 ):
     user = get_verified_user(request)
+    fields = {
+        field: getattr(body, field)
+        for field in ("name", "description", "course", "due_date", "max_members")
+        if field in body.model_fields_set
+    }
     return project_service.update_project(
         conn,
         project_id,
         user["id"],
-        name=body.name,
-        description=body.description,
-        course=body.course,
-        due_date=body.due_date,
-        max_members=body.max_members,
+        **fields,
     )
 
 

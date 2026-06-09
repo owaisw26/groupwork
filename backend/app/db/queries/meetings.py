@@ -126,7 +126,9 @@ def list_project_meetings(conn: connection, project_id: str | UUID) -> list[dict
     for row in rows:
         meeting = _public_meeting(_row_to_meeting(row[:9]))
         meeting["created_by_name"] = row[9]
-        meeting["attendee_count"] = len(get_meeting_attendance(conn, meeting["id"]))
+        attendees = get_meeting_attendees_with_names(conn, meeting["id"])
+        meeting["attendee_count"] = len(attendees)
+        meeting["attendee_names"] = [a["full_name"] for a in attendees]
         result.append(meeting)
     return result
 
@@ -164,6 +166,21 @@ def get_meeting_attendance(conn: connection, meeting_id: str | UUID) -> list[str
             (str(meeting_id),),
         )
         return [str(row[0]) for row in cur.fetchall()]
+
+
+def get_meeting_attendees_with_names(conn: connection, meeting_id: str | UUID) -> list[dict]:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT u.id, u.full_name
+            FROM meeting_attendance ma
+            JOIN users u ON u.id = ma.user_id
+            WHERE ma.meeting_id = %s AND ma.attended = TRUE
+            ORDER BY u.full_name, u.id
+            """,
+            (str(meeting_id),),
+        )
+        return [{"id": str(row[0]), "full_name": row[1]} for row in cur.fetchall()]
 
 
 def get_member_attendance_rate(

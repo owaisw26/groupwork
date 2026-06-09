@@ -291,15 +291,22 @@ def update_task(
     project = project_queries.get_project(conn, task["project_id"])
     if not project or project["deleted_at"] is not None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    if str(project["owner_id"]) != str(user_id):
+    is_owner = str(project["owner_id"]) == str(user_id)
+    is_assignee = task_queries.is_task_assignee(conn, task_id, user_id)
+    if not is_owner and not is_assignee:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the project owner can edit tasks directly",
+            detail="Only the project owner or a task assignee can edit this task",
         )
     lifecycle_service.assert_project_writable(conn, task["project_id"])
     if priority is not None:
         _validate_priority(priority)
     if assignee_ids is not None:
+        if not is_owner:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the project owner can update task assignees",
+            )
         _validate_assignees(conn, task["project_id"], assignee_ids)
 
     updated = task_queries.update_task(

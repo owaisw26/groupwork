@@ -170,35 +170,6 @@ function MetaPill({
   )
 }
 
-const COMPACT_SELECT_SX: SxProps<Theme> = {
-  height: 28,
-  borderRadius: 2,
-  bgcolor: '#FFFFFF',
-  fontSize: 12,
-  fontWeight: 700,
-  '& .MuiOutlinedInput-notchedOutline': {
-    borderColor: APP_BORDER,
-  },
-  '&:hover .MuiOutlinedInput-notchedOutline': {
-    borderColor: SLATE[300],
-  },
-  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-    borderColor: APP_PRIMARY,
-  },
-  '& .MuiSelect-select': {
-    py: 0.5,
-    pl: 1.5,
-    pr: '22px !important',
-    display: 'flex',
-    alignItems: 'center',
-    minHeight: 'unset',
-  },
-  '& .MuiSelect-icon': {
-    right: 6,
-    color: 'inherit',
-  },
-}
-
 function SectionBlock({
   title,
   children,
@@ -374,7 +345,7 @@ export default function TaskDetailModal({
           description: editDescription,
           priority: editPriority,
           due_date: editDueDate || undefined,
-          assignee_ids: assigneeIds,
+          assignee_ids: isOwner ? assigneeIds : undefined,
         }),
       ).unwrap()
       setEditMode(false)
@@ -633,35 +604,37 @@ export default function TaskDetailModal({
             slotProps={{ inputLabel: { shrink: true } }}
             sx={{ flex: 1, '& .MuiOutlinedInput-root': { borderRadius: '10px', fontSize: fs(13) } }}
           />
-          <FormControl size="small" sx={{ flex: 2 }}>
-            <InputLabel id="edit-task-assignees-label" shrink>Assignees</InputLabel>
-            <Select<string[]>
-              labelId="edit-task-assignees-label"
-              label="Assignees"
-              multiple
-              notched
-              value={editAssigneeIds}
-              onChange={(event: SelectChangeEvent<string[]>) => {
-                const value = event.target.value
-                setEditAssigneeIds(typeof value === 'string' ? value.split(',') : value)
-              }}
-              input={<OutlinedInput label="Assignees" notched />}
-              renderValue={(selected) =>
-                selected
-                  .map((memberId: string) =>
-                    members.find((member) => member.id === memberId)?.full_name ?? memberId,
-                  )
-                  .join(', ')
-              }
-              sx={{ borderRadius: '10px', fontSize: fs(13) }}
-            >
-              {members.map((member) => (
-                <MenuItem key={member.id} value={member.id} sx={{ fontSize: 13, fontWeight: 600 }}>
-                  {member.full_name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {isOwner && (
+            <FormControl size="small" sx={{ flex: 2 }}>
+              <InputLabel id="edit-task-assignees-label" shrink>Assignees</InputLabel>
+              <Select<string[]>
+                labelId="edit-task-assignees-label"
+                label="Assignees"
+                multiple
+                notched
+                value={editAssigneeIds}
+                onChange={(event: SelectChangeEvent<string[]>) => {
+                  const value = event.target.value
+                  setEditAssigneeIds(typeof value === 'string' ? value.split(',') : value)
+                }}
+                input={<OutlinedInput label="Assignees" notched />}
+                renderValue={(selected) =>
+                  selected
+                    .map((memberId: string) =>
+                      members.find((member) => member.id === memberId)?.full_name ?? memberId,
+                    )
+                    .join(', ')
+                }
+                sx={{ borderRadius: '10px', fontSize: fs(13) }}
+              >
+                {members.map((member) => (
+                  <MenuItem key={member.id} value={member.id} sx={{ fontSize: 13, fontWeight: 600 }}>
+                    {member.full_name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
         </Box>
       )}
 
@@ -686,7 +659,7 @@ export default function TaskDetailModal({
               )}
             </Box>
 
-            {showVerification && (
+            {!editMode && showVerification && (
               <Box
                 sx={{
                   ...SECTION_SX,
@@ -754,7 +727,7 @@ export default function TaskDetailModal({
               </Box>
             )}
 
-            <SectionBlock title="Subtasks">
+            {!editMode && <SectionBlock title="Subtasks">
               <Stack spacing={0.5}>
                 {subtasks.map((subtask) => (
                   <Box
@@ -821,9 +794,9 @@ export default function TaskDetailModal({
                   </Button>
                 </Box>
               )}
-            </SectionBlock>
+            </SectionBlock>}
 
-            <SectionBlock title="Comments">
+            {!editMode && <SectionBlock title="Comments">
               <Stack spacing={0.75}>
                 {comments.length === 0 ? (
                   <Typography sx={{ fontSize: fs(13), color: SLATE[400], fontStyle: 'italic' }}>
@@ -870,9 +843,9 @@ export default function TaskDetailModal({
                   </Button>
                 </Box>
               )}
-            </SectionBlock>
+            </SectionBlock>}
 
-            <SectionBlock title="Evidence">
+            {!editMode && <SectionBlock title="Evidence">
               {evidence.length === 0 ? (
                 <Typography sx={{ fontSize: fs(13), color: SLATE[400], fontStyle: 'italic', mb: 0.75 }}>
                   No files uploaded yet.
@@ -916,9 +889,9 @@ export default function TaskDetailModal({
                 </Stack>
               )}
               {!isReadOnly && <EvidenceUpload taskId={taskId} onUploaded={refreshEvidence} />}
-            </SectionBlock>
+            </SectionBlock>}
 
-            <SectionBlock title="Time Logs">
+            {!editMode && <SectionBlock title="Time Logs">
               <Typography sx={{ fontSize: fs(12), color: SLATE[500], mb: 0.75 }}>
                 Your total hours on this project: {totalProjectHours}h
               </Typography>
@@ -951,9 +924,9 @@ export default function TaskDetailModal({
                 </Stack>
               )}
               {isAssignee && !isReadOnly && <TimeLogForm taskId={taskId} />}
-            </SectionBlock>
+            </SectionBlock>}
 
-            {isOwner && editRequests.length > 0 && (
+            {isOwner && currentTask && editRequests.length > 0 && (
               <SectionBlock title="Pending Edit Requests">
                 {editRequests.map((request) => (
                   <Box key={request.id} sx={{ mb: editRequests.length > 1 ? 2 : 0 }}>
@@ -983,7 +956,7 @@ export default function TaskDetailModal({
               </SectionBlock>
             )}
 
-            {!isOwner && requestEditOpen && currentTask && (
+            {!editMode && !isOwner && !isAssignee && requestEditOpen && currentTask && (
               <SectionBlock title="Request Edit">
                 <TextField
                   label="Proposed title"
@@ -1015,7 +988,7 @@ export default function TaskDetailModal({
           borderTop: `1px solid ${APP_BORDER}`,
         }}
       >
-        {!isReadOnly && !isOwner && !requestEditOpen && (
+        {!isReadOnly && !isOwner && !isAssignee && !requestEditOpen && (
           <Button
             onClick={() => setRequestEditOpen(true)}
             sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
@@ -1023,7 +996,7 @@ export default function TaskDetailModal({
             Request Edit
           </Button>
         )}
-        {!isReadOnly && !isOwner && requestEditOpen && (
+        {!isReadOnly && !isOwner && !isAssignee && requestEditOpen && (
           <>
             <Button
               onClick={() => setRequestEditOpen(false)}
@@ -1040,7 +1013,7 @@ export default function TaskDetailModal({
             </Button>
           </>
         )}
-        {!isReadOnly && isOwner && !editMode && (
+        {!isReadOnly && (isOwner || isAssignee) && !editMode && (
           <Button
             variant="outlined"
             onClick={() => setEditMode(true)}
@@ -1049,7 +1022,7 @@ export default function TaskDetailModal({
             Edit Task
           </Button>
         )}
-        {!isReadOnly && isOwner && editMode && (
+        {!isReadOnly && (isOwner || isAssignee) && editMode && (
           <>
             {saveError && (
               <Typography sx={{ fontSize: 13, color: '#DC2626', fontWeight: 600, mr: 'auto' }}>

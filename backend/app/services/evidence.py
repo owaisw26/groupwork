@@ -215,7 +215,7 @@ def list_task_evidence(
     raw_items = evidence_queries.list_task_evidence(conn, task_id)
     items = []
     for raw in raw_items:
-        public = evidence_queries._public_evidence(raw)
+        public = evidence_queries._public_evidence(raw, user_name=raw.get("user_name"))
         if settings.AWS_S3_BUCKET:
             public["download_url"] = generate_presigned_download_url(
                 settings.AWS_S3_BUCKET,
@@ -235,7 +235,7 @@ def list_project_evidence(
     raw_items = evidence_queries.list_project_evidence(conn, project_id)
     items = []
     for raw in raw_items:
-        public = evidence_queries._public_evidence(raw)
+        public = evidence_queries._public_evidence(raw, user_name=raw.get("user_name"))
         public["task_title"] = raw.get("task_title")
         if settings.AWS_S3_BUCKET:
             public["download_url"] = generate_presigned_download_url(

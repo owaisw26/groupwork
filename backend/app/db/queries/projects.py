@@ -4,6 +4,8 @@ from uuid import UUID
 
 from psycopg2.extensions import connection
 
+_UNSET = object()
+
 
 def create_project(
     conn: connection,
@@ -102,28 +104,28 @@ def update_project(
     conn: connection,
     project_id: str | UUID,
     *,
-    name: str | None = None,
-    description: str | None = None,
-    course: str | None = None,
-    due_date: date | None = None,
-    max_members: int | None = None,
+    name: object = _UNSET,
+    description: object = _UNSET,
+    course: object = _UNSET,
+    due_date: object = _UNSET,
+    max_members: object = _UNSET,
 ) -> dict[str, Any] | None:
     updates: list[str] = []
     params: list[object] = []
 
-    if name is not None:
+    if name is not _UNSET:
         updates.append("name = %s")
         params.append(name)
-    if description is not None:
+    if description is not _UNSET:
         updates.append("description = %s")
         params.append(description)
-    if course is not None:
+    if course is not _UNSET:
         updates.append("course = %s")
         params.append(course)
-    if due_date is not None:
+    if due_date is not _UNSET:
         updates.append("due_date = %s")
         params.append(due_date)
-    if max_members is not None:
+    if max_members is not _UNSET:
         updates.append("max_members = %s")
         params.append(max_members)
 

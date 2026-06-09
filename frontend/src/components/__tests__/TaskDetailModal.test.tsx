@@ -189,7 +189,7 @@ describe('TaskDetailModal task metadata', () => {
     })
   })
 
-  it('does not show direct edit controls for non-owner members', async () => {
+  it('shows request edit controls for non-owner non-assignee members', async () => {
     const user = userEvent.setup()
     renderModal({ ownerId: 'user-1', userId: 'user-2' })
 
