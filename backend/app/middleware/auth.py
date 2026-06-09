@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import HTTPException, Request, status
 from jose import JWTError
 
+from app.config import get_settings
 from app.db.connection import get_connection
 from app.db.queries import users as user_queries
 from app.utils.security import decode_token
@@ -55,7 +56,7 @@ def get_current_user(request: Request) -> dict[str, Any]:
 
 def get_verified_user(request: Request) -> dict[str, Any]:
     user = get_current_user(request)
-    if not user["email_verified"]:
+    if get_settings().REQUIRE_EMAIL_VERIFICATION and not user["email_verified"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified",

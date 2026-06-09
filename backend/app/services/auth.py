@@ -62,18 +62,23 @@ def register_user(
             detail="Email already registered",
         ) from None
 
-    raw_token = generate_token()
-    token_queries.create_email_verification(
-        conn,
-        user_id=user["id"],
-        token_hash=hash_token(raw_token),
-        expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
-    )
-    email_utils.send_email(
-        to=email,
-        subject="Verify your GroupWork account",
-        html_body=email_utils.verification_email_body(raw_token),
-    )
+    settings = get_settings()
+    if settings.REQUIRE_EMAIL_VERIFICATION:
+        raw_token = generate_token()
+        token_queries.create_email_verification(
+            conn,
+            user_id=user["id"],
+            token_hash=hash_token(raw_token),
+            expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+        )
+        email_utils.send_email(
+            to=email,
+            subject="Verify your GroupWork account",
+            html_body=email_utils.verification_email_body(raw_token),
+        )
+    else:
+        user_queries.update_email_verified(conn, user["id"])
+        user["email_verified"] = True
 
     return user_queries.public_user(user)
 
@@ -140,11 +145,15 @@ def login_user(conn: connection, *, email: str, password: str) -> tuple[dict, st
             detail=INVALID_CREDENTIALS_MSG,
         )
 
-    if not user["email_verified"]:
+    settings = get_settings()
+    if settings.REQUIRE_EMAIL_VERIFICATION and not user["email_verified"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified",
         )
+    if not user["email_verified"]:
+        user_queries.update_email_verified(conn, user["id"])
+        user["email_verified"] = True
 
     user_queries.reset_failed_logins(conn, user["id"])
     token_queries.revoke_all_user_tokens(conn, user["id"])
@@ -190,13 +199,13 @@ def refresh_session(conn: connection, refresh_token: str) -> tuple[str, str, str
 
     _check_lockout(user)
 
-    if not user["email_verified"]:
+    settings = get_settings()
+    if settings.REQUIRE_EMAIL_VERIFICATION and not user["email_verified"]:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Email not verified",
         )
 
-    settings = get_settings()
     new_refresh_token = generate_token()
     token_queries.create_refresh_token(
         conn,

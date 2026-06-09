@@ -9,6 +9,23 @@ def test_valid_registration_returns_201(auth_client, email_outbox):
     assert len(email_outbox) == 1
 
 
+def test_registration_auto_verifies_when_email_verification_disabled(
+    auth_client,
+    email_outbox,
+    monkeypatch,
+):
+    monkeypatch.setenv("REQUIRE_EMAIL_VERIFICATION", "false")
+    from app.config import get_settings
+
+    get_settings.cache_clear()
+
+    response = register_user(auth_client, email="demo@example.com")
+
+    assert response.status_code == 201
+    assert response.json()["email_verified"] is True
+    assert len(email_outbox) == 0
+
+
 def test_duplicate_email_returns_409(auth_client):
     register_user(auth_client, email="dup@example.com")
     response = register_user(auth_client, email="dup@example.com")

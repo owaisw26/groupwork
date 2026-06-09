@@ -14,6 +14,7 @@ os.environ.setdefault("FRONTEND_URL", "http://localhost:5173")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
 os.environ.setdefault("COOKIE_SECURE", "false")
 os.environ.setdefault("AWS_S3_BUCKET", "test-bucket")
+os.environ.setdefault("REQUIRE_EMAIL_VERIFICATION", "true")
 
 
 @pytest.fixture(autouse=True)

@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: str = "http://localhost:5173"
     COOKIE_SECURE: bool = True
     ENVIRONMENT: str = "development"
+    REQUIRE_EMAIL_VERIFICATION: bool = False
 
     @property
     def is_production(self) -> bool:
