@@ -25,6 +25,17 @@ function Widget({ title, children }: { title: string; children: React.ReactNode 
   )
 }
 
+function formatDeadlineLabel(dueDate: string): string {
+  const due = new Date(`${dueDate}T00:00:00`)
+  const today = new Date()
+  due.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+  const diff = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  if (diff < 0) return `${dueDate} · ${Math.abs(diff)} days overdue`
+  if (diff === 0) return `${dueDate} · due today`
+  return `${dueDate} · ${diff} days remaining`
+}
+
 export default function DashboardPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -51,6 +62,10 @@ export default function DashboardPage() {
       return
     }
     document.getElementById('your-projects')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  const scrollToDeadlines = () => {
+    document.getElementById('dashboard-deadlines')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   return (
@@ -93,10 +108,10 @@ export default function DashboardPage() {
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <StatCard
             icon={<AccessTimeOutlinedIcon fontSize="small" />}
-            label="Upcoming Deadlines"
+            label="Deadlines"
             value={String(deadlines.length)}
             actionLabel="View deadlines"
-            actionTo="/my-tasks"
+            onActionClick={scrollToDeadlines}
             accent="#D97706"
           />
         </Grid>
@@ -128,7 +143,7 @@ export default function DashboardPage() {
       )}
 
       <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, lg: 6 }}>
+        <Grid id="dashboard-deadlines" size={{ xs: 12, lg: 6 }} sx={{ scrollMarginTop: 24 }}>
           <Widget title="My Tasks">
             {myTasks.length === 0 ? (
               <Typography color="text.secondary">No tasks assigned yet.</Typography>
@@ -159,9 +174,9 @@ export default function DashboardPage() {
           </Widget>
         </Grid>
         <Grid size={{ xs: 12, lg: 6 }}>
-          <Widget title="Upcoming Deadlines">
+          <Widget title="Deadlines">
             {deadlines.length === 0 ? (
-              <Typography color="text.secondary">No upcoming deadlines.</Typography>
+              <Typography color="text.secondary">No active deadlines.</Typography>
             ) : (
               <Stack spacing={1.5}>
                 {deadlines.map((item) => (
@@ -176,7 +191,10 @@ export default function DashboardPage() {
                   >
                     <Typography sx={{ fontSize: fs(15), fontWeight: 700 }}>{item.title}</Typography>
                     <Typography sx={{ fontSize: fs(13), color: SLATE[500] }}>
-                      {item.due_date} · {item.project_name}
+                      {item.type === 'project' ? 'Project deadline' : 'Task deadline'} · {item.project_name}
+                    </Typography>
+                    <Typography sx={{ fontSize: fs(13), color: SLATE[500] }}>
+                      {formatDeadlineLabel(item.due_date)}
                     </Typography>
                   </Box>
                 ))}

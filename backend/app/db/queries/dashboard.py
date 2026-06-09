@@ -39,26 +39,54 @@ def get_upcoming_deadlines(
     conn: connection,
     user_id: str | UUID,
     *,
-    days: int = 7,
+    days: int = 30,
     limit: int = 10,
 ) -> list[dict[str, Any]]:
     end_date = date.today() + timedelta(days=days)
     with conn.cursor() as cur:
         cur.execute(
             """
-            SELECT t.id, t.title, t.due_date, t.project_id, p.name
-            FROM tasks t
-            JOIN task_assignees ta ON ta.task_id = t.id
-            JOIN projects p ON p.id = t.project_id
-            JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = %s
-            WHERE ta.user_id = %s
-              AND p.deleted_at IS NULL
-              AND t.due_date IS NOT NULL
-              AND t.due_date BETWEEN CURRENT_DATE AND %s
-            ORDER BY t.due_date ASC
+            SELECT id, title, due_date, project_id, project_name, item_type, status
+            FROM (
+                SELECT
+                    t.id,
+                    t.title,
+                    t.due_date,
+                    t.project_id,
+                    p.name AS project_name,
+                    'task' AS item_type,
+                    t.status
+                FROM tasks t
+                JOIN task_assignees ta ON ta.task_id = t.id
+                JOIN projects p ON p.id = t.project_id
+                JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = %s
+                WHERE ta.user_id = %s
+                  AND p.deleted_at IS NULL
+                  AND t.due_date IS NOT NULL
+                  AND t.due_date <= %s
+                  AND t.status != 'done'
+
+                UNION ALL
+
+                SELECT
+                    p.id,
+                    p.name,
+                    p.due_date,
+                    p.id AS project_id,
+                    p.name AS project_name,
+                    'project' AS item_type,
+                    p.status
+                FROM projects p
+                JOIN project_members pm ON pm.project_id = p.id AND pm.user_id = %s
+                WHERE p.deleted_at IS NULL
+                  AND p.due_date IS NOT NULL
+                  AND p.due_date <= %s
+                  AND p.status NOT IN ('report_generated', 'archived')
+            ) deadlines
+            ORDER BY due_date ASC
             LIMIT %s
             """,
-            (str(user_id), str(user_id), end_date, limit),
+            (str(user_id), str(user_id), end_date, str(user_id), end_date, limit),
         )
         rows = cur.fetchall()
     return [
@@ -68,6 +96,8 @@ def get_upcoming_deadlines(
             "due_date": row[2].isoformat(),
             "project_id": str(row[3]),
             "project_name": row[4],
+            "type": row[5],
+            "status": row[6],
         }
         for row in rows
     ]

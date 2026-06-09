@@ -39,16 +39,21 @@ function renderDashboard() {
 }
 
 describe('DashboardPage', () => {
+  let dashboardData: {
+    my_tasks: unknown[]
+    upcoming_deadlines: unknown[]
+    recent_activity: unknown[]
+  }
+
   beforeEach(() => {
+    dashboardData = {
+      my_tasks: [],
+      upcoming_deadlines: [],
+      recent_activity: [],
+    }
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === '/dashboard') {
-        return Promise.resolve({
-          data: {
-            my_tasks: [],
-            upcoming_deadlines: [],
-            recent_activity: [],
-          },
-        })
+        return Promise.resolve({ data: dashboardData })
       }
       if (url === '/projects') {
         return Promise.resolve({ data: [] })
@@ -63,7 +68,7 @@ describe('DashboardPage', () => {
     expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument()
     expect(screen.getByText('Projects')).toBeInTheDocument()
     expect(screen.getAllByText('My Tasks').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getAllByText('Upcoming Deadlines').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Deadlines').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Recent Activity').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByRole('button', { name: /create project/i })).toBeInTheDocument()
   })
@@ -72,7 +77,24 @@ describe('DashboardPage', () => {
     renderDashboard()
 
     expect(await screen.findByText('No tasks assigned yet.')).toBeInTheDocument()
-    expect(screen.getByText('No upcoming deadlines.')).toBeInTheDocument()
+    expect(screen.getByText('No active deadlines.')).toBeInTheDocument()
     expect(screen.getByText('No recent activity.')).toBeInTheDocument()
+  })
+
+  it('renders project deadline items returned by the dashboard API', async () => {
+    dashboardData.upcoming_deadlines = [{
+      id: 'project-1',
+      title: 'Coursework Project',
+      due_date: '2026-06-20',
+      project_id: 'project-1',
+      project_name: 'Coursework Project',
+      type: 'project',
+      status: 'active',
+    }]
+
+    renderDashboard()
+
+    expect(await screen.findByText('Coursework Project')).toBeInTheDocument()
+    expect(screen.getByText(/project deadline/i)).toBeInTheDocument()
   })
 })

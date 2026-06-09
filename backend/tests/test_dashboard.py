@@ -11,10 +11,10 @@ def _verified_user(client, email_outbox, email="dash@example.com"):
     return auth_headers(client), email
 
 
-def _create_project(client, headers, name="Dashboard Project"):
+def _create_project(client, headers, name="Dashboard Project", due_date="2026-12-31"):
     return client.post(
         "/api/v1/projects",
-        json={"name": name, "due_date": "2026-12-31"},
+        json={"name": name, "due_date": due_date},
         headers=headers,
     ).json()
 
@@ -59,6 +59,31 @@ def test_dashboard_returns_widget_data(auth_client, email_outbox, db_conn):
         item for item in data["recent_activity"] if item["action_type"] == "task_created"
     ]
     assert len(task_activity) == 1
+
+
+def test_dashboard_deadlines_include_project_due_dates(auth_client, email_outbox):
+    headers, _email = _verified_user(
+        auth_client,
+        email_outbox,
+        email="project-deadline@example.com",
+    )
+    project_due_date = (date.today() + timedelta(days=5)).isoformat()
+    project = _create_project(
+        auth_client,
+        headers,
+        name="Project deadline only",
+        due_date=project_due_date,
+    )
+
+    response = auth_client.get("/api/v1/dashboard", headers=headers)
+
+    assert response.status_code == 200
+    deadlines = response.json()["upcoming_deadlines"]
+    assert len(deadlines) == 1
+    assert deadlines[0]["id"] == project["id"]
+    assert deadlines[0]["title"] == "Project deadline only"
+    assert deadlines[0]["type"] == "project"
+    assert deadlines[0]["due_date"] == project_due_date
 
 
 def test_dashboard_empty_for_new_user(auth_client, email_outbox):

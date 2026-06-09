@@ -36,6 +36,8 @@ export interface DashboardData {
     due_date: string
     project_id: string
     project_name: string
+    type?: 'task' | 'project'
+    status?: string
   }>
   recent_activity: Array<{
     id: string
