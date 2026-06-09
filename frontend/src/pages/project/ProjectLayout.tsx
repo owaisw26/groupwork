@@ -51,6 +51,7 @@ const TABS = [
   { label: 'Meetings', path: 'meetings' },
   { label: 'Members', path: 'members' },
   { label: 'Evidence', path: 'evidence' },
+  { label: 'Disputes', path: 'disputes' },
   { label: 'Peer Review', path: 'peer-review' },
   { label: 'Settings', path: 'settings' },
   { label: 'Report', path: 'report' },
@@ -308,7 +309,7 @@ export default function ProjectLayout() {
           label="Active Disputes"
           value={String(disputeCount)}
           actionLabel="View disputes"
-          actionTo={`/projects/${id}/peer-review`}
+          actionTo={`/projects/${id}/disputes`}
           accent="#DC2626"
         />
       </Box>
