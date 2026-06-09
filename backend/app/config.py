@@ -13,6 +13,9 @@ class Settings(BaseSettings):
     JWT_REFRESH_TTL: int = 604800
     AWS_S3_BUCKET: str = ""
     AWS_REGION: str = "us-east-1"
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    S3_ENDPOINT_URL: str = ""
     SES_SENDER_EMAIL: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
     CORS_ORIGINS: str = "http://localhost:5173"

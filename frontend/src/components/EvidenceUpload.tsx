@@ -44,11 +44,15 @@ export default function EvidenceUpload({ taskId, onUploaded }: EvidenceUploadPro
       setProgress(30)
 
       const { upload_url, evidence_id } = requestResponse.data
-      await fetch(upload_url, {
+      const putResponse = await fetch(upload_url, {
         method: 'PUT',
         headers: { 'Content-Type': file.type || 'application/octet-stream' },
         body: file,
       })
+      if (!putResponse.ok) {
+        const text = await putResponse.text()
+        throw new Error(`Storage upload failed (${putResponse.status}): ${text}`)
+      }
       setProgress(80)
 
       await api.post(`/tasks/${taskId}/evidence/confirm`, {
@@ -59,8 +63,8 @@ export default function EvidenceUpload({ taskId, onUploaded }: EvidenceUploadPro
       })
       setProgress(100)
       onUploaded?.()
-    } catch {
-      setError('Failed to upload evidence. Please try again.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload evidence. Please try again.')
     } finally {
       setUploading(false)
       setProgress(0)

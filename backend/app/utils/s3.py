@@ -9,7 +9,14 @@ PRESIGNED_DOWNLOAD_EXPIRY = 900
 
 def _get_s3_client():
     settings = get_settings()
-    return boto3.client("s3", region_name=settings.AWS_REGION)
+    kwargs: dict = {"region_name": settings.AWS_REGION}
+    if settings.AWS_ACCESS_KEY_ID:
+        kwargs["aws_access_key_id"] = settings.AWS_ACCESS_KEY_ID
+    if settings.AWS_SECRET_ACCESS_KEY:
+        kwargs["aws_secret_access_key"] = settings.AWS_SECRET_ACCESS_KEY
+    if settings.S3_ENDPOINT_URL:
+        kwargs["endpoint_url"] = settings.S3_ENDPOINT_URL
+    return boto3.client("s3", **kwargs)
 
 
 def generate_presigned_upload_url(
@@ -25,7 +32,6 @@ def generate_presigned_upload_url(
             "Bucket": bucket,
             "Key": key,
             "ContentType": content_type,
-            "ContentLength": max_size,
         },
         ExpiresIn=PRESIGNED_UPLOAD_EXPIRY,
     )

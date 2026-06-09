@@ -63,8 +63,8 @@ todos:
     content: "P5.1: Task field UI (due date, assignees, priority on create/edit; real card data)"
     status: completed
   - id: p5-m2-r2
-    content: "P5.2: Cloudflare R2 evidence storage (S3-compatible presigned URLs) — DEFERRED"
-    status: cancelled
+    content: "P5.2: Cloudflare R2 evidence storage (S3-compatible presigned URLs)"
+    status: completed
   - id: p5-m3-deploy
     content: "P5.3: Free-tier deployment (Vercel frontend, Render backend, Neon Postgres)"
     status: pending
