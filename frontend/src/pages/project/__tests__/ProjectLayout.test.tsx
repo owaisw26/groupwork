@@ -8,6 +8,7 @@ import { HeaderBridgeProvider } from '../../../contexts/HeaderBridgeContext'
 import ProjectLayout from '../ProjectLayout'
 import projectsReducer from '../../../store/projectsSlice'
 import tasksReducer from '../../../store/tasksSlice'
+import { getTodayDateInputValue } from '../../../utils/dateInput'
 
 vi.mock('../../../services/api', () => ({
   default: {
@@ -148,6 +149,7 @@ describe('ProjectLayout create task dialog', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Open Create Dialog' }))
     await user.type(screen.getByLabelText(/^title$/i), 'Ship feature')
+    await user.clear(screen.getByLabelText(/due date/i))
     await user.type(screen.getByLabelText(/due date/i), '2026-07-15')
 
     const prioritySelect = screen.getByLabelText(/priority/i)
@@ -166,7 +168,7 @@ describe('ProjectLayout create task dialog', () => {
     })
   })
 
-  it('defaults priority to medium and pre-selects the current user as assignee', async () => {
+  it('defaults due date to today, priority to medium, and pre-selects the current user as assignee', async () => {
     const user = userEvent.setup()
     renderProjectLayout()
 
@@ -178,6 +180,7 @@ describe('ProjectLayout create task dialog', () => {
       expect(api.post).toHaveBeenCalledWith('/projects/proj-1/tasks', {
         title: 'Default fields task',
         priority: 'medium',
+        due_date: getTodayDateInputValue(),
         assignee_ids: ['user-1'],
       })
     })

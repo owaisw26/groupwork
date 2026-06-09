@@ -10,6 +10,7 @@ import {
 import { useState } from 'react'
 import { useAppDispatch } from '../store/hooks'
 import { createProject } from '../store/projectsSlice'
+import { getTodayDateInputValue } from '../utils/dateInput'
 
 interface CreateProjectDialogProps {
   open: boolean
@@ -21,7 +22,7 @@ export default function CreateProjectDialog({ open, onClose }: CreateProjectDial
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [course, setCourse] = useState('')
-  const [dueDate, setDueDate] = useState('')
+  const [dueDate, setDueDate] = useState(getTodayDateInputValue)
   const [maxMembers, setMaxMembers] = useState('6')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -30,7 +31,7 @@ export default function CreateProjectDialog({ open, onClose }: CreateProjectDial
     setName('')
     setDescription('')
     setCourse('')
-    setDueDate('')
+    setDueDate(getTodayDateInputValue())
     setMaxMembers('6')
     setError(null)
   }

@@ -40,6 +40,7 @@ import api from '../../services/api'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { createTask } from '../../store/tasksSlice'
 import { completeProject, fetchDashboard, fetchProject } from '../../store/projectsSlice'
+import { getTodayDateInputValue } from '../../utils/dateInput'
 
 interface ProjectMember {
   id: string
@@ -84,7 +85,7 @@ export default function ProjectLayout() {
   const [createOpen, setCreateOpen] = useState(false)
   const [newTitle, setNewTitle] = useState('')
   const [newDescription, setNewDescription] = useState('')
-  const [newDueDate, setNewDueDate] = useState('')
+  const [newDueDate, setNewDueDate] = useState(getTodayDateInputValue)
   const [newPriority, setNewPriority] = useState('medium')
   const [newAssigneeIds, setNewAssigneeIds] = useState<string[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
@@ -107,7 +108,7 @@ export default function ProjectLayout() {
   const resetCreateForm = () => {
     setNewTitle('')
     setNewDescription('')
-    setNewDueDate('')
+    setNewDueDate(getTodayDateInputValue())
     setNewPriority('medium')
     setNewAssigneeIds(user?.id ? [user.id] : [])
   }
@@ -115,7 +116,7 @@ export default function ProjectLayout() {
   const openCreateDialog = useCallback(() => {
     setNewTitle('')
     setNewDescription('')
-    setNewDueDate('')
+    setNewDueDate(getTodayDateInputValue())
     setNewPriority('medium')
     setNewAssigneeIds(user?.id ? [user.id] : [])
     setCreateOpen(true)
