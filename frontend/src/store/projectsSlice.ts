@@ -13,6 +13,10 @@ export interface Project {
   join_code_expires_at: string
   max_members: number
   member_count?: number
+  completed_at?: string | null
+  peer_review_ends_at?: string | null
+  report_s3_key?: string | null
+  archived_at?: string | null
   created_at: string
 }
 
@@ -114,6 +118,18 @@ export const fetchProject = createAsyncThunk(
   },
 )
 
+export const completeProject = createAsyncThunk(
+  'projects/completeProject',
+  async (projectId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.post<Project>(`/projects/${projectId}/complete`)
+      return response.data
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  },
+)
+
 export const fetchDashboard = createAsyncThunk('projects/fetchDashboard', async (_, { rejectWithValue }) => {
   try {
     const response = await api.get<DashboardData>('/dashboard')
@@ -148,6 +164,15 @@ const projectsSlice = createSlice({
         state.items.unshift(action.payload)
       })
       .addCase(fetchProject.fulfilled, (state, action) => {
+        const existing = state.items.findIndex((item) => item.id === action.payload.id)
+        if (existing >= 0) {
+          state.items[existing] = action.payload
+        } else {
+          state.items.push(action.payload)
+        }
+        state.currentProject = action.payload
+      })
+      .addCase(completeProject.fulfilled, (state, action) => {
         const existing = state.items.findIndex((item) => item.id === action.payload.id)
         if (existing >= 0) {
           state.items[existing] = action.payload

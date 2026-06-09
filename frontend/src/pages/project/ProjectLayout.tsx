@@ -1,8 +1,10 @@
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined'
+import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined'
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined'
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined'
 import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined'
 import {
+  Alert,
   Avatar,
   AvatarGroup,
   Box,
@@ -12,6 +14,7 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
+  DialogContentText,
   DialogTitle,
   FormControl,
   InputLabel,
@@ -36,7 +39,7 @@ import StatCard from '../../components/layout/StatCard'
 import api from '../../services/api'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { createTask } from '../../store/tasksSlice'
-import { fetchDashboard, fetchProject } from '../../store/projectsSlice'
+import { completeProject, fetchDashboard, fetchProject } from '../../store/projectsSlice'
 
 interface ProjectMember {
   id: string
@@ -65,6 +68,10 @@ function formatDueDateSubtitle(dueDate: string | null): string | undefined {
   return `${diff} days remaining`
 }
 
+function formatProjectStatus(status: string): string {
+  return status.replace(/_/g, ' ')
+}
+
 export default function ProjectLayout() {
   const { id } = useParams()
   const location = useLocation()
@@ -81,6 +88,9 @@ export default function ProjectLayout() {
   const [newAssigneeIds, setNewAssigneeIds] = useState<string[]>([])
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [createError, setCreateError] = useState<string | null>(null)
+  const [finishOpen, setFinishOpen] = useState(false)
+  const [finishError, setFinishError] = useState<string | null>(null)
+  const [finishSubmitting, setFinishSubmitting] = useState(false)
 
   useEffect(() => {
     if (id) {
@@ -119,6 +129,8 @@ export default function ProjectLayout() {
   const disputeCount = projectTasks.filter((task) => task.verification_status === 'disputed').length
   const totalTasks = projectTasks.length
   const verifiedRatio = totalTasks > 0 ? Math.round((verifiedCount / totalTasks) * 100) : 0
+  const isProjectOwner = Boolean(user && currentProject?.owner_id === user.id)
+  const canFinishProject = isProjectOwner && currentProject?.status === 'active'
 
   const handleCreate = async () => {
     if (!id || !newTitle.trim()) return
@@ -153,6 +165,21 @@ export default function ProjectLayout() {
     setNewAssigneeIds(typeof value === 'string' ? value.split(',') : value)
   }
 
+  const handleFinishProject = async () => {
+    if (!id || finishSubmitting) return
+    setFinishSubmitting(true)
+    setFinishError(null)
+    try {
+      await dispatch(completeProject(id)).unwrap()
+      setFinishOpen(false)
+      dispatch(fetchDashboard())
+    } catch (error) {
+      setFinishError(typeof error === 'string' ? error : 'Failed to mark project as finished')
+    } finally {
+      setFinishSubmitting(false)
+    }
+  }
+
   const activeTab =
     TABS.find((tab) => location.pathname.endsWith(`/${tab.path}`))?.path ?? 'tasks'
   const isTaskBoard = activeTab === 'tasks'
@@ -180,10 +207,23 @@ export default function ProjectLayout() {
         title={currentProject.name}
         subtitle={currentProject.description ?? undefined}
         actions={
-          !isTaskBoard ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
+            {canFinishProject && (
+              <Button
+                variant="contained"
+                startIcon={<CheckCircleOutlineOutlinedIcon />}
+                onClick={() => {
+                  setFinishError(null)
+                  setFinishOpen(true)
+                }}
+                sx={{ whiteSpace: 'nowrap' }}
+              >
+                Mark Finished
+              </Button>
+            )}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Chip
-                label={currentProject.status}
+                label={formatProjectStatus(currentProject.status)}
                 sx={{
                   fontWeight: 700,
                   textTransform: 'capitalize',
@@ -197,7 +237,7 @@ export default function ProjectLayout() {
                 ))}
               </AvatarGroup>
             </Box>
-          ) : undefined
+          </Box>
         }
       />
 
@@ -367,6 +407,26 @@ export default function ProjectLayout() {
           <Button onClick={handleCloseCreate}>Cancel</Button>
           <Button variant="contained" onClick={handleCreate}>
             Create
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={finishOpen} onClose={() => !finishSubmitting && setFinishOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800 }}>Mark Project Finished?</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2}>
+            <DialogContentText>
+              This will close active task work for "{currentProject.name}" and move the project into peer review.
+            </DialogContentText>
+            {finishError && <Alert severity="error">{finishError}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button disabled={finishSubmitting} onClick={() => setFinishOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="contained" disabled={finishSubmitting} onClick={handleFinishProject}>
+            {finishSubmitting ? 'Finishing...' : 'Mark Finished'}
           </Button>
         </DialogActions>
       </Dialog>

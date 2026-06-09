@@ -44,14 +44,21 @@ function OpenCreateHarness() {
   return <button onClick={openCreateTask}>Open Create Dialog</button>
 }
 
-function renderProjectLayout() {
+function renderProjectLayout({
+  projectOverride = {},
+  userId = 'user-1',
+}: {
+  projectOverride?: Partial<typeof project>
+  userId?: string
+} = {}) {
+  const renderedProject = { ...project, ...projectOverride }
   const store = configureStore({
     reducer: {
       projects: projectsReducer,
       tasks: tasksReducer,
       auth: () => ({
         user: {
-          id: 'user-1',
+          id: userId,
           email: 'alice@example.com',
           full_name: 'Alice Owner',
           email_verified: true,
@@ -65,8 +72,8 @@ function renderProjectLayout() {
     },
     preloadedState: {
       projects: {
-        items: [project],
-        currentProject: project,
+        items: [renderedProject],
+        currentProject: renderedProject,
         dashboard: { my_tasks: [], upcoming_deadlines: [], recent_activity: [] },
         isLoading: false,
         error: null,
@@ -92,6 +99,7 @@ function renderProjectLayout() {
 
 describe('ProjectLayout create task dialog', () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(api.get).mockImplementation((url: string) => {
       if (url === '/projects/proj-1') return Promise.resolve({ data: project })
       if (url === '/dashboard') {
@@ -100,21 +108,26 @@ describe('ProjectLayout create task dialog', () => {
       if (url === '/projects/proj-1/members') return Promise.resolve({ data: members })
       return Promise.reject(new Error(`Unexpected GET ${url}`))
     })
-    vi.mocked(api.post).mockResolvedValue({
-      data: {
-        id: 'task-new',
-        project_id: 'proj-1',
-        title: 'New task',
-        description: null,
-        status: 'todo',
-        priority: 'medium',
-        due_date: null,
-        verification_status: 'unverified',
-        created_by: 'user-1',
-        created_at: '2026-01-01T00:00:00Z',
-        updated_at: '2026-01-01T00:00:00Z',
-        assignee_ids: ['user-1'],
-      },
+    vi.mocked(api.post).mockImplementation((url: string) => {
+      if (url === '/projects/proj-1/complete') {
+        return Promise.resolve({ data: { ...project, status: 'peer_review' } })
+      }
+      return Promise.resolve({
+        data: {
+          id: 'task-new',
+          project_id: 'proj-1',
+          title: 'New task',
+          description: null,
+          status: 'todo',
+          priority: 'medium',
+          due_date: null,
+          verification_status: 'unverified',
+          created_by: 'user-1',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-01T00:00:00Z',
+          assignee_ids: ['user-1'],
+        },
+      })
     })
   })
 
@@ -168,5 +181,29 @@ describe('ProjectLayout create task dialog', () => {
         assignee_ids: ['user-1'],
       })
     })
+  })
+
+  it('lets the project owner mark an active project as finished', async () => {
+    const user = userEvent.setup()
+    renderProjectLayout()
+
+    await user.click(await screen.findByRole('button', { name: /mark finished/i }))
+    await user.click(screen.getByRole('button', { name: /^mark finished$/i }))
+
+    await waitFor(() => {
+      expect(api.post).toHaveBeenCalledWith('/projects/proj-1/complete')
+    })
+  })
+
+  it('does not show the finish action to non-owner members', async () => {
+    renderProjectLayout({ userId: 'user-2' })
+
+    expect(screen.queryByRole('button', { name: /mark finished/i })).not.toBeInTheDocument()
+  })
+
+  it('does not show the finish action once the project is no longer active', async () => {
+    renderProjectLayout({ projectOverride: { status: 'peer_review' } })
+
+    expect(screen.queryByRole('button', { name: /mark finished/i })).not.toBeInTheDocument()
   })
 })
