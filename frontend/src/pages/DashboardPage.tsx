@@ -1,8 +1,9 @@
 import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined'
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined'
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined'
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
-import { Box, Button, Divider, Grid, Stack, Typography } from '@mui/material'
+import { Box, Button, Dialog, DialogContent, DialogTitle, Divider, Grid, IconButton, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { APP_PRIMARY, fs, SLATE, SURFACE_CARD_SX } from '../appTheme'
@@ -17,13 +18,23 @@ import { fetchDashboard, fetchProjects } from '../store/projectsSlice'
 
 function Widget({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <Box sx={{ ...SURFACE_CARD_SX, height: '100%' }}>
+    <Box sx={{ ...SURFACE_CARD_SX, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Typography sx={{ fontSize: fs(18), fontWeight: 800, color: SLATE[900], mb: 2 }}>
         {title}
       </Typography>
       {children}
     </Box>
   )
+}
+
+function formatTimeAgo(isoDate: string): string {
+  const diffMs = Date.now() - new Date(isoDate).getTime()
+  const mins = Math.floor(diffMs / 60000)
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  return `${days}d ago`
 }
 
 function getDeadlineBadge(dueDate: string): { label: string; bg: string; color: string } {
@@ -45,6 +56,7 @@ export default function DashboardPage() {
   const { items, dashboard } = useAppSelector((state) => state.projects)
   const [createOpen, setCreateOpen] = useState(false)
   const [joinOpen, setJoinOpen] = useState(false)
+  const [deadlinesOpen, setDeadlinesOpen] = useState(false)
 
   useEffect(() => {
     dispatch(fetchProjects())
@@ -151,8 +163,8 @@ export default function DashboardPage() {
             {myTasks.length === 0 ? (
               <Typography color="text.secondary">No tasks assigned yet.</Typography>
             ) : (
-              <>
-                <Stack divider={<Divider />}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <Stack divider={<Divider />} sx={{ flex: 1 }}>
                   {myTasks.slice(0, 7).map((task) => {
                     const statusStyle = STATUS_STYLES[task.status] ?? STATUS_STYLES.todo
                     const statusLabel = STATUS_LABELS[task.status] ?? task.status
@@ -216,7 +228,7 @@ export default function DashboardPage() {
                     View all tasks →
                   </RouterLink>
                 </Box>
-              </>
+              </Box>
             )}
           </Widget>
         </Grid>
@@ -225,9 +237,9 @@ export default function DashboardPage() {
             {deadlines.length === 0 ? (
               <Typography color="text.secondary">No active deadlines.</Typography>
             ) : (
-              <>
-                <Stack divider={<Divider />}>
-                  {deadlines.map((item) => {
+              <Box sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                <Stack divider={<Divider />} sx={{ flex: 1, justifyContent: 'space-between' }}>
+                  {deadlines.slice(0, 4).map((item) => {
                     const badge = getDeadlineBadge(item.due_date)
                     const isProject = item.type === 'project'
                     return (
@@ -237,8 +249,8 @@ export default function DashboardPage() {
                       >
                         <Box
                           sx={{
-                            width: 38,
-                            height: 38,
+                            width: 44,
+                            height: 44,
                             borderRadius: '10px',
                             bgcolor: '#EFF6FF',
                             display: 'flex',
@@ -248,8 +260,8 @@ export default function DashboardPage() {
                           }}
                         >
                           {isProject
-                            ? <FolderOutlinedIcon sx={{ fontSize: 20, color: '#2563EB' }} />
-                            : <AssignmentOutlinedIcon sx={{ fontSize: 20, color: '#7C3AED' }} />
+                            ? <FolderOutlinedIcon sx={{ fontSize: 26, color: '#2563EB' }} />
+                            : <AssignmentOutlinedIcon sx={{ fontSize: 26, color: '#7C3AED' }} />
                           }
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -283,56 +295,114 @@ export default function DashboardPage() {
                   })}
                 </Stack>
                 <Box sx={{ mt: 1.5 }}>
-                  <RouterLink
-                    to="/my-tasks"
-                    style={{ color: APP_PRIMARY, fontWeight: 700, fontSize: fs(13), textDecoration: 'none' }}
+                  <Box
+                    component="span"
+                    onClick={() => setDeadlinesOpen(true)}
+                    sx={{ color: APP_PRIMARY, fontWeight: 700, fontSize: fs(13), cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
                   >
                     View all deadlines →
-                  </RouterLink>
+                  </Box>
                 </Box>
-              </>
+              </Box>
             )}
           </Widget>
         </Grid>
+
+        <Dialog open={deadlinesOpen} onClose={() => setDeadlinesOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 800 }}>
+            All Deadlines
+            <IconButton size="small" onClick={() => setDeadlinesOpen(false)}>
+              <CloseOutlinedIcon fontSize="small" />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent dividers>
+            <Stack divider={<Divider />}>
+              {deadlines.map((item) => {
+                const badge = getDeadlineBadge(item.due_date)
+                const isProject = item.type === 'project'
+                return (
+                  <Box key={item.id} sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.25 }}>
+                    <Box
+                      sx={{
+                        width: 44, height: 44, borderRadius: '10px', bgcolor: '#EFF6FF',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                      }}
+                    >
+                      {isProject
+                        ? <FolderOutlinedIcon sx={{ fontSize: 26, color: '#2563EB' }} />
+                        : <AssignmentOutlinedIcon sx={{ fontSize: 26, color: '#7C3AED' }} />
+                      }
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography sx={{ fontSize: fs(14), fontWeight: 700, color: SLATE[900], lineHeight: 1.3 }}>
+                        {item.title}
+                      </Typography>
+                      <Typography sx={{ fontSize: fs(12), color: SLATE[400] }}>
+                        {isProject ? 'Project deadline' : 'Task deadline'} · {item.project_name}
+                      </Typography>
+                      <Typography sx={{ fontSize: fs(12), color: SLATE[400] }}>{item.due_date}</Typography>
+                    </Box>
+                    <Box
+                      sx={{
+                        px: 1.25, py: 0.35, borderRadius: '6px',
+                        bgcolor: badge.bg, color: badge.color,
+                        fontSize: fs(12), fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0,
+                      }}
+                    >
+                      {badge.label}
+                    </Box>
+                  </Box>
+                )
+              })}
+            </Stack>
+          </DialogContent>
+        </Dialog>
         <Grid size={{ xs: 12 }}>
           <Widget title="Recent Activity">
             {activity.length === 0 ? (
               <Typography color="text.secondary">No recent activity.</Typography>
             ) : (
-              <Stack spacing={1.5}>
-                {activity.map((item) => (
-                  <Box
-                    key={item.id}
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 1.5,
-                      p: 1.5,
-                      borderRadius: '12px',
-                      bgcolor: SLATE[50],
-                    }}
-                  >
+              <>
+                <Stack divider={<Divider />}>
+                  {activity.slice(0, 5).map((item) => (
                     <Box
-                      sx={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: '50%',
-                        bgcolor: APP_PRIMARY,
-                        mt: 0.75,
-                        flexShrink: 0,
-                      }}
-                    />
-                    <Box>
-                      <Typography sx={{ fontSize: fs(15), fontWeight: 600 }}>
-                        {item.user_name} · {item.action_type.replace('_', ' ')}
+                      key={item.id}
+                      sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1 }}
+                    >
+                      <Box
+                        sx={{
+                          width: 8, height: 8, borderRadius: '50%',
+                          bgcolor: APP_PRIMARY, flexShrink: 0,
+                        }}
+                      />
+                      <Typography sx={{ fontSize: fs(14), fontWeight: 700, color: SLATE[900], flexShrink: 0 }}>
+                        {item.user_name} · {item.action_type.replace(/_/g, ' ')}
                       </Typography>
-                      <Typography sx={{ fontSize: fs(13), color: SLATE[500] }}>
+                      <Box
+                        sx={{
+                          px: 1.25, py: 0.25, borderRadius: '6px',
+                          bgcolor: '#EEF2FF', color: '#4F46E5',
+                          fontSize: fs(12), fontWeight: 600,
+                          whiteSpace: 'nowrap', flexShrink: 0,
+                        }}
+                      >
                         {item.project_name}
+                      </Box>
+                      <Typography sx={{ fontSize: fs(12), color: SLATE[400], ml: 'auto', flexShrink: 0 }}>
+                        {formatTimeAgo(item.created_at)}
                       </Typography>
                     </Box>
+                  ))}
+                </Stack>
+                <Box sx={{ mt: 1.5 }}>
+                  <Box
+                    component="span"
+                    sx={{ color: APP_PRIMARY, fontWeight: 700, fontSize: fs(13), cursor: 'pointer', '&:hover': { textDecoration: 'underline' } }}
+                  >
+                    View all activity →
                   </Box>
-                ))}
-              </Stack>
+                </Box>
+              </>
             )}
           </Widget>
         </Grid>
