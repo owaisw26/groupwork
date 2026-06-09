@@ -61,10 +61,10 @@ todos:
     status: pending
   - id: p5-m1-task-fields
     content: "P5.1: Task field UI (due date, assignees, priority on create/edit; real card data)"
-    status: pending
+    status: completed
   - id: p5-m2-r2
-    content: "P5.2: Cloudflare R2 evidence storage (S3-compatible presigned URLs)"
-    status: pending
+    content: "P5.2: Cloudflare R2 evidence storage (S3-compatible presigned URLs) — DEFERRED"
+    status: cancelled
   - id: p5-m3-deploy
     content: "P5.3: Free-tier deployment (Vercel frontend, Render backend, Neon Postgres)"
     status: pending
@@ -82,7 +82,7 @@ isProject: false
 ## Design Debt (Deferred)
 
 - **UI polish (post-Phase 4)**: Current frontend is functional but visually rigid. Target a more flowy, Jira-style experience — fluid Kanban columns, denser information hierarchy, smoother transitions, and board-first navigation. Track as a dedicated UI/UX pass after core product phases; do not block Phase 4 feature delivery.
-- **Task card field wiring (Phase 5.1)**: Kanban cards were restyled to match the login-page preview (assignee avatars, due date, priority pill, subtask progress bar), but create/edit flows still only collect a title. Backend and Redux already support `due_date`, `assignee_ids`, and `priority`; Phase 5.1 wires the UI before production deployment work.
+- **Evidence object storage (Phase 5.2 — deferred)**: Cloudflare R2 (or AWS S3) for production evidence uploads. Blocked on Cloudflare billing/card validation at signup; deploy and other Phase 5 work proceeds without it. Evidence upload will not work in production until storage is configured. Revisit before final demo if file uploads are required.
 
 ## Git Workflow & Practices
 
@@ -766,18 +766,18 @@ groupwork/
 
 ## Phase 5: Production Readiness
 
-**Hosting stack (free tier):** Production uses managed free-tier services instead of AWS. Evidence uploads are required for production and are backed by **Cloudflare R2** (S3-compatible API). Email remains optional via **Resend** (or stdout logging when unset).
+**Hosting stack (free tier):** Production uses managed free-tier services instead of AWS. **Evidence storage (P5.2) is deferred** — see Design Debt; deploy without it first. Email remains optional via **Resend** (or stdout logging when unset).
 
 | Component | Service | Role |
 |-----------|---------|------|
 | Frontend | Vercel | Static Vite build, auto-deploy from `main` |
 | Backend API | Render (free web service) | Dockerized FastAPI, auto-deploy from `main` |
 | Database | Neon (free Postgres) | Managed PostgreSQL 16; avoid Render free Postgres (90-day expiry) |
-| Evidence files | Cloudflare R2 | Presigned upload/download via existing boto3 S3 client + custom endpoint |
+| Evidence files | Cloudflare R2 *(deferred)* | Presigned upload/download; configure when billing works |
 | Email (optional) | Resend | Invites and notifications; defer if not needed for demo |
 | CI | GitHub Actions | Lint + test on every push (existing); platforms handle CD on merge to `main` |
 
-**Prerequisites (user-owned):** Accounts on Vercel, Render, Neon, and Cloudflare; GitHub repo connected to Vercel and Render; production secrets set in each platform's env-var UI (never committed). Cold starts on Render free tier are acceptable for a course project.
+**Prerequisites (user-owned):** Accounts on Vercel, Render, and Neon; GitHub repo connected to Vercel and Render; production secrets set in each platform's env-var UI (never committed). Cloudflare R2 only when P5.2 is unblocked. Cold starts on Render free tier are acceptable for a course project.
 
 ---
 
@@ -843,11 +843,13 @@ groupwork/
 
 ---
 
-### Module 5.2: Cloudflare R2 Evidence Storage
+### Module 5.2: Cloudflare R2 Evidence Storage — DEFERRED
 
 **Branch**: `feat/r2-evidence`
 
-**Context:** Evidence upload is required for production. The existing flow (presigned PUT from browser -> confirm metadata in API) stays unchanged. R2 exposes an S3-compatible API; boto3 works with a custom `endpoint_url`. Free tier: 10 GB storage, no egress fees — sufficient for per-project 50 MB quotas.
+**Status:** Deferred (2026-06-07). Cloudflare R2 subscription failed with payment validation error; AWS S3 is an alternative fallback. Unblock when ready — does not block P5.3–P5.5.
+
+**Context:** Evidence upload is required for full production parity. The existing flow (presigned PUT from browser -> confirm metadata in API) stays unchanged. R2 exposes an S3-compatible API; boto3 works with a custom `endpoint_url`. Free tier: 10 GB storage, no egress fees — sufficient for per-project 50 MB quotas.
 
 **Tests (Step 1):**
 - `tests/test_s3_client.py`:

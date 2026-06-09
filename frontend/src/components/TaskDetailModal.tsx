@@ -101,6 +101,7 @@ interface TaskDetailModalProps {
   taskId: string | null
   projectOwnerId: string
   onClose: () => void
+  isReadOnly?: boolean
 }
 
 const FIELD_SX: SxProps<Theme> = {
@@ -221,6 +222,7 @@ export default function TaskDetailModal({
   taskId,
   projectOwnerId,
   onClose,
+  isReadOnly = false,
 }: TaskDetailModalProps) {
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
@@ -728,7 +730,7 @@ export default function TaskDetailModal({
                   </Stack>
                 )}
 
-                {canVerify && (
+                {canVerify && !isReadOnly && (
                   <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                     <Button
                       size="small"
@@ -785,6 +787,7 @@ export default function TaskDetailModal({
                     <Checkbox
                       checked={subtask.is_completed}
                       onChange={() =>
+                        !isReadOnly &&
                         dispatch(
                           toggleSubtask({
                             taskId: taskId,
@@ -793,6 +796,7 @@ export default function TaskDetailModal({
                           }),
                         )
                       }
+                      disabled={isReadOnly}
                       size="small"
                       sx={{
                         p: 0.25,
@@ -812,24 +816,26 @@ export default function TaskDetailModal({
                   </Box>
                 ))}
               </Stack>
-              <Box sx={{ display: 'flex', gap: 0.75, mt: 0.75 }}>
-                <TextField
-                  size="small"
-                  placeholder="Add subtask"
-                  value={newSubtask}
-                  onChange={(e) => setNewSubtask(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                  sx={{ flex: 1, ...FIELD_SX }}
-                />
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={handleAddSubtask}
-                  sx={{ fontWeight: 700, borderRadius: '10px', px: 1.75, textTransform: 'none' }}
-                >
-                  Add
-                </Button>
-              </Box>
+              {!isReadOnly && (
+                <Box sx={{ display: 'flex', gap: 0.75, mt: 0.75 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Add subtask"
+                    value={newSubtask}
+                    onChange={(e) => setNewSubtask(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                    sx={{ flex: 1, ...FIELD_SX }}
+                  />
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleAddSubtask}
+                    sx={{ fontWeight: 700, borderRadius: '10px', px: 1.75, textTransform: 'none' }}
+                  >
+                    Add
+                  </Button>
+                </Box>
+              )}
             </SectionBlock>
 
             <SectionBlock title="Comments">
@@ -859,24 +865,26 @@ export default function TaskDetailModal({
                   ))
                 )}
               </Stack>
-              <Box sx={{ display: 'flex', gap: 0.75, mt: 0.75 }}>
-                <TextField
-                  size="small"
-                  placeholder="Add comment"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-                  sx={{ flex: 1, ...FIELD_SX }}
-                />
-                <Button
-                  size="small"
-                  variant="contained"
-                  onClick={handleAddComment}
-                  sx={{ fontWeight: 700, borderRadius: '10px', px: 1.75, textTransform: 'none' }}
-                >
-                  Post
-                </Button>
-              </Box>
+              {!isReadOnly && (
+                <Box sx={{ display: 'flex', gap: 0.75, mt: 0.75 }}>
+                  <TextField
+                    size="small"
+                    placeholder="Add comment"
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
+                    sx={{ flex: 1, ...FIELD_SX }}
+                  />
+                  <Button
+                    size="small"
+                    variant="contained"
+                    onClick={handleAddComment}
+                    sx={{ fontWeight: 700, borderRadius: '10px', px: 1.75, textTransform: 'none' }}
+                  >
+                    Post
+                  </Button>
+                </Box>
+              )}
             </SectionBlock>
 
             <SectionBlock title="Evidence">
@@ -922,7 +930,7 @@ export default function TaskDetailModal({
                   ))}
                 </Stack>
               )}
-              <EvidenceUpload taskId={taskId} onUploaded={refreshEvidence} />
+              {!isReadOnly && <EvidenceUpload taskId={taskId} onUploaded={refreshEvidence} />}
             </SectionBlock>
 
             <SectionBlock title="Time Logs">
@@ -957,7 +965,7 @@ export default function TaskDetailModal({
                   ))}
                 </Stack>
               )}
-              {isAssignee && <TimeLogForm taskId={taskId} />}
+              {isAssignee && !isReadOnly && <TimeLogForm taskId={taskId} />}
             </SectionBlock>
 
             {isOwner && editRequests.length > 0 && (
@@ -1022,7 +1030,7 @@ export default function TaskDetailModal({
           borderTop: `1px solid ${APP_BORDER}`,
         }}
       >
-        {!isOwner && !requestEditOpen && (
+        {!isReadOnly && !isOwner && !requestEditOpen && (
           <Button
             onClick={() => setRequestEditOpen(true)}
             sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
@@ -1030,7 +1038,7 @@ export default function TaskDetailModal({
             Request Edit
           </Button>
         )}
-        {!isOwner && requestEditOpen && (
+        {!isReadOnly && !isOwner && requestEditOpen && (
           <>
             <Button
               onClick={() => setRequestEditOpen(false)}
@@ -1047,7 +1055,7 @@ export default function TaskDetailModal({
             </Button>
           </>
         )}
-        {isOwner && !editMode && (
+        {!isReadOnly && isOwner && !editMode && (
           <Button
             variant="outlined"
             onClick={() => setEditMode(true)}
@@ -1056,7 +1064,7 @@ export default function TaskDetailModal({
             Edit Task
           </Button>
         )}
-        {isOwner && editMode && (
+        {!isReadOnly && isOwner && editMode && (
           <>
             {saveError && (
               <Typography sx={{ fontSize: 13, color: '#DC2626', fontWeight: 600, mr: 'auto' }}>

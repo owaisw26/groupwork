@@ -2,10 +2,11 @@ import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined'
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import BoltOutlinedIcon from '@mui/icons-material/BoltOutlined'
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined'
-import { Box, Button, Grid, Stack, Typography } from '@mui/material'
+import { Box, Button, Divider, Grid, Stack, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { APP_PRIMARY, fs, SLATE, SURFACE_CARD_SX } from '../appTheme'
+import { STATUS_LABELS, STATUS_STYLES } from '../constants/taskFields'
 import CreateProjectDialog from '../components/CreateProjectDialog'
 import JoinProjectDialog from '../components/JoinProjectDialog'
 import ProjectCard from '../components/ProjectCard'
@@ -148,28 +149,72 @@ export default function DashboardPage() {
             {myTasks.length === 0 ? (
               <Typography color="text.secondary">No tasks assigned yet.</Typography>
             ) : (
-              <Stack spacing={1.5}>
-                {myTasks.map((task) => (
-                  <Box
-                    key={task.id}
-                    sx={{
-                      p: 1.5,
-                      borderRadius: '12px',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      cursor: 'pointer',
-                      transition: 'border-color 160ms ease',
-                      '&:hover': { borderColor: APP_PRIMARY },
-                    }}
-                    onClick={() => navigate(`/projects/${task.project_id}/tasks`)}
+              <>
+                <Stack divider={<Divider />}>
+                  {myTasks.map((task) => {
+                    const statusStyle = STATUS_STYLES[task.status] ?? STATUS_STYLES.todo
+                    const statusLabel = STATUS_LABELS[task.status] ?? task.status
+                    return (
+                      <Box
+                        key={task.id}
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 1.5,
+                          py: 1.25,
+                          cursor: 'pointer',
+                          '&:hover .task-title': { color: APP_PRIMARY },
+                        }}
+                        onClick={() => navigate(`/projects/${task.project_id}/tasks`)}
+                      >
+                        <Box
+                          sx={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: '50%',
+                            border: `2px solid ${SLATE[300]}`,
+                            flexShrink: 0,
+                          }}
+                        />
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography
+                            className="task-title"
+                            sx={{ fontSize: fs(14), fontWeight: 700, color: SLATE[900], lineHeight: 1.3 }}
+                          >
+                            {task.title}
+                          </Typography>
+                          <Typography sx={{ fontSize: fs(12), color: SLATE[400] }}>
+                            {task.project_name}
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{
+                            px: 1.25,
+                            py: 0.35,
+                            borderRadius: '6px',
+                            bgcolor: statusStyle.bg,
+                            color: statusStyle.color,
+                            fontSize: fs(12),
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {statusLabel}
+                        </Box>
+                      </Box>
+                    )
+                  })}
+                </Stack>
+                <Box sx={{ mt: 1.5 }}>
+                  <RouterLink
+                    to="/my-tasks"
+                    style={{ color: APP_PRIMARY, fontWeight: 700, fontSize: fs(13), textDecoration: 'none' }}
                   >
-                    <Typography sx={{ fontSize: fs(15), fontWeight: 700 }}>{task.title}</Typography>
-                    <Typography sx={{ fontSize: fs(13), color: SLATE[500] }}>
-                      {task.project_name} · {task.status.replace('_', ' ')}
-                    </Typography>
-                  </Box>
-                ))}
-              </Stack>
+                    View all tasks →
+                  </RouterLink>
+                </Box>
+              </>
             )}
           </Widget>
         </Grid>

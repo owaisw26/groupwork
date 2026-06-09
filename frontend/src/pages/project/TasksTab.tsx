@@ -235,6 +235,9 @@ export default function TasksTab() {
     state.projects.items.find((p) => p.id === projectId) ?? state.projects.currentProject,
   )
 
+  const isReadOnly = currentProject != null && currentProject.status !== 'active'
+  const [showArchivedDialog, setShowArchivedDialog] = useState(false)
+
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [disputeTask, setDisputeTask] = useState<Task | null>(null)
@@ -322,6 +325,10 @@ export default function TasksTab() {
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveTask(null)
+    if (isReadOnly) {
+      setShowArchivedDialog(true)
+      return
+    }
     const { active, over } = event
     if (!over) return
 
@@ -355,6 +362,10 @@ export default function TasksTab() {
   }
 
   const handleVerify = async (taskId: string) => {
+    if (isReadOnly) {
+      setShowArchivedDialog(true)
+      return
+    }
     const task = items.find((item) => item.id === taskId)
     await api.post(`/tasks/${taskId}/verify`)
     setVerifySuccess(task ? `"${task.title}" was verified` : 'Task was verified')
@@ -364,6 +375,10 @@ export default function TasksTab() {
   }
 
   const handleDispute = (task: Task) => {
+    if (isReadOnly) {
+      setShowArchivedDialog(true)
+      return
+    }
     setDisputeTask(task)
     setDisputeReason('')
     setDisputeError(null)
@@ -428,7 +443,10 @@ export default function TasksTab() {
                   members={members}
                   subtaskCounts={subtaskCounts}
                   onTaskClick={handleTaskClick}
-                  onAddTask={() => openCreateTask?.()}
+                  onAddTask={() => {
+                    if (isReadOnly) { setShowArchivedDialog(true); return }
+                    openCreateTask?.()
+                  }}
                   expanded={!!expandedColumns[status]}
                   onViewAll={() =>
                     setExpandedColumns((prev) => ({ ...prev, [status]: true }))
@@ -629,7 +647,22 @@ export default function TasksTab() {
         onClose={() => {
           setSelectedTaskId(null)
         }}
+        isReadOnly={isReadOnly}
       />
+      <Dialog open={showArchivedDialog} onClose={() => setShowArchivedDialog(false)} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800 }}>Project Archived</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ fontSize: fs(14), color: SLATE[500] }}>
+            This project has been archived. No changes can be made to the task board.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button variant="contained" onClick={() => setShowArchivedDialog(false)}>
+            OK
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Dialog open={Boolean(disputeTask)} onClose={handleCloseDispute} maxWidth="xs" fullWidth>
         <DialogTitle sx={{ fontWeight: 800 }}>File Task Dispute</DialogTitle>
         <DialogContent>
