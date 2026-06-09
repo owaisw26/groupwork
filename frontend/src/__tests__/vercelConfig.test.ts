@@ -7,4 +7,9 @@ describe('vercel.json', () => {
     expect(apiRewrite).toBeDefined()
     expect(apiRewrite?.destination).toMatch(/^https:\/\/.*\.onrender\.com\/api\/:path\*$/)
   })
+
+  it('serves the SPA for direct app routes', () => {
+    const appRewrite = vercelConfig.rewrites.find((rule) => rule.source === '/:path*')
+    expect(appRewrite?.destination).toBe('/index.html')
+  })
 })
