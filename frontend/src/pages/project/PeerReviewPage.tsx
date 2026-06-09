@@ -15,6 +15,8 @@ import { isAxiosError } from 'axios'
 import { useCallback, useEffect, useState } from 'react'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import api from '../../services/api'
+import { useAppDispatch } from '../../store/hooks'
+import { fetchProjectTasks } from '../../store/tasksSlice'
 import type { Task } from '../../store/tasksSlice'
 
 interface Member {
@@ -54,6 +56,7 @@ interface DisputeVote {
 interface TaskDispute {
   id: string
   task_id: string
+  filed_by: string
   reason: string
   status: string
   outcome: string | null
@@ -78,6 +81,7 @@ const defaultForm = (): ReviewForm => ({
 
 export default function PeerReviewPage() {
   const { id: projectId } = useParams<{ id: string }>()
+  const dispatch = useAppDispatch()
   const [members, setMembers] = useState<Member[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [status, setStatus] = useState<ReviewStatus | null>(null)
@@ -160,6 +164,23 @@ export default function PeerReviewPage() {
     }))
   }
 
+  const handleResolveDispute = async (disputeId: string) => {
+    if (!projectId) return
+    setError(null)
+    setSuccess(null)
+    try {
+      await api.post(`/disputes/${disputeId}/resolve`)
+      setSuccess('Dispute resolved')
+      dispatch(fetchProjectTasks(projectId))
+      await loadData()
+    } catch (err) {
+      const message = isAxiosError(err)
+        ? (err.response?.data as { detail?: string } | undefined)?.detail
+        : undefined
+      setError(message ?? 'Failed to resolve dispute')
+    }
+  }
+
   if (!status) {
     return <LinearProgress />
   }
@@ -208,45 +229,58 @@ export default function PeerReviewPage() {
               </Typography>
             ) : (
               <Stack spacing={1}>
-                {taskDisputes.map((dispute) => (
-                  <Box
-                    key={dispute.id}
-                    sx={{
-                      p: 1.5,
-                      border: '1px solid',
-                      borderColor: 'divider',
-                      borderRadius: 2,
-                      bgcolor: '#FFFFFF',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-                      <Typography
-                        component={RouterLink}
-                        to={`/projects/${projectId}/tasks`}
-                        sx={{
-                          fontWeight: 700,
-                          color: 'primary.main',
-                          textDecoration: 'none',
-                          '&:hover': { textDecoration: 'underline' },
-                        }}
-                      >
-                        {dispute.taskTitle}
+                {taskDisputes.map((dispute) => {
+                  const canResolve = dispute.status === 'open' && dispute.filed_by === currentUserId
+                  return (
+                    <Box
+                      key={dispute.id}
+                      sx={{
+                        p: 1.5,
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 2,
+                        bgcolor: '#FFFFFF',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
+                        <Typography
+                          component={RouterLink}
+                          to={`/projects/${projectId}/tasks`}
+                          sx={{
+                            fontWeight: 700,
+                            color: 'primary.main',
+                            textDecoration: 'none',
+                            '&:hover': { textDecoration: 'underline' },
+                          }}
+                        >
+                          {dispute.taskTitle}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          label={dispute.status === 'resolved' ? 'resolved' : 'open'}
+                          color={dispute.status === 'open' ? 'error' : 'default'}
+                        />
+                      </Box>
+                      <Typography variant="body2" sx={{ mt: 1 }}>
+                        {dispute.reason}
                       </Typography>
-                      <Chip
-                        size="small"
-                        label={dispute.status === 'resolved' ? `resolved: ${dispute.outcome}` : 'open'}
-                        color={dispute.status === 'open' ? 'error' : 'default'}
-                      />
+                      <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                        Task status: {dispute.taskStatus.replace('_', ' ')}
+                      </Typography>
+                      {canResolve && (
+                        <Button
+                          size="small"
+                          variant="contained"
+                          color="success"
+                          sx={{ mt: 1.25 }}
+                          onClick={() => handleResolveDispute(dispute.id)}
+                        >
+                          Dispute resolved
+                        </Button>
+                      )}
                     </Box>
-                    <Typography variant="body2" sx={{ mt: 1 }}>
-                      {dispute.reason}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
-                      Task status: {dispute.taskStatus.replace('_', ' ')} · Votes:{' '}
-                      {dispute.vote_summary.uphold} uphold / {dispute.vote_summary.reject} reject
-                    </Typography>
-                  </Box>
-                ))}
+                  )
+                })}
               </Stack>
             )}
           </Stack>

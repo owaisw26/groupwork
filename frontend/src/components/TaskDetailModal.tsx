@@ -1,7 +1,6 @@
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined'
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined'
 import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined'
-import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined'
 import VerifiedOutlinedIcon from '@mui/icons-material/VerifiedOutlined'
 import {
   Avatar,
@@ -100,7 +99,6 @@ interface TaskDetailModalProps {
   taskId: string | null
   projectOwnerId: string
   onClose: () => void
-  initialDisputeOpen?: boolean
 }
 
 const FIELD_SX: SxProps<Theme> = {
@@ -221,7 +219,6 @@ export default function TaskDetailModal({
   taskId,
   projectOwnerId,
   onClose,
-  initialDisputeOpen = false,
 }: TaskDetailModalProps) {
   const dispatch = useAppDispatch()
   const user = useAppSelector((state) => state.auth.user)
@@ -251,8 +248,6 @@ export default function TaskDetailModal({
   const [evidence, setEvidence] = useState<EvidenceItem[]>([])
   const [verifications, setVerifications] = useState<VerificationItem[]>([])
   const [disputes, setDisputes] = useState<DisputeItem[]>([])
-  const [disputeReason, setDisputeReason] = useState('')
-  const [showDisputeForm, setShowDisputeForm] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
   const isOwner = user?.id === projectOwnerId
@@ -295,13 +290,6 @@ export default function TaskDetailModal({
   }, [dispatch, taskId])
 
   useEffect(() => {
-    if (taskId && initialDisputeOpen) {
-      const timer = window.setTimeout(() => setShowDisputeForm(true), 0)
-      return () => window.clearTimeout(timer)
-    }
-  }, [initialDisputeOpen, taskId])
-
-  useEffect(() => {
     if (!currentTask?.project_id) return
     api
       .get<ProjectMember[]>(`/projects/${currentTask.project_id}/members`)
@@ -323,19 +311,6 @@ export default function TaskDetailModal({
   const handleVerify = async () => {
     if (!taskId) return
     await api.post(`/tasks/${taskId}/verify`)
-    await refreshTaskAndVerifications()
-  }
-
-  const handleDispute = async () => {
-    if (!taskId || !disputeReason.trim()) return
-    await api.post(`/tasks/${taskId}/dispute`, { reason: disputeReason.trim() })
-    setDisputeReason('')
-    setShowDisputeForm(false)
-    await refreshTaskAndVerifications()
-  }
-
-  const handleDisputeVote = async (disputeId: string, vote: 'uphold' | 'reject') => {
-    await api.post(`/disputes/${disputeId}/vote`, { vote })
     await refreshTaskAndVerifications()
   }
 
@@ -368,8 +343,6 @@ export default function TaskDetailModal({
     dispatch(clearTaskDetail())
     setEditMode(false)
     setRequestEditOpen(false)
-    setShowDisputeForm(false)
-    setDisputeReason('')
     onClose()
   }
 
@@ -760,99 +733,29 @@ export default function TaskDetailModal({
                     >
                       Verify
                     </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      color="error"
-                      startIcon={<GavelOutlinedIcon />}
-                      onClick={() => setShowDisputeForm(true)}
-                      sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
-                    >
-                      Dispute
-                    </Button>
-                  </Box>
-                )}
-
-                {showDisputeForm && (
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
-                    <TextField
-                      size="small"
-                      label="Dispute reason"
-                      value={disputeReason}
-                      onChange={(e) => setDisputeReason(e.target.value)}
-                      multiline
-                      rows={1}
-                      sx={FIELD_SX}
-                    />
-                    <Box sx={{ display: 'flex', gap: 1 }}>
-                      <Button
-                        size="small"
-                        variant="contained"
-                        color="error"
-                        onClick={handleDispute}
-                        sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
-                      >
-                        Submit Dispute
-                      </Button>
-                      <Button
-                        size="small"
-                        onClick={() => setShowDisputeForm(false)}
-                        sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
-                      >
-                        Cancel
-                      </Button>
-                    </Box>
                   </Box>
                 )}
 
                 {disputes.length > 0 && (
                   <Stack spacing={1} sx={{ mt: 1.25 }}>
-                    {disputes.map((dispute) => {
-                      const userVoted = dispute.votes.some((v) => v.user_id === user?.id)
-                      const canVote = dispute.status === 'open' && !userVoted
-                      return (
-                        <Box
-                          key={dispute.id}
-                          sx={{
-                            p: 1,
-                            borderRadius: '10px',
-                            bgcolor: '#FFFFFF',
-                            border: `1px solid ${APP_BORDER}`,
-                          }}
-                        >
-                          <Typography sx={{ fontSize: fs(13), color: SLATE[800], mb: 0.25 }}>
-                            {dispute.reason}
-                          </Typography>
-                          <Typography sx={{ fontSize: fs(12), color: SLATE[500], mb: 1 }}>
-                            {dispute.status === 'resolved'
-                              ? `Resolved: ${dispute.outcome ?? 'unknown'}`
-                              : `Votes: ${dispute.vote_summary.uphold} uphold / ${dispute.vote_summary.reject} reject`}
-                          </Typography>
-                          {canVote && (
-                            <Box sx={{ display: 'flex', gap: 1 }}>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                color="success"
-                                onClick={() => handleDisputeVote(dispute.id, 'uphold')}
-                                sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
-                              >
-                                Uphold
-                              </Button>
-                              <Button
-                                size="small"
-                                variant="outlined"
-                                color="error"
-                                onClick={() => handleDisputeVote(dispute.id, 'reject')}
-                                sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
-                              >
-                                Reject
-                              </Button>
-                            </Box>
-                          )}
-                        </Box>
-                      )
-                    })}
+                    {disputes.map((dispute) => (
+                      <Box
+                        key={dispute.id}
+                        sx={{
+                          p: 1,
+                          borderRadius: '10px',
+                          bgcolor: '#FFFFFF',
+                          border: `1px solid ${APP_BORDER}`,
+                        }}
+                      >
+                        <Typography sx={{ fontSize: fs(13), color: SLATE[800], mb: 0.25 }}>
+                          {dispute.reason}
+                        </Typography>
+                        <Typography sx={{ fontSize: fs(12), color: SLATE[500] }}>
+                          {dispute.status === 'resolved' ? 'Resolved' : 'Open dispute'}
+                        </Typography>
+                      </Box>
+                    ))}
                   </Stack>
                 )}
               </Box>

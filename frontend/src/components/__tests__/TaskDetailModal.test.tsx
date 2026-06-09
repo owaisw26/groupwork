@@ -44,12 +44,10 @@ function renderModal({
   ownerId = 'user-1',
   userId = 'user-1',
   taskOverride = {},
-  initialDisputeOpen = false,
 }: {
   ownerId?: string
   userId?: string
   taskOverride?: Partial<Task>
-  initialDisputeOpen?: boolean
 } = {}) {
   const modalTask = { ...task, ...taskOverride }
   currentApiTask = modalTask
@@ -115,7 +113,6 @@ function renderModal({
       <TaskDetailModal
         taskId="task-1"
         projectOwnerId={ownerId}
-        initialDisputeOpen={initialDisputeOpen}
         onClose={() => {}}
       />
     </Provider>,
@@ -201,17 +198,18 @@ describe('TaskDetailModal task metadata', () => {
     expect(screen.queryByLabelText(/assignees/i)).not.toBeInTheDocument()
   })
 
-  it('opens dispute reason field when requested by the task board shortcut', async () => {
+  it('does not expose dispute creation inside the task modal', async () => {
     renderModal({
       ownerId: 'user-1',
       userId: 'user-2',
-      initialDisputeOpen: true,
       taskOverride: {
         status: 'review',
         verification_status: 'pending',
       },
     })
 
-    expect(await screen.findByLabelText(/dispute reason/i)).toBeInTheDocument()
+    expect(await screen.findByText(/no verification votes yet/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /dispute/i })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/dispute reason/i)).not.toBeInTheDocument()
   })
 })

@@ -169,7 +169,7 @@ def cast_vote(
     *,
     vote: str,
 ) -> dict:
-    dispute, task, _project = _require_dispute_access(conn, dispute_id, user_id)
+    dispute, _task, _project = _require_dispute_access(conn, dispute_id, user_id)
 
     if dispute["status"] == "resolved":
         raise HTTPException(
@@ -189,12 +189,6 @@ def cast_vote(
         user_id=user_id,
         vote=vote,
     )
-    _maybe_resolve_dispute(
-        conn,
-        dispute_id=dispute_id,
-        task=task,
-        project_id=task["project_id"],
-    )
     fresh_dispute = dispute_queries.get_dispute(conn, dispute_id)
     if fresh_dispute is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispute not found")
@@ -202,6 +196,41 @@ def cast_vote(
         "vote": recorded_vote["vote"],
         "dispute": _enrich_dispute(conn, fresh_dispute),
     }
+
+
+def resolve_dispute(
+    conn: connection,
+    dispute_id: str | UUID,
+    user_id: str | UUID,
+) -> dict:
+    dispute, task, _project = _require_dispute_access(conn, dispute_id, user_id)
+
+    if dispute["status"] == "resolved":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Dispute is already resolved",
+        )
+
+    if str(dispute["filed_by"]) != str(user_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the member who filed this dispute can resolve it",
+        )
+
+    resolved = dispute_queries.resolve_dispute(conn, dispute_id, outcome="resolved")
+    if not resolved:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Dispute not found")
+
+    verification_queries.delete_user_verification(conn, task["id"], user_id)
+    verification_service.recalculate_task_verification(conn, task["id"])
+    _notify_dispute_resolved(
+        conn,
+        project_id=task["project_id"],
+        dispute=resolved,
+        task_title=task["title"],
+        outcome="resolved",
+    )
+    return _enrich_dispute(conn, resolved)
 
 
 def list_task_disputes(

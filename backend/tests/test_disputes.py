@@ -94,6 +94,14 @@ def _vote(auth_client, ctx, dispute_id, vote, *, as_email):
     )
 
 
+def _resolve(auth_client, ctx, dispute_id, *, as_email):
+    _clear_rate_limit()
+    return auth_client.post(
+        f"/api/v1/disputes/{dispute_id}/resolve",
+        headers=switch_user(auth_client, as_email),
+    )
+
+
 def test_file_dispute_valid_returns_201(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_review_task(auth_client, ctx)
@@ -233,7 +241,7 @@ def test_cannot_vote_twice(auth_client, email_outbox, db_conn):
     assert second.status_code == 409
 
 
-def test_dispute_resolved_on_majority_uphold(auth_client, email_outbox, db_conn):
+def test_votes_do_not_resolve_dispute(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(
@@ -249,49 +257,66 @@ def test_dispute_resolved_on_majority_uphold(auth_client, email_outbox, db_conn)
         as_email=ctx["member_one_email"],
     )
 
-    assert response.json()["dispute"]["status"] == "resolved"
-    assert response.json()["dispute"]["outcome"] == "upheld"
+    assert response.json()["dispute"]["status"] == "open"
+    assert response.json()["dispute"]["outcome"] is None
 
 
-def test_dispute_resolved_on_majority_reject(auth_client, email_outbox, db_conn):
+def test_filing_member_can_resolve_dispute(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(
-        auth_client, ctx, task["id"], as_member="member_two"
+        auth_client, ctx, task["id"], as_member="member_one"
     ).json()
 
-    _vote(auth_client, ctx, dispute["id"], "reject", as_email=ctx["owner_email"])
-    response = _vote(
+    response = _resolve(
         auth_client,
         ctx,
         dispute["id"],
-        "reject",
         as_email=ctx["member_one_email"],
     )
 
-    assert response.json()["dispute"]["status"] == "resolved"
-    assert response.json()["dispute"]["outcome"] == "rejected"
+    assert response.status_code == 200
+    assert response.json()["status"] == "resolved"
+    assert response.json()["outcome"] == "resolved"
+
+    task_response = auth_client.get(
+        f"/api/v1/tasks/{task['id']}",
+        headers=_owner_headers(auth_client, ctx),
+    )
+    assert task_response.json()["verification_status"] == "pending"
 
 
-def test_dispute_resolved_when_all_members_voted(auth_client, email_outbox, db_conn):
+def test_resolved_dispute_allows_filer_to_verify_task(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     task = _create_review_task(auth_client, ctx)
     dispute = _file_dispute(
-        auth_client, ctx, task["id"], as_member="member_two"
+        auth_client, ctx, task["id"], as_member="member_one"
     ).json()
 
-    _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["owner_email"])
-    _vote(auth_client, ctx, dispute["id"], "reject", as_email=ctx["member_one_email"])
-    response = _vote(
+    _resolve(auth_client, ctx, dispute["id"], as_email=ctx["member_one_email"])
+    response = auth_client.post(
+        f"/api/v1/tasks/{task['id']}/verify",
+        headers=_member_one_headers(auth_client, ctx),
+    )
+
+    assert response.status_code == 200
+
+
+def test_non_filing_member_cannot_resolve_dispute(auth_client, email_outbox, db_conn):
+    ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
+    task = _create_review_task(auth_client, ctx)
+    dispute = _file_dispute(
+        auth_client, ctx, task["id"], as_member="member_one"
+    ).json()
+
+    response = _resolve(
         auth_client,
         ctx,
         dispute["id"],
-        "uphold",
         as_email=ctx["member_two_email"],
     )
 
-    assert response.json()["dispute"]["status"] == "resolved"
-    assert response.json()["dispute"]["outcome"] == "upheld"
+    assert response.status_code == 403
 
 
 def test_notification_sent_on_dispute_resolution(auth_client, email_outbox, db_conn):
@@ -301,8 +326,7 @@ def test_notification_sent_on_dispute_resolution(auth_client, email_outbox, db_c
         auth_client, ctx, task["id"], as_member="member_two"
     ).json()
 
-    _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["owner_email"])
-    _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["member_one_email"])
+    _resolve(auth_client, ctx, dispute["id"], as_email=ctx["member_two_email"])
 
     with db_conn.cursor() as cur:
         cur.execute(
@@ -339,8 +363,7 @@ def test_cannot_vote_on_resolved_dispute(auth_client, email_outbox, db_conn):
         auth_client, ctx, task["id"], as_member="member_two"
     ).json()
 
-    _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["owner_email"])
-    _vote(auth_client, ctx, dispute["id"], "uphold", as_email=ctx["member_one_email"])
+    _resolve(auth_client, ctx, dispute["id"], as_email=ctx["member_two_email"])
 
     response = _vote(
         auth_client,

@@ -30,3 +30,13 @@ def cast_dispute_vote(
         user["id"],
         vote=body.vote,
     )
+
+
+@router.post("/disputes/{dispute_id}/resolve")
+def resolve_dispute(
+    dispute_id: UUID,
+    request: Request,
+    conn: connection = Depends(_get_db),
+):
+    user = get_verified_user(request)
+    return dispute_service.resolve_dispute(conn, dispute_id, user["id"])

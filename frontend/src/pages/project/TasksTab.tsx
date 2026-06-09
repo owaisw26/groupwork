@@ -18,12 +18,17 @@ import {
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   Grid,
   IconButton,
   Link,
   Paper,
   Snackbar,
   Stack,
+  TextField,
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -232,7 +237,10 @@ export default function TasksTab() {
 
   const [activeTask, setActiveTask] = useState<Task | null>(null)
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-  const [disputeTaskId, setDisputeTaskId] = useState<string | null>(null)
+  const [disputeTask, setDisputeTask] = useState<Task | null>(null)
+  const [disputeReason, setDisputeReason] = useState('')
+  const [disputeError, setDisputeError] = useState<string | null>(null)
+  const [disputeSubmitting, setDisputeSubmitting] = useState(false)
   const [members, setMembers] = useState<ProjectMember[]>([])
   const [subtaskCounts, setSubtaskCounts] = useState<Record<string, { completed: number; total: number }>>({})
   const [expandedColumns, setExpandedColumns] = useState<Partial<Record<TaskStatus, boolean>>>({})
@@ -342,7 +350,6 @@ export default function TasksTab() {
 
   const handleTaskClick = (task: Task) => {
     if (suppressTaskClickRef.current) return
-    setDisputeTaskId(null)
     setSelectedTaskId(task.id)
   }
 
@@ -353,9 +360,33 @@ export default function TasksTab() {
     }
   }
 
-  const handleDispute = (taskId: string) => {
-    setDisputeTaskId(taskId)
-    setSelectedTaskId(taskId)
+  const handleDispute = (task: Task) => {
+    setDisputeTask(task)
+    setDisputeReason('')
+    setDisputeError(null)
+  }
+
+  const handleCloseDispute = () => {
+    if (disputeSubmitting) return
+    setDisputeTask(null)
+    setDisputeReason('')
+    setDisputeError(null)
+  }
+
+  const handleSubmitDispute = async () => {
+    if (!projectId || !disputeTask || !disputeReason.trim()) return
+    setDisputeSubmitting(true)
+    setDisputeError(null)
+    try {
+      await api.post(`/tasks/${disputeTask.id}/dispute`, { reason: disputeReason.trim() })
+      setDisputeTask(null)
+      setDisputeReason('')
+      dispatch(fetchProjectTasks(projectId))
+    } catch {
+      setDisputeError('Could not file dispute. Please try again.')
+    } finally {
+      setDisputeSubmitting(false)
+    }
   }
 
   if (isLoading && items.length === 0) {
@@ -490,7 +521,7 @@ export default function TasksTab() {
                   <Button
                     variant="outlined"
                     fullWidth
-                    onClick={() => handleDispute(featuredReviewTask.id)}
+                    onClick={() => handleDispute(featuredReviewTask)}
                     startIcon={<ReportProblemOutlinedIcon sx={{ fontSize: fs(18) }} />}
                     sx={{
                       py: 1.25,
@@ -592,12 +623,44 @@ export default function TasksTab() {
       <TaskDetailModal
         taskId={selectedTaskId}
         projectOwnerId={currentProject?.owner_id ?? ''}
-        initialDisputeOpen={selectedTaskId === disputeTaskId}
         onClose={() => {
           setSelectedTaskId(null)
-          setDisputeTaskId(null)
         }}
       />
+      <Dialog open={Boolean(disputeTask)} onClose={handleCloseDispute} maxWidth="xs" fullWidth>
+        <DialogTitle sx={{ fontWeight: 800 }}>File Task Dispute</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 0.5 }}>
+            <Typography sx={{ fontSize: fs(14), color: SLATE[500] }}>
+              {disputeTask ? `Explain why "${disputeTask.title}" should not be verified yet.` : ''}
+            </Typography>
+            <TextField
+              autoFocus
+              fullWidth
+              multiline
+              minRows={3}
+              label="Reason for dispute"
+              value={disputeReason}
+              onChange={(event) => setDisputeReason(event.target.value)}
+              disabled={disputeSubmitting}
+            />
+            {disputeError && <Alert severity="error">{disputeError}</Alert>}
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button disabled={disputeSubmitting} onClick={handleCloseDispute}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color="error"
+            disabled={!disputeReason.trim() || disputeSubmitting}
+            onClick={handleSubmitDispute}
+          >
+            {disputeSubmitting ? 'Filing...' : 'File Dispute'}
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Snackbar
         open={Boolean(moveError)}
         autoHideDuration={4500}

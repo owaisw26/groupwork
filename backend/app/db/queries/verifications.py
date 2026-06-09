@@ -74,6 +74,18 @@ def delete_task_verifications(conn: connection, task_id: str | UUID) -> None:
         )
 
 
+def delete_user_verification(
+    conn: connection,
+    task_id: str | UUID,
+    user_id: str | UUID,
+) -> None:
+    with conn.cursor() as cur:
+        cur.execute(
+            "DELETE FROM task_verifications WHERE task_id = %s AND user_id = %s",
+            (str(task_id), str(user_id)),
+        )
+
+
 def update_user_verification_status(
     conn: connection,
     task_id: str | UUID,
