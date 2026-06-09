@@ -103,7 +103,7 @@ export default function DashboardPage() {
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <StatCard
-            icon={<FolderOutlinedIcon fontSize="small" />}
+            icon={<FolderOutlinedIcon sx={{ fontSize: 26 }} />}
             label="Projects"
             value={String(items.length)}
             actionLabel="View projects"
@@ -112,7 +112,7 @@ export default function DashboardPage() {
         </Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <StatCard
-            icon={<AssignmentOutlinedIcon fontSize="small" />}
+            icon={<AssignmentOutlinedIcon sx={{ fontSize: 26 }} />}
             label="My Tasks"
             value={String(myTasks.length)}
             actionLabel="Open task board"
@@ -122,7 +122,7 @@ export default function DashboardPage() {
         </Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <StatCard
-            icon={<AccessTimeOutlinedIcon fontSize="small" />}
+            icon={<AccessTimeOutlinedIcon sx={{ fontSize: 26 }} />}
             label="Deadlines"
             value={String(deadlines.length)}
             actionLabel="View deadlines"
@@ -132,7 +132,7 @@ export default function DashboardPage() {
         </Grid>
         <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
           <StatCard
-            icon={<BoltOutlinedIcon fontSize="small" />}
+            icon={<BoltOutlinedIcon sx={{ fontSize: 26 }} />}
             label="Recent Activity"
             value={String(activity.length)}
             actionLabel="See activity"
@@ -312,7 +312,7 @@ export default function DashboardPage() {
           <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 800 }}>
             All Deadlines
             <IconButton size="small" onClick={() => setDeadlinesOpen(false)}>
-              <CloseOutlinedIcon fontSize="small" />
+              <CloseOutlinedIcon sx={{ fontSize: 26 }} />
             </IconButton>
           </DialogTitle>
           <DialogContent dividers>

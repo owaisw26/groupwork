@@ -30,35 +30,38 @@ export default function StatCard({
 
   const content = (
     <>
-      <Box
-        sx={{
-          width: 34,
-          height: 34,
-          borderRadius: '10px',
-          bgcolor: accent === APP_PRIMARY ? APP_PRIMARY_LIGHT : 'rgba(15, 23, 42, 0.06)',
-          color: accent,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          mb: 1.25,
-        }}
-      >
-        {icon}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, mb: 1.5 }}>
+        <Box
+          sx={{
+            width: 46,
+            height: 46,
+            borderRadius: '12px',
+            bgcolor: accent === APP_PRIMARY ? APP_PRIMARY_LIGHT : `${accent}18`,
+            color: accent,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          {icon}
+        </Box>
+        <Box>
+          <Typography sx={{ fontSize: fs(12), fontWeight: 700, color: SLATE[500], mb: 0.25 }}>
+            {label}
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: { xs: fs(22), md: fs(26) },
+              fontWeight: 800,
+              color: SLATE[900],
+              lineHeight: 1.15,
+            }}
+          >
+            {value}
+          </Typography>
+        </Box>
       </Box>
-      <Typography sx={{ fontSize: fs(12), fontWeight: 700, color: SLATE[500], mb: 0.35 }}>
-        {label}
-      </Typography>
-      <Typography
-        sx={{
-          fontSize: { xs: fs(20), md: fs(23) },
-          fontWeight: 800,
-          color: SLATE[900],
-          mb: subtitle ? 0.35 : 1,
-          lineHeight: 1.15,
-        }}
-      >
-        {value}
-      </Typography>
       {subtitle && (
         <Typography sx={{ fontSize: fs(12), color: SLATE[500], mb: 1 }}>
           {subtitle}
@@ -71,13 +74,12 @@ export default function StatCard({
           component="span"
           sx={{
             mt: 'auto',
-            pt: 1,
             fontSize: fs(13),
             fontWeight: 700,
             color: accent === '#DC2626' ? '#DC2626' : APP_PRIMARY,
           }}
         >
-          {actionLabel}
+          {actionLabel} →
         </Typography>
       )}
     </>
