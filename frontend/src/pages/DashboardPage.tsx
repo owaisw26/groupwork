@@ -26,15 +26,17 @@ function Widget({ title, children }: { title: string; children: React.ReactNode 
   )
 }
 
-function formatDeadlineLabel(dueDate: string): string {
+function getDeadlineBadge(dueDate: string): { label: string; bg: string; color: string } {
   const due = new Date(`${dueDate}T00:00:00`)
   const today = new Date()
   due.setHours(0, 0, 0, 0)
   today.setHours(0, 0, 0, 0)
   const diff = Math.round((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-  if (diff < 0) return `${dueDate} · ${Math.abs(diff)} days overdue`
-  if (diff === 0) return `${dueDate} · due today`
-  return `${dueDate} · ${diff} days remaining`
+  if (diff < 0)
+    return { label: `${Math.abs(diff)} day${Math.abs(diff) === 1 ? '' : 's'} overdue`, bg: '#FEE2E2', color: '#DC2626' }
+  if (diff === 0)
+    return { label: 'Due today', bg: '#FEF3C7', color: '#D97706' }
+  return { label: `${diff} day${diff === 1 ? '' : 's'} remaining`, bg: '#DCFCE7', color: '#16A34A' }
 }
 
 export default function DashboardPage() {
@@ -151,7 +153,7 @@ export default function DashboardPage() {
             ) : (
               <>
                 <Stack divider={<Divider />}>
-                  {myTasks.map((task) => {
+                  {myTasks.slice(0, 7).map((task) => {
                     const statusStyle = STATUS_STYLES[task.status] ?? STATUS_STYLES.todo
                     const statusLabel = STATUS_LABELS[task.status] ?? task.status
                     return (
@@ -223,27 +225,72 @@ export default function DashboardPage() {
             {deadlines.length === 0 ? (
               <Typography color="text.secondary">No active deadlines.</Typography>
             ) : (
-              <Stack spacing={1.5}>
-                {deadlines.map((item) => (
-                  <Box
-                    key={item.id}
-                    sx={{
-                      p: 1.5,
-                      borderRadius: '12px',
-                      border: '1px solid',
-                      borderColor: 'divider',
-                    }}
+              <>
+                <Stack divider={<Divider />}>
+                  {deadlines.map((item) => {
+                    const badge = getDeadlineBadge(item.due_date)
+                    const isProject = item.type === 'project'
+                    return (
+                      <Box
+                        key={item.id}
+                        sx={{ display: 'flex', alignItems: 'center', gap: 1.5, py: 1.25 }}
+                      >
+                        <Box
+                          sx={{
+                            width: 38,
+                            height: 38,
+                            borderRadius: '10px',
+                            bgcolor: '#EFF6FF',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isProject
+                            ? <FolderOutlinedIcon sx={{ fontSize: 20, color: '#2563EB' }} />
+                            : <AssignmentOutlinedIcon sx={{ fontSize: 20, color: '#7C3AED' }} />
+                          }
+                        </Box>
+                        <Box sx={{ flex: 1, minWidth: 0 }}>
+                          <Typography sx={{ fontSize: fs(14), fontWeight: 700, color: SLATE[900], lineHeight: 1.3 }}>
+                            {item.title}
+                          </Typography>
+                          <Typography sx={{ fontSize: fs(12), color: SLATE[400] }}>
+                            {isProject ? 'Project deadline' : 'Task deadline'} · {item.project_name}
+                          </Typography>
+                          <Typography sx={{ fontSize: fs(12), color: SLATE[400] }}>
+                            {item.due_date}
+                          </Typography>
+                        </Box>
+                        <Box
+                          sx={{
+                            px: 1.25,
+                            py: 0.35,
+                            borderRadius: '6px',
+                            bgcolor: badge.bg,
+                            color: badge.color,
+                            fontSize: fs(12),
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {badge.label}
+                        </Box>
+                      </Box>
+                    )
+                  })}
+                </Stack>
+                <Box sx={{ mt: 1.5 }}>
+                  <RouterLink
+                    to="/my-tasks"
+                    style={{ color: APP_PRIMARY, fontWeight: 700, fontSize: fs(13), textDecoration: 'none' }}
                   >
-                    <Typography sx={{ fontSize: fs(15), fontWeight: 700 }}>{item.title}</Typography>
-                    <Typography sx={{ fontSize: fs(13), color: SLATE[500] }}>
-                      {item.type === 'project' ? 'Project deadline' : 'Task deadline'} · {item.project_name}
-                    </Typography>
-                    <Typography sx={{ fontSize: fs(13), color: SLATE[500] }}>
-                      {formatDeadlineLabel(item.due_date)}
-                    </Typography>
-                  </Box>
-                ))}
-              </Stack>
+                    View all deadlines →
+                  </RouterLink>
+                </Box>
+              </>
             )}
           </Widget>
         </Grid>
