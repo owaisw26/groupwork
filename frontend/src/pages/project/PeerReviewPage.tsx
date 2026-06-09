@@ -14,6 +14,8 @@ import { isAxiosError } from 'axios'
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import api from '../../services/api'
+import { useAppDispatch } from '../../store/hooks'
+import { fetchProject } from '../../store/projectsSlice'
 
 interface Member {
   id: string
@@ -52,6 +54,7 @@ const defaultForm = (): ReviewForm => ({
 
 export default function PeerReviewPage() {
   const { id: projectId } = useParams<{ id: string }>()
+  const dispatch = useAppDispatch()
   const [members, setMembers] = useState<Member[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const [status, setStatus] = useState<ReviewStatus | null>(null)
@@ -94,6 +97,7 @@ export default function PeerReviewPage() {
       })
       setSuccess('Review submitted')
       await loadData()
+      dispatch(fetchProject(projectId))
     } catch (err) {
       const message = isAxiosError(err)
         ? (err.response?.data as { detail?: string } | undefined)?.detail
@@ -131,8 +135,9 @@ export default function PeerReviewPage() {
       </Box>
       {status.is_open === false && (
         <Alert severity="info">
-          Peer reviews open after the project owner marks the project complete and moves it into
-          the peer review phase. Right now this project is {status.project_status ?? 'active'}.
+          {status.project_status === 'completed'
+            ? 'All peer reviews have been submitted. This project is completed.'
+            : `Peer reviews open after the project owner marks the project complete and moves it into the peer review phase. Right now this project is ${status.project_status ?? 'active'}.`}
         </Alert>
       )}
       {status.deadline_passed && (

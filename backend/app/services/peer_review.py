@@ -7,6 +7,9 @@ from psycopg2.extensions import connection
 from app.db.queries import peer_reviews as peer_review_queries
 from app.db.queries import projects as project_queries
 
+STATUS_COMPLETED = "completed"
+STATUS_PEER_REVIEW = "peer_review"
+
 
 def _require_member(conn: connection, project_id: str | UUID, user_id: str | UUID) -> dict:
     project = project_queries.get_project(conn, project_id)
@@ -28,7 +31,25 @@ def _get_peer_review_deadline(conn: connection, project_id: str | UUID):
 
 
 def _is_peer_review_open(project: dict) -> bool:
-    return project["status"] == "peer_review"
+    return project["status"] == STATUS_PEER_REVIEW
+
+
+def _complete_project_if_all_reviews_submitted(
+    conn: connection,
+    project_id: str | UUID,
+) -> None:
+    members = project_queries.get_project_members(conn, project_id)
+    if not members:
+        return
+
+    submitted_ids = set(peer_review_queries.get_submitted_reviewer_ids(conn, project_id))
+    member_ids = {str(member["id"]) for member in members}
+    if member_ids.issubset(submitted_ids):
+        project_queries.update_project_status(
+            conn,
+            project_id,
+            status=STATUS_COMPLETED,
+        )
 
 
 def submit_review(
@@ -86,6 +107,7 @@ def submit_review(
         overall=overall,
         comment=comment,
     )
+    _complete_project_if_all_reviews_submitted(conn, project_id)
     return peer_review_queries._public_review(review)
 
 

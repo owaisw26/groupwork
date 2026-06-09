@@ -9,19 +9,21 @@ from app.services import notifications as notification_service
 
 STATUS_ACTIVE = "active"
 STATUS_PEER_REVIEW = "peer_review"
+STATUS_COMPLETED = "completed"
 STATUS_REPORT_GENERATED = "report_generated"
 STATUS_ARCHIVED = "archived"
 
 PEER_REVIEW_DURATION_DAYS = 7
 READ_ONLY_PROJECT_STATUSES = {
     STATUS_PEER_REVIEW,
+    STATUS_COMPLETED,
     STATUS_REPORT_GENERATED,
     STATUS_ARCHIVED,
 }
 
 ALLOWED_TRANSITIONS = {
     STATUS_ACTIVE: STATUS_PEER_REVIEW,
-    STATUS_PEER_REVIEW: STATUS_REPORT_GENERATED,
+    STATUS_COMPLETED: STATUS_REPORT_GENERATED,
     STATUS_REPORT_GENERATED: STATUS_ARCHIVED,
 }
 
@@ -104,7 +106,14 @@ def complete_project(conn: connection, project_id: str | UUID, user_id: str | UU
 
 def generate_project_report(conn: connection, project_id: str | UUID, user_id: str | UUID) -> dict:
     project = _require_owner_project_for_update(conn, project_id, user_id)
-    _validate_transition(project["status"], STATUS_PEER_REVIEW, STATUS_REPORT_GENERATED)
+    if project["status"] not in {STATUS_PEER_REVIEW, STATUS_COMPLETED}:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Cannot transition project from {project['status']} "
+                f"to {STATUS_REPORT_GENERATED}"
+            ),
+        )
     updated = project_queries.update_project_status(
         conn,
         project_id,

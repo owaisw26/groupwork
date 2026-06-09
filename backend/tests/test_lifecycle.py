@@ -179,6 +179,25 @@ def test_generate_report_peer_review_to_report_generated(auth_client, email_outb
     assert report_s3_key is not None
 
 
+def test_generate_report_completed_to_report_generated(auth_client, email_outbox, db_conn):
+    ctx = _setup_two_member_project(auth_client, email_outbox, db_conn)
+    _set_project_lifecycle_status(
+        db_conn,
+        ctx["project"]["id"],
+        status="completed",
+        with_completed_at=True,
+        with_peer_review_deadline=True,
+    )
+
+    response = auth_client.post(
+        f"/api/v1/projects/{ctx['project']['id']}/generate-report",
+        headers=_owner_headers(auth_client, ctx),
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "report_generated"
+
+
 def test_generate_report_requires_peer_review_state(auth_client, email_outbox, db_conn):
     ctx = _setup_two_member_project(auth_client, email_outbox, db_conn)
 
