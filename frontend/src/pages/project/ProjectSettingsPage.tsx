@@ -18,6 +18,17 @@ import { APP_BORDER, fs, SLATE, SURFACE_CARD_SX } from '../../appTheme'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { deleteProject, fetchDashboard } from '../../store/projectsSlice'
 
+function normalizeConfirmationName(value: string): string {
+  const trimmed = value.trim()
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"'))
+    || (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim()
+  }
+  return trimmed
+}
+
 export default function ProjectSettingsPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -35,7 +46,9 @@ export default function ProjectSettingsPage() {
   }, [currentProject, id, items])
 
   const isOwner = Boolean(user && project?.owner_id === user.id)
-  const canDelete = Boolean(project && confirmName === project.name && !deleteSubmitting)
+  const canDelete = Boolean(
+    project && normalizeConfirmationName(confirmName) === project.name && !deleteSubmitting,
+  )
 
   const closeDeleteDialog = () => {
     if (deleteSubmitting) return
@@ -140,7 +153,7 @@ export default function ProjectSettingsPage() {
         <DialogContent>
           <Stack spacing={2}>
             <DialogContentText>
-              Type "{project.name}" to confirm deletion. This action cannot be undone.
+              Type the project name exactly to confirm deletion: {project.name}. This action cannot be undone.
             </DialogContentText>
             <TextField
               autoFocus

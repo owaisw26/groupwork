@@ -102,6 +102,19 @@ describe('ProjectSettingsPage', () => {
     expect(await screen.findByText('Dashboard Home')).toBeInTheDocument()
   })
 
+  it('accepts the project name with accidental surrounding quotes', async () => {
+    const user = userEvent.setup()
+    renderSettingsPage()
+
+    await user.click(screen.getByRole('button', { name: /^delete project$/i }))
+
+    const dialog = screen.getByRole('dialog', { name: /delete project/i })
+    const confirmButton = within(dialog).getByRole('button', { name: /^delete project$/i })
+    await user.type(within(dialog).getByLabelText(/project name/i), `"${project.name}"`)
+
+    expect(confirmButton).toBeEnabled()
+  })
+
   it('does not allow non-owner members to delete the project', () => {
     renderSettingsPage({ userId: 'user-2' })
 
