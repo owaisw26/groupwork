@@ -72,7 +72,8 @@ export default function PeerReviewPage() {
     setMembers(membersRes.data)
     setStatus(statusRes.data)
     setCurrentUserId(meRes.data.id)
-  }, [projectId])
+    dispatch(fetchProject(projectId))
+  }, [dispatch, projectId])
 
   useEffect(() => {
     if (!projectId) return
@@ -97,7 +98,6 @@ export default function PeerReviewPage() {
       })
       setSuccess('Review submitted')
       await loadData()
-      dispatch(fetchProject(projectId))
     } catch (err) {
       const message = isAxiosError(err)
         ? (err.response?.data as { detail?: string } | undefined)?.detail

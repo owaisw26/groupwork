@@ -124,10 +124,20 @@ describe('PeerReviewPage', () => {
     const user = userEvent.setup()
     renderPeerReviewPage()
 
+    await waitFor(() => {
+      expect(api.get).toHaveBeenCalledWith('/projects/proj-1')
+    })
+    const initialProjectFetches = vi.mocked(api.get).mock.calls.filter(
+      ([url]) => url === '/projects/proj-1',
+    ).length
+
     await user.click(await screen.findByRole('button', { name: /submit review/i }))
 
     await waitFor(() => {
-      expect(api.get).toHaveBeenCalledWith('/projects/proj-1')
+      const projectFetches = vi.mocked(api.get).mock.calls.filter(
+        ([url]) => url === '/projects/proj-1',
+      ).length
+      expect(projectFetches).toBeGreaterThan(initialProjectFetches)
     })
   })
 })

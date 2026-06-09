@@ -306,6 +306,58 @@ def test_project_status_completed_after_all_members_submit_reviews(
     assert status_response.json()["is_open"] is False
 
 
+def test_review_status_completes_project_with_existing_submissions(
+    auth_client,
+    email_outbox,
+    db_conn,
+):
+    ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
+    _set_peer_review_status(db_conn, ctx["project"]["id"])
+    members = auth_client.get(
+        f"/api/v1/projects/{ctx['project']['id']}/members",
+        headers=_owner_headers(auth_client, ctx),
+    ).json()
+    by_email = {m["email"]: m["id"] for m in members}
+
+    auth_client.post(
+        f"/api/v1/projects/{ctx['project']['id']}/peer-review",
+        json=_valid_review(by_email[ctx["member_one_email"]]),
+        headers=_owner_headers(auth_client, ctx),
+    )
+    auth_client.post(
+        f"/api/v1/projects/{ctx['project']['id']}/peer-review",
+        json=_valid_review(by_email[ctx["owner_email"]]),
+        headers=_member_one_headers(auth_client, ctx),
+    )
+    auth_client.post(
+        f"/api/v1/projects/{ctx['project']['id']}/peer-review",
+        json=_valid_review(by_email[ctx["owner_email"]]),
+        headers=_member_two_headers(auth_client, ctx),
+    )
+
+    with db_conn.cursor() as cur:
+        cur.execute(
+            "UPDATE projects SET status = 'peer_review' WHERE id = %s",
+            (ctx["project"]["id"],),
+        )
+    db_conn.commit()
+
+    status_response = auth_client.get(
+        f"/api/v1/projects/{ctx['project']['id']}/peer-review/status",
+        headers=_owner_headers(auth_client, ctx),
+    )
+
+    assert status_response.status_code == 200
+    assert status_response.json()["project_status"] == "completed"
+    assert status_response.json()["is_open"] is False
+
+    project_response = auth_client.get(
+        f"/api/v1/projects/{ctx['project']['id']}",
+        headers=_owner_headers(auth_client, ctx),
+    )
+    assert project_response.json()["status"] == "completed"
+
+
 def test_get_non_submitters_after_deadline(auth_client, email_outbox, db_conn):
     ctx = _setup_three_member_project(auth_client, email_outbox, db_conn)
     with db_conn.cursor() as cur:

@@ -37,19 +37,20 @@ def _is_peer_review_open(project: dict) -> bool:
 def _complete_project_if_all_reviews_submitted(
     conn: connection,
     project_id: str | UUID,
-) -> None:
+) -> dict | None:
     members = project_queries.get_project_members(conn, project_id)
     if not members:
-        return
+        return None
 
     submitted_ids = set(peer_review_queries.get_submitted_reviewer_ids(conn, project_id))
     member_ids = {str(member["id"]) for member in members}
     if member_ids.issubset(submitted_ids):
-        project_queries.update_project_status(
+        return project_queries.update_project_status(
             conn,
             project_id,
             status=STATUS_COMPLETED,
         )
+    return None
 
 
 def submit_review(
@@ -117,10 +118,13 @@ def get_review_status(
     user_id: str | UUID,
 ) -> dict:
     project = _require_member(conn, project_id, user_id)
+    if project["status"] == STATUS_PEER_REVIEW:
+        project = _complete_project_if_all_reviews_submitted(conn, project_id) or project
+
     members = project_queries.get_project_members(conn, project_id)
     submitted_ids = set(peer_review_queries.get_submitted_reviewer_ids(conn, project_id))
-    submitted_by = [m["email"] for m in members if m["id"] in submitted_ids]
-    pending_members = [m for m in members if m["id"] not in submitted_ids]
+    submitted_by = [m["email"] for m in members if str(m["id"]) in submitted_ids]
+    pending_members = [m for m in members if str(m["id"]) not in submitted_ids]
 
     deadline = _get_peer_review_deadline(conn, project_id)
     now = datetime.now(timezone.utc)
