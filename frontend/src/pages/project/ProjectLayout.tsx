@@ -353,51 +353,55 @@ export default function ProjectLayout() {
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
             />
-            <TextField
-              fullWidth
-              label="Due Date"
-              type="date"
-              value={newDueDate}
-              onChange={(e) => setNewDueDate(e.target.value)}
-              slotProps={{ inputLabel: { shrink: true } }}
-            />
-            <FormControl fullWidth>
-              <InputLabel id="create-task-priority-label">Priority</InputLabel>
-              <Select
-                labelId="create-task-priority-label"
-                label="Priority"
-                value={newPriority}
-                onChange={(e) => setNewPriority(e.target.value)}
-              >
-                {PRIORITY_OPTIONS.map((option) => (
-                  <MenuItem key={option} value={option}>
-                    {PRIORITY_STYLES[option].label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <FormControl fullWidth>
-              <InputLabel id="create-task-assignees-label">Assignees</InputLabel>
-              <Select
-                labelId="create-task-assignees-label"
-                label="Assignees"
-                multiple
-                value={newAssigneeIds}
-                onChange={handleAssigneeChange}
-                input={<OutlinedInput label="Assignees" />}
-                renderValue={(selected) =>
-                  selected
-                    .map((memberId) => members.find((member) => member.id === memberId)?.full_name ?? memberId)
-                    .join(', ')
-                }
-              >
-                {members.map((member) => (
-                  <MenuItem key={member.id} value={member.id}>
-                    {member.full_name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <FormControl sx={{ flex: 1 }} size="small">
+                <InputLabel id="create-task-priority-label" shrink>Priority</InputLabel>
+                <Select
+                  labelId="create-task-priority-label"
+                  label="Priority"
+                  value={newPriority}
+                  onChange={(e) => setNewPriority(e.target.value)}
+                  notched
+                >
+                  {PRIORITY_OPTIONS.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {PRIORITY_STYLES[option].label}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                sx={{ flex: 1 }}
+                label="Due Date"
+                type="date"
+                size="small"
+                value={newDueDate}
+                onChange={(e) => setNewDueDate(e.target.value)}
+                slotProps={{ inputLabel: { shrink: true } }}
+              />
+              <FormControl sx={{ flex: 2 }} size="small">
+                <InputLabel id="create-task-assignees-label" shrink>Assignees</InputLabel>
+                <Select
+                  labelId="create-task-assignees-label"
+                  label="Assignees"
+                  multiple
+                  value={newAssigneeIds}
+                  onChange={handleAssigneeChange}
+                  input={<OutlinedInput label="Assignees" notched />}
+                  renderValue={(selected) =>
+                    selected
+                      .map((memberId) => members.find((member) => member.id === memberId)?.full_name ?? memberId)
+                      .join(', ')
+                  }
+                >
+                  {members.map((member) => (
+                    <MenuItem key={member.id} value={member.id}>
+                      {member.full_name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Box>
             {createError && (
               <Typography sx={{ fontSize: 13, color: '#DC2626', fontWeight: 600 }}>
                 {createError}
