@@ -130,6 +130,18 @@ export const completeProject = createAsyncThunk(
   },
 )
 
+export const deleteProject = createAsyncThunk(
+  'projects/deleteProject',
+  async (projectId: string, { rejectWithValue }) => {
+    try {
+      await api.delete(`/projects/${projectId}`)
+      return projectId
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  },
+)
+
 export const fetchDashboard = createAsyncThunk('projects/fetchDashboard', async (_, { rejectWithValue }) => {
   try {
     const response = await api.get<DashboardData>('/dashboard')
@@ -180,6 +192,12 @@ const projectsSlice = createSlice({
           state.items.push(action.payload)
         }
         state.currentProject = action.payload
+      })
+      .addCase(deleteProject.fulfilled, (state, action) => {
+        state.items = state.items.filter((item) => item.id !== action.payload)
+        if (state.currentProject?.id === action.payload) {
+          state.currentProject = null
+        }
       })
       .addCase(fetchDashboard.fulfilled, (state, action) => {
         state.dashboard = action.payload

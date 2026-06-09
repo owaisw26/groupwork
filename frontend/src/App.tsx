@@ -19,7 +19,7 @@ import MembersTab from './pages/project/MembersTab'
 import EvidenceTab from './pages/project/EvidenceTab'
 import MeetingsTab from './pages/project/MeetingsTab'
 import PeerReviewPage from './pages/project/PeerReviewPage'
-import ProjectPlaceholderPage from './pages/project/ProjectPlaceholderPage'
+import ProjectSettingsPage from './pages/project/ProjectSettingsPage'
 import ReportPreviewPage from './pages/project/ReportPreviewPage'
 import ActivityTab from './pages/project/ActivityTab'
 import TasksTab from './pages/project/TasksTab'
@@ -96,7 +96,7 @@ function AppRoutes() {
             <Route path="members" element={<MembersTab />} />
             <Route path="evidence" element={<EvidenceTab />} />
             <Route path="peer-review" element={<PeerReviewPage />} />
-            <Route path="settings" element={<ProjectPlaceholderPage title="Settings" />} />
+            <Route path="settings" element={<ProjectSettingsPage />} />
             <Route path="report" element={<ReportPreviewPage />} />
           </Route>
         </Route>
