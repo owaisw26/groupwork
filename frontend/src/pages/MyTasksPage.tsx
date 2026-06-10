@@ -153,6 +153,10 @@ export default function MyTasksPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const start = (page - 1) * PAGE_SIZE
   const visibleTasks = filtered.slice(start, start + PAGE_SIZE)
+  const selectedTask = useMemo(
+    () => myTasks.find((task) => task.id === selectedTaskId) ?? null,
+    [myTasks, selectedTaskId],
+  )
 
   if (myTasksLoading && myTasks.length === 0) {
     return (
@@ -319,9 +323,8 @@ export default function MyTasksPage() {
       {selectedTaskId && (
         <TaskDetailModal
           taskId={selectedTaskId}
-          projectOwnerId={getProjectOwnerId(
-            myTasks.find((t) => t.id === selectedTaskId)?.project_id ?? '',
-          )}
+          initialTask={selectedTask}
+          projectOwnerId={getProjectOwnerId(selectedTask?.project_id ?? '')}
           onClose={() => setSelectedTaskId(null)}
         />
       )}

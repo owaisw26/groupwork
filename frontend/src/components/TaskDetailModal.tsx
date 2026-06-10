@@ -55,6 +55,7 @@ import api from '../services/api'
 import EditRequestDiff from './EditRequestDiff'
 import EvidenceUpload from './EvidenceUpload'
 import TimeLogForm from './TimeLogForm'
+import type { Task } from '../store/tasksSlice'
 
 interface ProjectMember {
   id: string
@@ -99,6 +100,7 @@ interface DisputeItem {
 
 interface TaskDetailModalProps {
   taskId: string | null
+  initialTask?: Task | null
   projectOwnerId: string
   onClose: () => void
   isReadOnly?: boolean
@@ -191,6 +193,7 @@ function SectionBlock({
 
 export default function TaskDetailModal({
   taskId,
+  initialTask = null,
   projectOwnerId,
   onClose,
   isReadOnly = false,
@@ -199,8 +202,10 @@ export default function TaskDetailModal({
   const user = useAppSelector((state) => state.auth.user)
   const { currentTask, subtasks, comments, timeLogs, totalProjectHours, editRequests } =
     useAppSelector((state) => state.tasks)
+  const displayedTask =
+    currentTask?.id === taskId ? currentTask : initialTask?.id === taskId ? initialTask : null
   const project = useAppSelector((state) => {
-    const projectId = state.tasks.currentTask?.project_id
+    const projectId = displayedTask?.project_id
     if (!projectId) return state.projects.currentProject
     return (
       state.projects.items.find((item) => item.id === projectId)
@@ -227,25 +232,25 @@ export default function TaskDetailModal({
   const [verifySuccess, setVerifySuccess] = useState<string | null>(null)
 
   const isOwner = user?.id === projectOwnerId
-  const isAssignee = currentTask?.assignee_ids.includes(user?.id ?? '') ?? false
+  const isAssignee = displayedTask?.assignee_ids.includes(user?.id ?? '') ?? false
   const canVerify =
-    currentTask?.status === 'review'
+    displayedTask?.status === 'review'
     && !isAssignee
     && !verifications.some((v) => v.user_id === user?.id)
-  const showVerification = currentTask?.status === 'review' || currentTask?.status === 'done'
+  const showVerification = displayedTask?.status === 'review' || displayedTask?.status === 'done'
 
   const assignees = useMemo(
     () =>
-      (currentTask?.assignee_ids ?? [])
+      (displayedTask?.assignee_ids ?? [])
         .map((id) => members.find((member) => member.id === id))
         .filter((member): member is ProjectMember => Boolean(member)),
-    [currentTask?.assignee_ids, members],
+    [displayedTask?.assignee_ids, members],
   )
 
   const completedSubtasks = subtasks.filter((item) => item.is_completed).length
   const subtaskProgress =
     subtasks.length > 0 ? Math.round((completedSubtasks / subtasks.length) * 100) : 0
-  const effectiveDueDate = getEffectiveDueDate(currentTask?.due_date, projectDueDate)
+  const effectiveDueDate = getEffectiveDueDate(displayedTask?.due_date, projectDueDate)
 
   useEffect(() => {
     if (!taskId) return
@@ -266,12 +271,12 @@ export default function TaskDetailModal({
   }, [dispatch, taskId])
 
   useEffect(() => {
-    if (!currentTask?.project_id) return
+    if (!displayedTask?.project_id) return
     api
-      .get<ProjectMember[]>(`/projects/${currentTask.project_id}/members`)
+      .get<ProjectMember[]>(`/projects/${displayedTask.project_id}/members`)
       .then((response) => setMembers(response.data))
       .catch(() => setMembers([]))
-  }, [currentTask?.project_id])
+  }, [displayedTask?.project_id])
 
   const refreshTaskAndVerifications = async () => {
     if (!taskId) return
@@ -287,7 +292,7 @@ export default function TaskDetailModal({
   const handleVerify = async () => {
     if (!taskId) return
     await api.post(`/tasks/${taskId}/verify`)
-    setVerifySuccess(currentTask ? `"${currentTask.title}" was verified` : 'Task was verified')
+    setVerifySuccess(displayedTask ? `"${displayedTask.title}" was verified` : 'Task was verified')
     await refreshTaskAndVerifications()
   }
 
@@ -304,17 +309,17 @@ export default function TaskDetailModal({
   }, [dispatch, taskId, isOwner])
 
   useEffect(() => {
-    if (!currentTask || currentTask.id !== taskId) return
+    if (!displayedTask || displayedTask.id !== taskId) return
     const timer = window.setTimeout(() => {
-      setEditTitle(currentTask.title)
-      setEditDescription(currentTask.description ?? '')
-      setEditPriority(currentTask.priority)
-      setEditDueDate(currentTask.due_date ?? '')
-      setEditAssigneeIds(currentTask.assignee_ids)
-      setProposedTitle(currentTask.title)
+      setEditTitle(displayedTask.title)
+      setEditDescription(displayedTask.description ?? '')
+      setEditPriority(displayedTask.priority)
+      setEditDueDate(displayedTask.due_date ?? '')
+      setEditAssigneeIds(displayedTask.assignee_ids)
+      setProposedTitle(displayedTask.title)
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [currentTask, taskId])
+  }, [displayedTask, taskId])
 
   const handleClose = () => {
     dispatch(clearTaskDetail())
@@ -325,12 +330,12 @@ export default function TaskDetailModal({
   }
 
   const resetEditFields = () => {
-    if (!currentTask) return
-    setEditTitle(currentTask.title)
-    setEditDescription(currentTask.description ?? '')
-    setEditPriority(currentTask.priority)
-    setEditDueDate(currentTask.due_date ?? '')
-    setEditAssigneeIds(currentTask.assignee_ids)
+    if (!displayedTask) return
+    setEditTitle(displayedTask.title)
+    setEditDescription(displayedTask.description ?? '')
+    setEditPriority(displayedTask.priority)
+    setEditDueDate(displayedTask.due_date ?? '')
+    setEditAssigneeIds(displayedTask.assignee_ids)
   }
 
   const handleSave = async () => {
@@ -367,9 +372,9 @@ export default function TaskDetailModal({
   }
 
   const handleSubmitEditRequest = async () => {
-    if (!taskId || !currentTask) return
+    if (!taskId || !displayedTask) return
     const changes: Record<string, unknown> = {}
-    if (proposedTitle !== currentTask.title) changes.title = proposedTitle
+    if (proposedTitle !== displayedTask.title) changes.title = proposedTitle
     if (Object.keys(changes).length === 0) return
     await dispatch(submitEditRequest({ taskId, proposed_changes: changes }))
     setRequestEditOpen(false)
@@ -386,8 +391,8 @@ export default function TaskDetailModal({
 
   if (!taskId) return null
 
-  const statusStyle = STATUS_STYLES[currentTask?.status ?? 'todo'] ?? STATUS_STYLES.todo
-  const priorityStyle = PRIORITY_STYLES[currentTask?.priority ?? 'medium'] ?? PRIORITY_STYLES.medium
+  const statusStyle = STATUS_STYLES[displayedTask?.status ?? 'todo'] ?? STATUS_STYLES.todo
+  const priorityStyle = PRIORITY_STYLES[displayedTask?.priority ?? 'medium'] ?? PRIORITY_STYLES.medium
 
   return (
     <>
@@ -429,16 +434,16 @@ export default function TaskDetailModal({
                   mb: 0.75,
                 }}
               >
-                {currentTask?.title ?? 'Task'}
+                {displayedTask?.title ?? 'Task'}
               </Typography>
             )}
 
-            {currentTask && (
+            {displayedTask && (
               <>
                 <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 0.6, mb: 0.75 }}>
                   {!editMode && (
                     <MetaPill
-                      label={STATUS_LABELS[currentTask.status] ?? currentTask.status}
+                      label={STATUS_LABELS[displayedTask.status] ?? displayedTask.status}
                       bg={statusStyle.bg}
                       color={statusStyle.color}
                     />
@@ -446,7 +451,7 @@ export default function TaskDetailModal({
 
                   {editMode ? (
                     <Typography sx={{ fontSize: 12, color: SLATE[400], fontWeight: 600 }}>
-                      {STATUS_LABELS[currentTask.status]} · move on board to change status
+                      {STATUS_LABELS[displayedTask.status]} · move on board to change status
                     </Typography>
                   ) : (
                     <>
@@ -469,18 +474,18 @@ export default function TaskDetailModal({
 
                   {showVerification && (
                     <MetaPill
-                      label={`Verification: ${currentTask.verification_status}`}
+                      label={`Verification: ${displayedTask.verification_status}`}
                       bg={
-                        currentTask.verification_status === 'verified'
+                        displayedTask.verification_status === 'verified'
                           ? '#DCFCE7'
-                          : currentTask.verification_status === 'disputed'
+                          : displayedTask.verification_status === 'disputed'
                             ? '#FEE2E2'
                             : '#FEF3C7'
                       }
                       color={
-                        currentTask.verification_status === 'verified'
+                        displayedTask.verification_status === 'verified'
                           ? '#166534'
-                          : currentTask.verification_status === 'disputed'
+                          : displayedTask.verification_status === 'disputed'
                             ? '#B91C1C'
                             : '#B45309'
                       }
@@ -576,7 +581,7 @@ export default function TaskDetailModal({
         </Box>
       </Box>
 
-      {editMode && currentTask && (
+      {editMode && displayedTask && (
         <Box sx={{ px: { xs: 1.75, sm: 2.25 }, pt: 1.25, pb: 0.5, display: 'flex', gap: 1.5 }}>
           <FormControl size="small" sx={{ flex: 1 }}>
             <InputLabel id="edit-task-priority-label" shrink>Priority</InputLabel>
@@ -639,7 +644,7 @@ export default function TaskDetailModal({
       )}
 
       <Box sx={{ px: { xs: 1.75, sm: 2.25 }, py: 1.25 }}>
-        {currentTask && (
+        {displayedTask && (
           <Stack spacing={1}>
             <Box sx={SECTION_SX}>
               {editMode ? (
@@ -654,7 +659,7 @@ export default function TaskDetailModal({
                 />
               ) : (
                 <Typography sx={{ fontSize: fs(13), color: SLATE[500], lineHeight: 1.35 }}>
-                  {currentTask.description || 'No description provided.'}
+                  {displayedTask.description || 'No description provided.'}
                 </Typography>
               )}
             </Box>
@@ -926,11 +931,11 @@ export default function TaskDetailModal({
               {isAssignee && !isReadOnly && <TimeLogForm taskId={taskId} />}
             </SectionBlock>}
 
-            {isOwner && currentTask && editRequests.length > 0 && (
+            {isOwner && displayedTask && editRequests.length > 0 && (
               <SectionBlock title="Pending Edit Requests">
                 {editRequests.map((request) => (
                   <Box key={request.id} sx={{ mb: editRequests.length > 1 ? 2 : 0 }}>
-                    <EditRequestDiff current={currentTask} proposed={request.proposed_changes} />
+                    <EditRequestDiff current={displayedTask} proposed={request.proposed_changes} />
                     <Box sx={{ display: 'flex', gap: 1, mt: 1.25 }}>
                       <Button
                         size="small"
@@ -956,7 +961,7 @@ export default function TaskDetailModal({
               </SectionBlock>
             )}
 
-            {!editMode && !isOwner && !isAssignee && requestEditOpen && currentTask && (
+            {!editMode && !isOwner && !isAssignee && requestEditOpen && displayedTask && (
               <SectionBlock title="Request Edit">
                 <TextField
                   label="Proposed title"
@@ -967,8 +972,8 @@ export default function TaskDetailModal({
                   sx={{ ...FIELD_SX, mb: 1.5 }}
                 />
                 <EditRequestDiff
-                  current={currentTask}
-                  proposed={proposedTitle !== currentTask.title ? { title: proposedTitle } : {}}
+                  current={displayedTask}
+                  proposed={proposedTitle !== displayedTask.title ? { title: proposedTitle } : {}}
                 />
               </SectionBlock>
             )}

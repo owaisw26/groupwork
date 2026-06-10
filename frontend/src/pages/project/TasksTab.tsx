@@ -366,6 +366,11 @@ export default function TasksTab() {
     setSelectedTaskId(task.id)
   }
 
+  const selectedTask = useMemo(
+    () => items.find((task) => task.id === selectedTaskId) ?? null,
+    [items, selectedTaskId],
+  )
+
   const handleVerify = async (taskId: string) => {
     if (isReadOnly) {
       setShowArchivedDialog(true)
@@ -648,6 +653,7 @@ export default function TasksTab() {
 
       <TaskDetailModal
         taskId={selectedTaskId}
+        initialTask={selectedTask}
         projectOwnerId={currentProject?.owner_id ?? ''}
         onClose={() => {
           setSelectedTaskId(null)

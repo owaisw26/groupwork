@@ -44,10 +44,14 @@ function renderModal({
   ownerId = 'user-1',
   userId = 'user-1',
   taskOverride = {},
+  preloadCurrentTask = true,
+  passInitialTask = false,
 }: {
   ownerId?: string
   userId?: string
   taskOverride?: Partial<Task>
+  preloadCurrentTask?: boolean
+  passInitialTask?: boolean
 } = {}) {
   const modalTask = { ...task, ...taskOverride }
   currentApiTask = modalTask
@@ -74,8 +78,8 @@ function renderModal({
         items: [modalTask],
         myTasks: [],
         searchResults: [],
-        currentTask: modalTask,
-        activeDetailTaskId: 'task-1',
+        currentTask: preloadCurrentTask ? modalTask : null,
+        activeDetailTaskId: preloadCurrentTask ? 'task-1' : null,
         lastSearchQuery: '',
         myTasksLoading: false,
         subtasks: [],
@@ -112,6 +116,7 @@ function renderModal({
     <Provider store={store}>
       <TaskDetailModal
         taskId="task-1"
+        initialTask={passInitialTask ? modalTask : null}
         projectOwnerId={ownerId}
         onClose={() => {}}
       />
@@ -139,6 +144,14 @@ describe('TaskDetailModal task metadata', () => {
       data: { ...task, priority: 'high', due_date: '2026-09-10', assignee_ids: ['user-1', 'user-2'] },
     })
     vi.mocked(api.post).mockResolvedValue({ data: { status: 'ok' } })
+  })
+
+  it('renders clicked task data immediately while detail fetch is pending', () => {
+    renderModal({ preloadCurrentTask: false, passInitialTask: true })
+
+    expect(screen.getByText('Original title')).toBeInTheDocument()
+    expect(screen.getByText('Original description')).toBeInTheDocument()
+    expect(screen.getByText('Medium')).toBeInTheDocument()
   })
 
   it('shows assignee names in view mode', async () => {
