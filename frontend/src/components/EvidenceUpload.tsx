@@ -11,6 +11,21 @@ interface EvidenceUploadProps {
   onUploaded?: () => void
 }
 
+function getUploadErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const data = (error as { response?: { data?: unknown } }).response?.data
+    if (data && typeof data === 'object' && 'error' in data) {
+      const apiError = (data as { error?: { message?: unknown } }).error
+      if (typeof apiError?.message === 'string') return apiError.message
+    }
+    if (data && typeof data === 'object' && 'detail' in data) {
+      const detail = (data as { detail?: unknown }).detail
+      if (typeof detail === 'string') return detail
+    }
+  }
+  return error instanceof Error ? error.message : 'Failed to upload evidence. Please try again.'
+}
+
 export default function EvidenceUpload({ taskId, onUploaded }: EvidenceUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
@@ -64,7 +79,7 @@ export default function EvidenceUpload({ taskId, onUploaded }: EvidenceUploadPro
       setProgress(100)
       onUploaded?.()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload evidence. Please try again.')
+      setError(getUploadErrorMessage(err))
     } finally {
       setUploading(false)
       setProgress(0)
