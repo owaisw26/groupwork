@@ -39,7 +39,9 @@ import TaskDetailModal from '../../components/TaskDetailModal'
 import api from '../../services/api'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import {
+  applyOptimisticTaskStatus,
   fetchProjectTasks,
+  restoreOptimisticTask,
   TASK_STATUSES,
   updateTaskStatus,
   type Subtask,
@@ -323,7 +325,7 @@ export default function TasksTab() {
     setActiveTask(task ?? null)
   }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     setActiveTask(null)
     if (isReadOnly) {
       setShowArchivedDialog(true)
@@ -342,17 +344,20 @@ export default function TasksTab() {
       window.setTimeout(() => {
         suppressTaskClickRef.current = false
       }, 0)
-      try {
-        await dispatch(updateTaskStatus({ taskId, status: newStatus })).unwrap()
-      } catch {
-        if (newStatus === 'done') {
-          setMoveError(
-            `Cannot move '${task.title}' into 'Done' as it has not been verified yet`,
-          )
-        } else {
-          setMoveError('Could not move task. Please try again.')
-        }
-      }
+      const previousTask = { ...task, assignee_ids: [...task.assignee_ids] }
+      dispatch(applyOptimisticTaskStatus({ taskId, status: newStatus }))
+      void dispatch(updateTaskStatus({ taskId, status: newStatus }))
+        .unwrap()
+        .catch(() => {
+          dispatch(restoreOptimisticTask(previousTask))
+          if (newStatus === 'done') {
+            setMoveError(
+              `Cannot move '${task.title}' into 'Done' as it has not been verified yet`,
+            )
+          } else {
+            setMoveError('Could not move task. Please try again.')
+          }
+        })
     }
   }
 

@@ -393,6 +393,28 @@ function upsertTask(state: TasksState, task: Task) {
   }
 }
 
+function applyTaskStatus(state: TasksState, taskId: string, status: string) {
+  const updateStatus = (task: Task) => {
+    const previousStatus = task.status
+    task.status = status
+    if (status === 'review') {
+      task.verification_status = 'pending'
+    } else if ((task.verification_status === 'pending' || previousStatus === 'review') && status !== 'done') {
+      task.verification_status = 'none'
+    }
+  }
+
+  const task = state.items.find((item) => item.id === taskId)
+  if (task) updateStatus(task)
+
+  const myTask = state.myTasks.find((item) => item.id === taskId)
+  if (myTask) updateStatus(myTask)
+
+  if (state.currentTask?.id === taskId) {
+    updateStatus(state.currentTask)
+  }
+}
+
 function isActiveDetailTask(state: TasksState, taskId: string): boolean {
   return state.activeDetailTaskId === taskId
 }
@@ -415,6 +437,12 @@ const tasksSlice = createSlice({
     },
     clearSearchResults(state) {
       state.searchResults = []
+    },
+    applyOptimisticTaskStatus(state, action: { payload: { taskId: string; status: string } }) {
+      applyTaskStatus(state, action.payload.taskId, action.payload.status)
+    },
+    restoreOptimisticTask(state, action: { payload: Task }) {
+      upsertTask(state, action.payload)
     },
   },
   extraReducers: (builder) => {
@@ -507,5 +535,11 @@ const tasksSlice = createSlice({
   },
 })
 
-export const { clearTaskDetail, clearSearchResults, setActiveDetailTaskId } = tasksSlice.actions
+export const {
+  applyOptimisticTaskStatus,
+  clearTaskDetail,
+  clearSearchResults,
+  restoreOptimisticTask,
+  setActiveDetailTaskId,
+} = tasksSlice.actions
 export default tasksSlice.reducer
