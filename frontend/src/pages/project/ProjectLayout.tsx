@@ -78,7 +78,7 @@ export default function ProjectLayout() {
   const { id } = useParams()
   const location = useLocation()
   const dispatch = useAppDispatch()
-  const { currentProject, isLoading } = useAppSelector((state) => state.projects)
+  const { currentProject, dashboard, items: projects, isLoading } = useAppSelector((state) => state.projects)
   const user = useAppSelector((state) => state.auth.user)
   const tasks = useAppSelector((state) => state.tasks.items)
   const { setCreateTaskHandler } = useHeaderBridge()
@@ -93,17 +93,52 @@ export default function ProjectLayout() {
   const [finishOpen, setFinishOpen] = useState(false)
   const [finishError, setFinishError] = useState<string | null>(null)
   const [finishSubmitting, setFinishSubmitting] = useState(false)
+  const project = useMemo(
+    () => {
+      if (!id) return null
+      return currentProject?.id === id
+        ? currentProject
+        : projects.find((item) => item.id === id) ?? null
+    },
+    [currentProject, id, projects],
+  )
 
   useEffect(() => {
     if (id) {
       dispatch(fetchProject(id))
-      dispatch(fetchDashboard())
       api
         .get<ProjectMember[]>(`/projects/${id}/members`)
         .then((response) => setMembers(response.data))
         .catch(() => setMembers([]))
     }
   }, [dispatch, id])
+
+  useEffect(() => {
+    if (!dashboard) {
+      dispatch(fetchDashboard())
+    }
+  }, [dashboard, dispatch])
+
+  useEffect(() => {
+    const prefetchTabs = () => {
+      void import('./ActivityTab')
+      void import('./MeetingsTab')
+      void import('./MembersTab')
+      void import('./EvidenceTab')
+      void import('./DisputesPage')
+      void import('./PeerReviewPage')
+      void import('./ProjectSettingsPage')
+      void import('./ReportPreviewPage')
+    }
+
+    if ('requestIdleCallback' in window) {
+      const id = window.requestIdleCallback(prefetchTabs)
+      return () => window.cancelIdleCallback(id)
+    }
+
+    const timeoutId = globalThis.setTimeout(prefetchTabs, 500)
+    return () => globalThis.clearTimeout(timeoutId)
+  }, [])
 
   const resetCreateForm = () => {
     setNewTitle('')
@@ -131,8 +166,8 @@ export default function ProjectLayout() {
   const disputeCount = projectTasks.filter((task) => task.verification_status === 'disputed').length
   const totalTasks = projectTasks.length
   const verifiedRatio = totalTasks > 0 ? Math.round((verifiedCount / totalTasks) * 100) : 0
-  const isProjectOwner = Boolean(user && currentProject?.owner_id === user.id)
-  const canFinishProject = isProjectOwner && currentProject?.status === 'active'
+  const isProjectOwner = Boolean(user && project?.owner_id === user.id)
+  const canFinishProject = isProjectOwner && project?.status === 'active'
 
   const handleCreate = async () => {
     if (!id || !newTitle.trim()) return
@@ -195,7 +230,7 @@ export default function ProjectLayout() {
     return () => setCreateTaskHandler(null)
   }, [isTaskBoard, setCreateTaskHandler, openCreateDialog])
 
-  if (isLoading || !currentProject || currentProject.id !== id) {
+  if (!project && isLoading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 8 }}>
         <CircularProgress />
@@ -203,11 +238,15 @@ export default function ProjectLayout() {
     )
   }
 
+  if (!project) {
+    return <Alert severity="info">Project is unavailable.</Alert>
+  }
+
   return (
     <Box>
       <PageHeader
-        title={currentProject.name}
-        subtitle={currentProject.description ?? undefined}
+        title={project.name}
+        subtitle={project.description ?? undefined}
         actions={
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}>
             {canFinishProject && (
@@ -225,7 +264,7 @@ export default function ProjectLayout() {
             )}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
               <Chip
-                label={formatProjectStatus(currentProject.status)}
+                label={formatProjectStatus(project.status)}
                 sx={{
                   fontWeight: 700,
                   textTransform: 'capitalize',
@@ -234,7 +273,7 @@ export default function ProjectLayout() {
                 }}
               />
               <AvatarGroup max={4} sx={{ '& .MuiAvatar-root': { width: 34, height: 34, fontSize: fs(14) } }}>
-                {Array.from({ length: currentProject.member_count ?? 1 }).map((_, index) => (
+                {Array.from({ length: project.member_count ?? 1 }).map((_, index) => (
                   <Avatar key={index} sx={{ bgcolor: SLATE[300], color: SLATE[700] }} />
                 ))}
               </AvatarGroup>
@@ -257,7 +296,7 @@ export default function ProjectLayout() {
         <StatCard
           icon={<PeopleOutlinedIcon fontSize="small" />}
           label="Members"
-          value={String(currentProject.member_count ?? 1)}
+          value={String(project.member_count ?? 1)}
           actionLabel="View members"
           actionTo={`/projects/${id}/members`}
           footer={
@@ -274,7 +313,7 @@ export default function ProjectLayout() {
                 },
               }}
             >
-              {Array.from({ length: currentProject.member_count ?? 1 }).map((_, index) => (
+              {Array.from({ length: project.member_count ?? 1 }).map((_, index) => (
                 <Avatar key={index}>{String.fromCharCode(65 + index)}</Avatar>
               ))}
             </AvatarGroup>
@@ -283,8 +322,8 @@ export default function ProjectLayout() {
         <StatCard
           icon={<CalendarTodayOutlinedIcon fontSize="small" />}
           label="Due Date"
-          value={currentProject.due_date ?? 'Not set'}
-          subtitle={formatDueDateSubtitle(currentProject.due_date)}
+          value={project.due_date ?? 'Not set'}
+          subtitle={formatDueDateSubtitle(project.due_date)}
           actionLabel="Project settings"
           actionTo={`/projects/${id}/settings`}
           accent="#D97706"
@@ -422,7 +461,7 @@ export default function ProjectLayout() {
         <DialogContent>
           <Stack spacing={2}>
             <DialogContentText>
-              This will close active task work for "{currentProject.name}" and move the project into peer review.
+              This will close active task work for "{project.name}" and move the project into peer review.
             </DialogContentText>
             {finishError && <Alert severity="error">{finishError}</Alert>}
           </Stack>
