@@ -49,6 +49,56 @@
         gap: 20px;
         margin-top: 8px;
       }
+      .metric-row {
+        display: flex;
+        gap: 12px;
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 8px;
+        margin-top: 8px;
+        break-inside: avoid;
+      }
+      .metric-name {
+        width: 140px;
+        font-weight: 700;
+      }
+      .metric-bars {
+        flex: 1;
+      }
+      .bar-line {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 5px;
+      }
+      .bar-line span {
+        width: 70px;
+        color: #4b5563;
+      }
+      .bar-line strong {
+        width: 40px;
+        text-align: right;
+      }
+      .bar-track {
+        flex: 1;
+        height: 9px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+      }
+      .bar {
+        height: 100%;
+        border-radius: 999px;
+      }
+      .bar.assigned {
+        background: #2563eb;
+      }
+      .bar.completed {
+        background: #16a34a;
+      }
+      .bar.hours {
+        background: #d97706;
+      }
     </style>
   </head>
   <body>
@@ -73,6 +123,23 @@
       </thead>
       <tbody>
         {{task_rows}}
+      </tbody>
+    </table>
+
+    <h2>Member Contribution Graph</h2>
+    <p class="muted">Tasks assigned, tasks completed, and logged hours by member.</p>
+    {{contribution_chart_rows}}
+    <table>
+      <thead>
+        <tr>
+          <th>Member</th>
+          <th>Tasks Assigned</th>
+          <th>Tasks Completed</th>
+          <th>Hours Logged</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{contribution_rows}}
       </tbody>
     </table>
 

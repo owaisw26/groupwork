@@ -115,6 +115,37 @@ def generate_report_data(
 
         cur.execute(
             """
+            WITH member_hours AS (
+                SELECT
+                    tl.user_id,
+                    COALESCE(SUM(tl.hours), 0) AS total_hours
+                FROM time_logs tl
+                JOIN tasks logged_task ON logged_task.id = tl.task_id
+                WHERE logged_task.project_id = %s
+                GROUP BY tl.user_id
+            )
+            SELECT
+                pm.user_id,
+                u.full_name,
+                COUNT(DISTINCT ta.task_id)::int AS assigned_tasks,
+                COUNT(DISTINCT ta.task_id) FILTER (WHERE t.status = 'done')::int
+                    AS completed_tasks,
+                COALESCE(member_hours.total_hours, 0) AS hours
+            FROM project_members pm
+            JOIN users u ON u.id = pm.user_id
+            LEFT JOIN task_assignees ta ON ta.user_id = pm.user_id
+            LEFT JOIN tasks t ON t.id = ta.task_id AND t.project_id = pm.project_id
+            LEFT JOIN member_hours ON member_hours.user_id = pm.user_id
+            WHERE pm.project_id = %s
+            GROUP BY pm.user_id, u.full_name, member_hours.total_hours
+            ORDER BY u.full_name ASC
+            """,
+            (str(project_id), str(project_id)),
+        )
+        contribution_rows = cur.fetchall()
+
+        cur.execute(
+            """
             SELECT
                 pr.reviewee_id,
                 u.full_name,
@@ -198,6 +229,17 @@ def generate_report_data(
         for row in time_rows
     ]
 
+    contribution_items = [
+        {
+            "user_id": str(row[0]),
+            "user_name": row[1],
+            "assigned_tasks": row[2],
+            "completed_tasks": row[3],
+            "hours": float(row[4]),
+        }
+        for row in contribution_rows
+    ]
+
     peer_score_items = [
         {
             "reviewee_id": str(row[0]),
@@ -260,6 +302,9 @@ def generate_report_data(
             "total_hours": round(sum(item["hours"] for item in time_by_member), 2),
             "by_member": time_by_member,
         },
+        "contribution_metrics": {
+            "items": contribution_items,
+        },
         "peer_scores": {
             "items": peer_score_items,
         },
@@ -321,6 +366,51 @@ def _render_html(template: str, report: dict[str, Any]) -> str:
         for item in report["peer_scores"]["items"]
     ) or "<tr><td colspan='6'>No peer reviews found</td></tr>"
 
+    contribution_rows = "".join(
+        (
+            "<tr>"
+            f"<td>{escape(item['user_name'])}</td>"
+            f"<td>{item['assigned_tasks']}</td>"
+            f"<td>{item['completed_tasks']}</td>"
+            f"<td>{item['hours']:.2f}</td>"
+            "</tr>"
+        )
+        for item in report["contribution_metrics"]["items"]
+    ) or "<tr><td colspan='4'>No contribution data found</td></tr>"
+
+    max_assigned = max(
+        [item["assigned_tasks"] for item in report["contribution_metrics"]["items"]] + [1],
+    )
+    max_completed = max(
+        [item["completed_tasks"] for item in report["contribution_metrics"]["items"]] + [1],
+    )
+    max_hours = max([item["hours"] for item in report["contribution_metrics"]["items"]] + [1])
+
+    def _contribution_chart_row(item: dict[str, Any]) -> str:
+        assigned_width = (item["assigned_tasks"] / max_assigned) * 100
+        completed_width = (item["completed_tasks"] / max_completed) * 100
+        hours_width = (item["hours"] / max_hours) * 100
+        return (
+            "<div class='metric-row'>"
+            f"<div class='metric-name'>{escape(item['user_name'])}</div>"
+            "<div class='metric-bars'>"
+            f"<div class='bar-line'><span>Assigned</span><div class='bar-track'>"
+            f"<div class='bar assigned' style='width:{assigned_width:.1f}%'></div>"
+            f"</div><strong>{item['assigned_tasks']}</strong></div>"
+            f"<div class='bar-line'><span>Completed</span><div class='bar-track'>"
+            f"<div class='bar completed' style='width:{completed_width:.1f}%'></div>"
+            f"</div><strong>{item['completed_tasks']}</strong></div>"
+            f"<div class='bar-line'><span>Hours</span><div class='bar-track'>"
+            f"<div class='bar hours' style='width:{hours_width:.1f}%'></div>"
+            f"</div><strong>{item['hours']:.2f}</strong></div>"
+            "</div></div>"
+        )
+
+    contribution_chart_rows = "".join(
+        _contribution_chart_row(item)
+        for item in report["contribution_metrics"]["items"]
+    ) or "<p class='muted'>No contribution data found.</p>"
+
     dispute_rows = "".join(
         (
             "<tr>"
@@ -355,6 +445,8 @@ def _render_html(template: str, report: dict[str, Any]) -> str:
         "{{attendance_total_meetings}}": str(report["attendance"]["total_meetings"]),
         "{{task_rows}}": task_rows,
         "{{time_rows}}": time_rows,
+        "{{contribution_rows}}": contribution_rows,
+        "{{contribution_chart_rows}}": contribution_chart_rows,
         "{{peer_rows}}": peer_rows,
         "{{dispute_rows}}": dispute_rows,
         "{{attendance_rows}}": attendance_rows,

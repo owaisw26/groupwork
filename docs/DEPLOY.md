@@ -48,11 +48,15 @@ REQUIRE_EMAIL_VERIFICATION=false
 
 ```bash
 AWS_S3_BUCKET=placeholder          # evidence upload disabled until R2/S3 is configured
-RESEND_API_KEY=                    # email via Resend; stdout fallback when unset
-SES_SENDER_EMAIL=                  # legacy SES path if not using Resend
+RESEND_API_KEY=re_...              # email via Resend; stdout fallback when unset
+EMAIL_FROM=FairShare <hello@your-domain.edu>
+SES_SENDER_EMAIL=                  # legacy SES fallback if not using Resend
 ```
 
 Set `REQUIRE_EMAIL_VERIFICATION=true` only after production email delivery is configured.
+
+For Resend, create an API key in the Resend dashboard, verify a sender domain or email, then set
+`RESEND_API_KEY` and `EMAIL_FROM` on Render. Restart/redeploy the backend after saving env vars.
 
 ## Vercel (frontend)
 

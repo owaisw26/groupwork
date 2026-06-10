@@ -1,15 +1,46 @@
 import html
 import logging
 
+import httpx
+
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
+RESEND_EMAILS_URL = "https://api.resend.com/emails"
+
+
+def _sender_email() -> str:
+    settings = get_settings()
+    return settings.EMAIL_FROM or settings.SES_SENDER_EMAIL or "FairShare <onboarding@resend.dev>"
+
+
+def _send_resend_email(to: str, subject: str, html_body: str) -> None:
+    settings = get_settings()
+    response = httpx.post(
+        RESEND_EMAILS_URL,
+        headers={
+            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "from": _sender_email(),
+            "to": [to],
+            "subject": subject,
+            "html": html_body,
+        },
+        timeout=10,
+    )
+    response.raise_for_status()
 
 
 def send_email(to: str, subject: str, html_body: str) -> None:
     settings = get_settings()
+    if settings.RESEND_API_KEY:
+        _send_resend_email(to, subject, html_body)
+        return
+
     if not settings.SES_SENDER_EMAIL:
-        logger.warning("SES_SENDER_EMAIL not configured; logging email to stdout for %s", to)
+        logger.warning("Email provider not configured; logging email to stdout for %s", to)
         print(f"[DEV EMAIL] To: {to}\nSubject: {subject}\n[body redacted]", flush=True)
         return
 

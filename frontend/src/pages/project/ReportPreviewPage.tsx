@@ -14,6 +14,16 @@ import {
 } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import api from '../../services/api'
 
 interface TaskSummaryItem {
@@ -27,6 +37,14 @@ interface TaskSummaryItem {
 interface TimeLogItem {
   user_id: string
   user_name: string
+  hours: number
+}
+
+interface ContributionMetricItem {
+  user_id: string
+  user_name: string
+  assigned_tasks: number
+  completed_tasks: number
   hours: number
 }
 
@@ -75,6 +93,9 @@ interface ReportPreview {
   time_logs: {
     total_hours: number
     by_member: TimeLogItem[]
+  }
+  contribution_metrics: {
+    items: ContributionMetricItem[]
   }
   peer_scores: {
     items: PeerScoreItem[]
@@ -180,6 +201,32 @@ export default function ReportPreviewPage() {
                 ))}
               </TableBody>
             </Table>
+          </Paper>
+
+          <Paper sx={{ p: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Member Contribution Graph
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Tasks assigned, tasks completed, and hours logged by member.
+            </Typography>
+            <Box sx={{ width: '100%', height: 320 }}>
+              <ResponsiveContainer>
+                <BarChart
+                  data={report.contribution_metrics.items}
+                  margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="user_name" tick={{ fontSize: 12 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="assigned_tasks" name="Tasks assigned" fill="#2563EB" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="completed_tasks" name="Tasks completed" fill="#16A34A" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="hours" name="Hours logged" fill="#D97706" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
           </Paper>
 
           <Paper sx={{ p: 2 }}>

@@ -74,6 +74,22 @@ def _seed_report_data(auth_client, email_outbox, db_conn):
     with db_conn.cursor() as cur:
         cur.execute("SELECT id FROM users WHERE email = %s", (owner_email,))
         owner_id = cur.fetchone()[0]
+        cur.execute(
+            """
+            UPDATE users
+            SET full_name = CASE
+                WHEN email = %s THEN 'Report Owner'
+                WHEN email = %s THEN 'Report Member'
+                ELSE full_name
+            END
+            WHERE email IN (%s, %s)
+            """,
+            (owner_email, member_email, owner_email, member_email),
+        )
+        cur.execute(
+            "DELETE FROM task_assignees WHERE task_id IN (%s, %s)",
+            (task_done["id"], task_progress["id"]),
+        )
 
         cur.execute(
             "INSERT INTO task_assignees (task_id, user_id) VALUES (%s, %s) ON CONFLICT DO NOTHING",
@@ -182,6 +198,15 @@ def test_report_preview_returns_aggregated_data(auth_client, email_outbox, db_co
     assert data["task_summary"]["total_tasks"] == 2
     assert data["task_summary"]["completed_tasks"] == 1
     assert data["time_logs"]["total_hours"] == 4.0
+    contribution_by_member = {
+        item["user_name"]: item for item in data["contribution_metrics"]["items"]
+    }
+    assert contribution_by_member["Report Owner"]["assigned_tasks"] == 1
+    assert contribution_by_member["Report Owner"]["completed_tasks"] == 1
+    assert contribution_by_member["Report Owner"]["hours"] == 2.5
+    assert contribution_by_member["Report Member"]["assigned_tasks"] == 1
+    assert contribution_by_member["Report Member"]["completed_tasks"] == 0
+    assert contribution_by_member["Report Member"]["hours"] == 1.5
     assert len(data["peer_scores"]["items"]) == 2
     assert data["disputes"]["total"] == 2
     assert data["attendance"]["total_meetings"] == 2
