@@ -22,7 +22,7 @@ export default function ResetPasswordPage() {
         <Card sx={{ width: '100%', maxWidth: 420 }}>
           <CardContent sx={{ p: 4 }}>
             <Alert severity="error">
-              Invalid reset link. Please request a new password reset email.
+              Password reset by email is coming soon. Please return to login or contact an app admin.
             </Alert>
           </CardContent>
         </Card>

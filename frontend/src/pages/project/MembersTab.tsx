@@ -7,7 +7,6 @@ import MailOutlineOutlinedIcon from '@mui/icons-material/MailOutlineOutlined'
 import MoreVertIcon from '@mui/icons-material/MoreVert'
 import PersonAddOutlinedIcon from '@mui/icons-material/PersonAddOutlined'
 import PersonOutlinedIcon from '@mui/icons-material/PersonOutlined'
-import SendOutlinedIcon from '@mui/icons-material/SendOutlined'
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined'
 import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined'
 import {
@@ -18,15 +17,13 @@ import {
   Divider,
   Grid,
   IconButton,
-  InputAdornment,
   Menu,
   MenuItem,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { APP_BORDER, APP_PRIMARY, APP_PRIMARY_LIGHT, fs, SLATE, SURFACE_CARD_SX } from '../../appTheme'
 import { AVATAR_COLORS, memberInitials } from '../../constants/taskFields'
@@ -210,12 +207,7 @@ export default function MembersTab() {
   const [members, setMembers] = useState<Member[]>([])
   const [tasks, setTasks] = useState<TaskSlim[]>([])
   const [activity, setActivity] = useState<ActivityItem[]>([])
-  const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteMessage, setInviteMessage] = useState<string | null>(null)
-  const [inviteError, setInviteError] = useState<string | null>(null)
-  const [inviteSending, setInviteSending] = useState(false)
   const [copied, setCopied] = useState(false)
-  const inviteRef = useRef<HTMLInputElement>(null)
 
   const isOwner = currentUser?.id === project?.owner_id
 
@@ -225,22 +217,6 @@ export default function MembersTab() {
     api.get<{ items: TaskSlim[] }>(`/projects/${id}/tasks`).then((r) => setTasks(r.data.items ?? [])).catch(() => {})
     api.get<ActivityItem[]>(`/projects/${id}/activity`).then((r) => setActivity(r.data)).catch(() => {})
   }, [id])
-
-  const handleInvite = async () => {
-    if (!id || !inviteEmail.trim()) return
-    setInviteMessage(null)
-    setInviteError(null)
-    setInviteSending(true)
-    try {
-      await api.post(`/projects/${id}/invite`, { email: inviteEmail.trim() })
-      setInviteMessage('Invitation sent successfully.')
-      setInviteEmail('')
-    } catch {
-      setInviteError('Unable to send invitation. Check the email and try again.')
-    } finally {
-      setInviteSending(false)
-    }
-  }
 
   const handleCopyCode = () => {
     if (!project?.join_code) return
@@ -294,10 +270,10 @@ export default function MembersTab() {
           <Button
             variant="contained"
             startIcon={<PersonAddOutlinedIcon />}
-            onClick={() => inviteRef.current?.focus()}
+            disabled
             sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none' }}
           >
-            Invite Member
+            Email Invites Soon
           </Button>
         </Box>
       </Box>
@@ -400,50 +376,22 @@ export default function MembersTab() {
                 </Typography>
               </Box>
               <Typography sx={{ fontSize: fs(13), color: SLATE[500], mb: 2 }}>
-                Invite a teammate to collaborate on this project.
+                Email group invites are coming soon. Share the project join code for now.
               </Typography>
-              <TextField
-                inputRef={inviteRef}
-                fullWidth
-                placeholder="Email address"
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
-                slotProps={{
-                  input: {
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <MailOutlineOutlinedIcon sx={{ fontSize: 18, color: SLATE[400] }} />
-                      </InputAdornment>
-                    ),
-                  },
-                }}
+              <Alert
+                severity="info"
                 sx={{
-                  mb: 1.5,
-                  '& .MuiOutlinedInput-root': { borderRadius: '10px' },
+                  borderRadius: '10px',
+                  bgcolor: '#F8FAFF',
+                  border: `1px solid ${APP_BORDER}`,
                 }}
-              />
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={<SendOutlinedIcon />}
-                disabled={!inviteEmail.trim() || inviteSending}
-                onClick={handleInvite}
-                sx={{ fontWeight: 700, borderRadius: '10px', textTransform: 'none', py: 1.25 }}
               >
-                {inviteSending ? 'Sending...' : 'Send Invite'}
-              </Button>
-              {inviteMessage && (
-                <Alert severity="success" sx={{ mt: 1.5, borderRadius: '10px' }}>{inviteMessage}</Alert>
-              )}
-              {inviteError && (
-                <Alert severity="error" sx={{ mt: 1.5, borderRadius: '10px' }}>{inviteError}</Alert>
-              )}
+                Email invites are a feature coming soon.
+              </Alert>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mt: 1.5 }}>
                 <LockOutlinedIcon sx={{ fontSize: 14, color: SLATE[400] }} />
                 <Typography sx={{ fontSize: fs(12), color: SLATE[400] }}>
-                  Only invited users can access this project.
+                  Until then, teammates can join with the project code below.
                 </Typography>
               </Box>
             </Box>

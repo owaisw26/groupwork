@@ -60,10 +60,11 @@ describe('MembersTab', () => {
     })
   })
 
-  it('renders member cards and invite form', async () => {
+  it('renders member cards and invite coming soon notice', async () => {
     renderMembersTab()
     expect(await screen.findByText('Members')).toBeInTheDocument()
-    expect(screen.getAllByText('Invite Member').length).toBeGreaterThan(0)
+    expect(screen.getByText('Email Invites Soon')).toBeInTheDocument()
+    expect(screen.getByText(/email invites are a feature coming soon/i)).toBeInTheDocument()
     expect(screen.getAllByText('Owner').length).toBeGreaterThan(0)
     expect(screen.getByText('ABC123')).toBeInTheDocument()
   })

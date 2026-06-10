@@ -16,9 +16,6 @@ class Settings(BaseSettings):
     AWS_ACCESS_KEY_ID: str = ""
     AWS_SECRET_ACCESS_KEY: str = ""
     S3_ENDPOINT_URL: str = ""
-    RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = ""
-    SES_SENDER_EMAIL: str = ""
     FRONTEND_URL: str = "http://localhost:5173"
     CORS_ORIGINS: str = "http://localhost:5173"
     COOKIE_SECURE: bool = True

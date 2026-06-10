@@ -1,7 +1,5 @@
-import { screen, waitFor } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
+import { screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import api from '../../services/api'
 import { renderWithProviders } from '../../test-utils'
 import ForgotPasswordPage from '../auth/ForgotPasswordPage'
 
@@ -14,23 +12,14 @@ vi.mock('../../services/api', () => ({
 }))
 
 describe('ForgotPasswordPage', () => {
-  it('renders email form', () => {
+  it('renders coming soon message', () => {
     renderWithProviders(<ForgotPasswordPage />, { route: '/forgot-password' })
-    expect(screen.getByLabelText(/email/i)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument()
+    expect(screen.getByText(/password reset by email is coming soon/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /back to login/i })).toBeInTheDocument()
   })
 
-  it('submits email and shows success message', async () => {
-    const user = userEvent.setup()
-    vi.mocked(api.post).mockResolvedValueOnce({ data: { status: 'ok' } })
+  it('does not call password reset email endpoint', () => {
     renderWithProviders(<ForgotPasswordPage />, { route: '/forgot-password' })
-    await user.type(screen.getByLabelText(/email/i), 'test@example.com')
-    await user.click(screen.getByRole('button', { name: /send reset link/i }))
-    await waitFor(() => {
-      expect(api.post).toHaveBeenCalledWith('/auth/forgot-password', {
-        email: 'test@example.com',
-      })
-    })
-    expect(await screen.findByText(/check your email/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/email/i)).not.toBeInTheDocument()
   })
 })

@@ -8,7 +8,7 @@ FairShare production runs on managed free-tier services. The browser talks only 
 | Backend API | Render | https://groupwork-dr2n.onrender.com |
 | Database | Neon Postgres 16 | (connection string in Render env) |
 | Evidence files | Cloudflare R2 *(deferred)* | Not configured — uploads fail in production until P5.2 |
-| Email (optional) | Resend / stdout | Verification links logged to Render logs when unset |
+| Email | Disabled | Email invites and password reset are coming soon |
 
 ## Architecture
 
@@ -48,15 +48,11 @@ REQUIRE_EMAIL_VERIFICATION=false
 
 ```bash
 AWS_S3_BUCKET=placeholder          # evidence upload disabled until R2/S3 is configured
-RESEND_API_KEY=re_...              # email via Resend; stdout fallback when unset
-EMAIL_FROM=FairShare <hello@your-domain.edu>
-SES_SENDER_EMAIL=                  # legacy SES fallback if not using Resend
 ```
 
-Set `REQUIRE_EMAIL_VERIFICATION=true` only after production email delivery is configured.
-
-For Resend, create an API key in the Resend dashboard, verify a sender domain or email, then set
-`RESEND_API_KEY` and `EMAIL_FROM` on Render. Restart/redeploy the backend after saving env vars.
+Email delivery is not part of the active production flow. Keep `REQUIRE_EMAIL_VERIFICATION=false`;
+new accounts are usable immediately, email invites show as coming soon, and password reset by email
+is disabled until a later release.
 
 ## Vercel (frontend)
 
@@ -95,8 +91,8 @@ curl -s https://groupwork-rho.vercel.app/api/v1/health
 ### Manual checklist
 
 1. Open https://groupwork-rho.vercel.app — login page loads, no console CORS errors.
-2. Register a new account — check Render logs for verification link (if email not configured).
-3. Verify email → log in → create a project → add a task.
+2. Register a new account → log in → create a project → add a task.
+3. Confirm the Members page shows email invites as coming soon and the project join code is available.
 4. Evidence upload: **expected to fail** until Cloudflare R2 (P5.2) is configured.
 
 ## Cold starts
@@ -112,7 +108,6 @@ Render free tier spins down after inactivity. The first request after idle can t
 | `/api/v1/health` 404 on Vercel | `vercel.json` not deployed — merge to `main` and wait for Vercel rebuild |
 | 502 / timeout on first request | Render cold start — retry after ~30s |
 | DB connection errors | Use Neon **pooled** URL; check IP allowlist (Neon allows all by default) |
-| Verification link wrong host | `FRONTEND_URL` must be `https://groupwork-rho.vercel.app` |
 
 ## CI/CD
 

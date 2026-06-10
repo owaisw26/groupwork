@@ -1,4 +1,3 @@
-import logging
 from uuid import UUID
 
 from fastapi import HTTPException, status
@@ -6,11 +5,7 @@ from psycopg2.extensions import connection
 
 from app.db.queries import notification_preferences as preference_queries
 from app.db.queries import notifications as notification_queries
-from app.utils.email import notification_email_body, send_email
 from app.utils.pagination import decode_cursor
-
-logger = logging.getLogger(__name__)
-
 
 def notify(
     conn: connection,
@@ -34,26 +29,6 @@ def notify(
         entity_type=entity_type,
         entity_id=entity_id,
     )
-
-    if recipient_email and preference_queries.get_preference(
-        conn, user_id, notification_type
-    ):
-        try:
-            send_email(
-                recipient_email,
-                email_subject or f"FairShare: {title}",
-                email_body
-                or notification_email_body(
-                    title,
-                    message,
-                    notification_type=notification_type,
-                ),
-            )
-        except Exception:
-            logger.exception(
-                "Failed to send notification email for type %s",
-                notification_type,
-            )
 
     return notification
 

@@ -1,59 +1,16 @@
 import html
 import logging
 
-import httpx
-
 from app.config import get_settings
 
 logger = logging.getLogger(__name__)
-RESEND_EMAILS_URL = "https://api.resend.com/emails"
-
-
-def _sender_email() -> str:
-    settings = get_settings()
-    return settings.EMAIL_FROM or settings.SES_SENDER_EMAIL or "FairShare <onboarding@resend.dev>"
-
-
-def _send_resend_email(to: str, subject: str, html_body: str) -> None:
-    settings = get_settings()
-    response = httpx.post(
-        RESEND_EMAILS_URL,
-        headers={
-            "Authorization": f"Bearer {settings.RESEND_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "from": _sender_email(),
-            "to": [to],
-            "subject": subject,
-            "html": html_body,
-        },
-        timeout=10,
-    )
-    response.raise_for_status()
 
 
 def send_email(to: str, subject: str, html_body: str) -> None:
-    settings = get_settings()
-    if settings.RESEND_API_KEY:
-        _send_resend_email(to, subject, html_body)
-        return
-
-    if not settings.SES_SENDER_EMAIL:
-        logger.warning("Email provider not configured; logging email to stdout for %s", to)
-        print(f"[DEV EMAIL] To: {to}\nSubject: {subject}\n[body redacted]", flush=True)
-        return
-
-    import boto3
-
-    client = boto3.client("ses", region_name=settings.AWS_REGION)
-    client.send_email(
-        Source=settings.SES_SENDER_EMAIL,
-        Destination={"ToAddresses": [to]},
-        Message={
-            "Subject": {"Data": subject, "Charset": "UTF-8"},
-            "Body": {"Html": {"Data": html_body, "Charset": "UTF-8"}},
-        },
+    logger.info(
+        "Email delivery disabled; skipped email to %s with subject %s",
+        to,
+        subject,
     )
 
 
@@ -75,24 +32,6 @@ def invite_email_body(project_name: str, token: str) -> str:
         f"<p>You have been invited to join <strong>{safe_name}</strong> on FairShare.</p>"
         f'<p><a href="{safe_url}/invitations/accept/{token}">'
         f"Accept invitation</a></p>"
-    )
-
-
-def notification_email_body(title: str, message: str, *, notification_type: str) -> str:
-    safe_title = html.escape(title)
-    safe_message = html.escape(message)
-    safe_type = html.escape(notification_type.replace("_", " "))
-    settings = get_settings()
-    safe_url = html.escape(settings.FRONTEND_URL)
-    return (
-        f"<div style='font-family:Arial,sans-serif;max-width:560px'>"
-        f"<p><strong>FairShare</strong> &mdash; {safe_type}</p>"
-        f"<h2 style='color:#1565C0'>{safe_title}</h2>"
-        f"<p>{safe_message}</p>"
-        f'<p><a href="{safe_url}/notifications">View notifications</a></p>'
-        f"<p style='color:#666;font-size:12px'>"
-        f"You can manage email preferences in your profile settings."
-        f"</p></div>"
     )
 
 

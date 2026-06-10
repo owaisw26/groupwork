@@ -150,7 +150,7 @@ export default function RegisterCard({
               textAlign: 'center',
             }}
           >
-            Account created. Please check your email to verify your account.
+            Account created. You can log in now.
           </Box>
         ) : (
           <Box
