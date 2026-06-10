@@ -1,5 +1,7 @@
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 import CalendarTodayOutlinedIcon from '@mui/icons-material/CalendarTodayOutlined'
 import CheckCircleOutlineOutlinedIcon from '@mui/icons-material/CheckCircleOutlineOutlined'
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined'
 import GavelOutlinedIcon from '@mui/icons-material/GavelOutlined'
 import PeopleOutlinedIcon from '@mui/icons-material/PeopleOutlined'
 import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined'
@@ -17,6 +19,8 @@ import {
   DialogContentText,
   DialogTitle,
   FormControl,
+  FormHelperText,
+  IconButton,
   InputLabel,
   LinearProgress,
   MenuItem,
@@ -31,7 +35,7 @@ import {
 } from '@mui/material'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useLocation, useParams } from 'react-router-dom'
-import { APP_PRIMARY, APP_PRIMARY_LIGHT, fs, PAGE_CARD_SX, SLATE } from '../../appTheme'
+import { APP_BORDER, APP_PRIMARY, APP_PRIMARY_LIGHT, fs, PAGE_CARD_SX, SLATE } from '../../appTheme'
 import { PRIORITY_OPTIONS, PRIORITY_STYLES } from '../../constants/taskFields'
 import { useHeaderBridge } from '../../contexts/HeaderBridgeContext'
 import PageHeader from '../../components/layout/PageHeader'
@@ -45,6 +49,33 @@ import { getTodayDateInputValue } from '../../utils/dateInput'
 interface ProjectMember {
   id: string
   full_name: string
+}
+
+const createDialogPaperSx = {
+  borderRadius: '18px',
+  border: `1px solid ${APP_BORDER}`,
+  boxShadow: '0 28px 70px rgba(15, 23, 42, 0.22)',
+}
+
+const createFieldSx = {
+  '& .MuiInputLabel-root': {
+    color: SLATE[700],
+    fontWeight: 800,
+    fontSize: fs(12),
+  },
+  '& .MuiOutlinedInput-root': {
+    borderRadius: '10px',
+    bgcolor: '#FFFFFF',
+    '& fieldset': { borderColor: APP_BORDER },
+    '&:hover fieldset': { borderColor: '#CBD5E1' },
+    '&.Mui-focused fieldset': { borderColor: APP_PRIMARY, borderWidth: 1.5 },
+  },
+  '& .MuiFormHelperText-root': {
+    ml: 0,
+    mt: 0.75,
+    color: SLATE[500],
+    fontSize: fs(10),
+  },
 }
 
 const TABS = [
@@ -372,10 +403,49 @@ export default function ProjectLayout() {
 
       <Outlet context={{ openCreateTask: openCreateDialog }} />
 
-      <Dialog open={createOpen} onClose={handleCloseCreate} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800 }}>New Task</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
+      <Dialog
+        open={createOpen}
+        onClose={handleCloseCreate}
+        maxWidth="sm"
+        fullWidth
+        slotProps={{ paper: { sx: createDialogPaperSx } }}
+      >
+        <DialogTitle sx={{ px: 3, pt: 2.75, pb: 2, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+            <Box
+              sx={{
+                width: 42,
+                height: 42,
+                borderRadius: '50%',
+                bgcolor: APP_PRIMARY_LIGHT,
+                color: APP_PRIMARY,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <AssignmentOutlinedIcon sx={{ fontSize: 22 }} />
+            </Box>
+            <Box>
+              <Typography component="h2" sx={{ fontSize: fs(22), fontWeight: 900, color: SLATE[900], lineHeight: 1.15 }}>
+                Create Task
+              </Typography>
+              <Typography sx={{ mt: 0.6, fontSize: fs(11), color: SLATE[500], fontWeight: 600 }}>
+                Add work to the board with owners, importance, and deadline.
+              </Typography>
+            </Box>
+          </Box>
+          <IconButton
+            aria-label="Close"
+            onClick={handleCloseCreate}
+            sx={{ color: SLATE[500], borderRadius: '10px' }}
+          >
+            <CloseOutlinedIcon sx={{ fontSize: 20 }} />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent sx={{ px: 3, py: 0 }}>
+          <Stack spacing={2.1} sx={{ pt: 0.5 }}>
             <TextField
               autoFocus
               fullWidth
@@ -383,6 +453,8 @@ export default function ProjectLayout() {
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+              helperText="Use a clear action name for the task."
+              sx={createFieldSx}
             />
             <TextField
               fullWidth
@@ -391,9 +463,11 @@ export default function ProjectLayout() {
               rows={3}
               value={newDescription}
               onChange={(e) => setNewDescription(e.target.value)}
+              helperText="Add context, deliverables, or evidence expectations."
+              sx={createFieldSx}
             />
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <FormControl sx={{ flex: 1 }} size="small">
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+              <FormControl size="small" sx={createFieldSx}>
                 <InputLabel id="create-task-priority-label" shrink>Priority</InputLabel>
                 <Select
                   labelId="create-task-priority-label"
@@ -408,50 +482,106 @@ export default function ProjectLayout() {
                     </MenuItem>
                   ))}
                 </Select>
+                <FormHelperText>Choose how urgent this work is.</FormHelperText>
               </FormControl>
               <TextField
-                sx={{ flex: 1 }}
                 label="Due Date"
                 type="date"
                 size="small"
                 value={newDueDate}
                 onChange={(e) => setNewDueDate(e.target.value)}
+                helperText="Set when this task should be completed."
                 slotProps={{ inputLabel: { shrink: true } }}
+                sx={createFieldSx}
               />
-              <FormControl sx={{ flex: 2 }} size="small">
-                <InputLabel id="create-task-assignees-label" shrink>Assignees</InputLabel>
-                <Select
-                  labelId="create-task-assignees-label"
-                  label="Assignees"
-                  multiple
-                  value={newAssigneeIds}
-                  onChange={handleAssigneeChange}
-                  input={<OutlinedInput label="Assignees" notched />}
-                  renderValue={(selected) =>
-                    selected
-                      .map((memberId) => members.find((member) => member.id === memberId)?.full_name ?? memberId)
-                      .join(', ')
-                  }
-                >
-                  {members.map((member) => (
-                    <MenuItem key={member.id} value={member.id}>
-                      {member.full_name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+            </Box>
+            <FormControl size="small" sx={createFieldSx}>
+              <InputLabel id="create-task-assignees-label" shrink>Assignees</InputLabel>
+              <Select
+                labelId="create-task-assignees-label"
+                label="Assignees"
+                multiple
+                value={newAssigneeIds}
+                onChange={handleAssigneeChange}
+                input={<OutlinedInput label="Assignees" notched />}
+                renderValue={(selected) =>
+                  selected
+                    .map((memberId) => members.find((member) => member.id === memberId)?.full_name ?? memberId)
+                    .join(', ')
+                }
+              >
+                {members.map((member) => (
+                  <MenuItem key={member.id} value={member.id}>
+                    {member.full_name}
+                  </MenuItem>
+                ))}
+              </Select>
+              <FormHelperText>Assign the teammate responsible for this task.</FormHelperText>
+            </FormControl>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 1.25,
+                px: 1.5,
+                py: 1.25,
+                borderRadius: '10px',
+                border: `1px solid #BFDBFE`,
+                bgcolor: APP_PRIMARY_LIGHT,
+              }}
+            >
+              <Box
+                sx={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: '50%',
+                  bgcolor: '#FFFFFF',
+                  color: APP_PRIMARY,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <TaskAltOutlinedIcon sx={{ fontSize: 16 }} />
+              </Box>
+              <Box>
+                <Typography sx={{ fontSize: fs(12), fontWeight: 900, color: SLATE[800] }}>
+                  Task visibility
+                </Typography>
+                <Typography sx={{ fontSize: fs(10), color: SLATE[500], fontWeight: 600 }}>
+                  This task will appear on the shared project board.
+                </Typography>
+              </Box>
             </Box>
             {createError && (
-              <Typography sx={{ fontSize: 13, color: '#DC2626', fontWeight: 600 }}>
+              <Typography sx={{ fontSize: fs(11), color: '#DC2626', fontWeight: 700 }}>
                 {createError}
               </Typography>
             )}
           </Stack>
         </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={handleCloseCreate}>Cancel</Button>
-          <Button variant="contained" onClick={handleCreate}>
-            Create
+        <DialogActions sx={{ px: 3, py: 2, mt: 2, borderTop: `1px solid ${APP_BORDER}` }}>
+          <Button
+            onClick={handleCloseCreate}
+            sx={{
+              borderRadius: '10px',
+              px: 2.25,
+              color: SLATE[700],
+              border: `1px solid ${APP_BORDER}`,
+              fontWeight: 800,
+              textTransform: 'none',
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleCreate}
+            disabled={!newTitle.trim()}
+            sx={{ borderRadius: '10px', px: 2.5, fontWeight: 900, textTransform: 'none' }}
+          >
+            Create Task
           </Button>
         </DialogActions>
       </Dialog>

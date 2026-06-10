@@ -70,7 +70,7 @@ describe('CreateProjectDialog', () => {
     expect(screen.getByLabelText(/due date/i)).toHaveValue(getTodayDateInputValue())
 
     await user.type(screen.getByLabelText(/project name/i), 'New Project')
-    await user.click(screen.getByRole('button', { name: /^create$/i }))
+    await user.click(screen.getByRole('button', { name: /create project/i }))
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/projects', expect.objectContaining({

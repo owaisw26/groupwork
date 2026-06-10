@@ -156,7 +156,7 @@ describe('ProjectLayout create task dialog', () => {
     await user.click(prioritySelect)
     await user.click(await screen.findByRole('option', { name: 'High' }))
 
-    await user.click(screen.getByRole('button', { name: 'Create' }))
+    await user.click(screen.getByRole('button', { name: 'Create Task' }))
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/projects/proj-1/tasks', {
@@ -174,7 +174,7 @@ describe('ProjectLayout create task dialog', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Open Create Dialog' }))
     await user.type(screen.getByLabelText(/^title$/i), 'Default fields task')
-    await user.click(screen.getByRole('button', { name: 'Create' }))
+    await user.click(screen.getByRole('button', { name: 'Create Task' }))
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/projects/proj-1/tasks', {
