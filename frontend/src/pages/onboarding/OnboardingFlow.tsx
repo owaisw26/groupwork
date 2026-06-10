@@ -68,7 +68,7 @@ export default function OnboardingFlow() {
         <CardContent sx={{ p: 4 }}>
           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Welcome to GroupWork
+              Welcome to FairShare
             </Typography>
             <Button onClick={handleSkip} disabled={isSubmitting}>
               Skip
@@ -88,7 +88,7 @@ export default function OnboardingFlow() {
           )}
           {activeStep === 0 && (
             <Typography>
-              GroupWork helps your team track contributions, verify work, and generate fair reports.
+              FairShare helps your team track contributions, verify work, and generate fair reports.
             </Typography>
           )}
           {activeStep === 1 && (

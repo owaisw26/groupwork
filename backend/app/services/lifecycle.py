@@ -79,7 +79,7 @@ def _notify_project_completed(
             entity_type="project",
             entity_id=project["id"],
             recipient_email=member.get("email"),
-            email_subject=f"GroupWork: Peer review opened for {project['name']}",
+            email_subject=f"FairShare: Peer review opened for {project['name']}",
         )
 
 

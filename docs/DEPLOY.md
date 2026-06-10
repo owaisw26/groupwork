@@ -1,6 +1,6 @@
 # Production Deployment (Free Tier)
 
-GroupWork production runs on managed free-tier services. The browser talks only to the Vercel frontend; API requests are proxied to Render so HttpOnly cookie auth stays same-origin.
+FairShare production runs on managed free-tier services. The browser talks only to the Vercel frontend; API requests are proxied to Render so HttpOnly cookie auth stays same-origin.
 
 | Component | Service | URL |
 |-----------|---------|-----|

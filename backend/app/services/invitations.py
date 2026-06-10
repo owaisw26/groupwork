@@ -66,7 +66,7 @@ def invite_member(
     )
 
     invitee = user_queries.get_user_by_email(conn, normalized_email)
-    subject = f"Invitation to join {project['name']} on GroupWork"
+    subject = f"Invitation to join {project['name']} on FairShare"
     body = invite_email_body(project["name"], token)
     if invitee:
         notification_service.notify(

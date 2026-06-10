@@ -1,6 +1,6 @@
 ---
-name: GroupWork PRD
-overview: Comprehensive Product Requirements Document for GroupWork -- a university group assignment accountability platform built with FastAPI, React, PostgreSQL, and AWS services.
+name: FairShare PRD
+overview: Comprehensive Product Requirements Document for FairShare -- a university group assignment accountability platform built with FastAPI, React, PostgreSQL, and AWS services.
 todos:
   - id: phase-1-foundation
     content: "Phase 1: Foundation -- scaffolding, auth, DB schema, rate limiting, frontend skeleton"
@@ -20,7 +20,7 @@ todos:
 isProject: false
 ---
 
-# GroupWork -- Product Requirements Document
+# FairShare -- Product Requirements Document
 
 ## 1. Problem Statement
 
@@ -28,7 +28,7 @@ In university group assignments, it is often unclear who actually did the work. 
 
 ## 2. Product Vision
 
-GroupWork makes group assignments more organised, transparent, and fair. It is a single platform where students plan tasks, log work, verify each other's contributions, resolve disputes democratically, and generate an auditable contribution report.
+FairShare makes group assignments more organised, transparent, and fair. It is a single platform where students plan tasks, log work, verify each other's contributions, resolve disputes democratically, and generate an auditable contribution report.
 
 ---
 
@@ -291,7 +291,7 @@ flowchart LR
         subgraph mainArea [Main Area]
             direction LR
             subgraph sidebar [Left Sidebar - 260px]
-                Logo[GroupWork Logo]
+                Logo[FairShare Logo]
                 DashLink[Dashboard]
                 MyTasks[My Tasks]
                 ProjectsList[Projects List - expandable]
@@ -302,7 +302,7 @@ flowchart LR
 ```
 
 **Top Header Bar** (fixed, full width):
-- Left: GroupWork logo/wordmark (clicking navigates to dashboard)
+- Left: FairShare logo/wordmark (clicking navigates to dashboard)
 - Center: Search bar (search tasks, projects, members across all projects)
 - Right: Notification bell (with unread count badge) + user avatar with dropdown (Profile, Settings, Logout)
 
@@ -337,7 +337,7 @@ flowchart LR
 
 **Page: Guided Onboarding (first login only)**
 - Full-page welcome screen after first registration
-- Step 1: "Welcome to GroupWork!" with brief value prop
+- Step 1: "Welcome to FairShare!" with brief value prop
 - Step 2: "Create your first project" (inline form: name, course, due date) OR "Join an existing project" (enter join code)
 - Step 3: "Invite your team" (enter email addresses) -- skippable
 - Progress indicator (dots) at the bottom

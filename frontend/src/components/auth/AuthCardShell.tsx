@@ -56,7 +56,7 @@ export default function AuthCardShell({
             <GroupsOutlinedIcon fontSize="small" />
           </Box>
           <Typography sx={{ fontSize: 22, fontWeight: 800, color: PRIMARY }}>
-            GroupWork
+            FairShare
           </Typography>
         </Box>
       )}

@@ -75,6 +75,6 @@ describe('Auth flow', () => {
     cy.url().should('include', '/login')
 
     cy.reload()
-    cy.contains('Log in to GroupWork')
+    cy.contains('Log in to FairShare')
   })
 })

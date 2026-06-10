@@ -71,7 +71,7 @@ export default function LoginCard({
             Welcome back
           </Typography>
           <Typography sx={{ fontSize: { xs: 17, lg: 12, xl: 13 }, color: SLATE[500], m: 0 }}>
-            Log in to continue to your GroupWork workspace.
+            Log in to continue to your FairShare workspace.
           </Typography>
         </Box>
 

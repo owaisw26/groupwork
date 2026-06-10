@@ -123,7 +123,7 @@ export default function RegisterCard({
             Create your account
           </Typography>
           <Typography sx={{ fontSize: { xs: 17, lg: 12, xl: 13 }, color: SLATE[500], m: 0 }}>
-            Join GroupWork and start collaborating with your team.
+            Join FairShare and start collaborating with your team.
           </Typography>
         </Box>
 

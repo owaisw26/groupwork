@@ -41,7 +41,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
 
     app = FastAPI(
-        title="GroupWork API",
+        title="FairShare API",
         version="1.0.0",
         lifespan=lifespan,
         docs_url=None if settings.is_production else "/docs",

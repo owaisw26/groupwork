@@ -120,7 +120,7 @@ export default function Sidebar() {
             textDecoration: 'none',
           }}
         >
-          GroupWork
+          FairShare
         </Typography>
       </Box>
 

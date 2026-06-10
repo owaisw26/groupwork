@@ -41,7 +41,7 @@ def notify(
         try:
             send_email(
                 recipient_email,
-                email_subject or f"GroupWork: {title}",
+                email_subject or f"FairShare: {title}",
                 email_body
                 or notification_email_body(
                     title,

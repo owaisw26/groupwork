@@ -75,7 +75,7 @@ export default function LoginHeroPanel() {
   return (
     <Box
       component="section"
-      aria-label="GroupWork product overview"
+      aria-label="FairShare product overview"
       sx={{
         position: 'relative',
         overflow: 'hidden',
@@ -151,7 +151,7 @@ export default function LoginHeroPanel() {
           <GroupsOutlinedIcon sx={{ fontSize: { lg: 23, xl: 25 } }} />
         </Box>
         <Typography sx={{ fontSize: { lg: 24, xl: 26 }, fontWeight: 800, color: PRIMARY, letterSpacing: 0 }}>
-          GroupWork
+          FairShare
         </Typography>
       </Box>
 
@@ -254,7 +254,7 @@ export default function LoginHeroPanel() {
         <Typography sx={{ fontSize: { lg: 11, xl: 12 }, lineHeight: 1.45, color: SLATE[600] }}>
           Crafted to combat the issues
           <br />
-          surrounding groupwork.
+          surrounding group work.
         </Typography>
       </Box>
     </Box>

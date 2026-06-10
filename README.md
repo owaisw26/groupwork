@@ -1,4 +1,4 @@
-# GroupWork
+# FairShare
 
 University group assignment accountability platform. Students plan tasks, log work, verify contributions, resolve disputes, and generate auditable contribution reports.
 

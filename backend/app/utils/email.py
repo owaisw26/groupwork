@@ -30,7 +30,7 @@ def verification_email_body(token: str) -> str:
     settings = get_settings()
     safe_url = html.escape(settings.FRONTEND_URL)
     return (
-        f"<p>Verify your GroupWork account.</p>"
+        f"<p>Verify your FairShare account.</p>"
         f'<p><a href="{safe_url}/verify-email/{token}">'
         f"Verify email</a></p>"
     )
@@ -41,7 +41,7 @@ def invite_email_body(project_name: str, token: str) -> str:
     safe_name = html.escape(project_name)
     safe_url = html.escape(settings.FRONTEND_URL)
     return (
-        f"<p>You have been invited to join <strong>{safe_name}</strong> on GroupWork.</p>"
+        f"<p>You have been invited to join <strong>{safe_name}</strong> on FairShare.</p>"
         f'<p><a href="{safe_url}/invitations/accept/{token}">'
         f"Accept invitation</a></p>"
     )
@@ -55,7 +55,7 @@ def notification_email_body(title: str, message: str, *, notification_type: str)
     safe_url = html.escape(settings.FRONTEND_URL)
     return (
         f"<div style='font-family:Arial,sans-serif;max-width:560px'>"
-        f"<p><strong>GroupWork</strong> &mdash; {safe_type}</p>"
+        f"<p><strong>FairShare</strong> &mdash; {safe_type}</p>"
         f"<h2 style='color:#1565C0'>{safe_title}</h2>"
         f"<p>{safe_message}</p>"
         f'<p><a href="{safe_url}/notifications">View notifications</a></p>'
@@ -69,7 +69,7 @@ def password_reset_email_body(token: str) -> str:
     settings = get_settings()
     safe_url = html.escape(settings.FRONTEND_URL)
     return (
-        f"<p>Reset your GroupWork password.</p>"
+        f"<p>Reset your FairShare password.</p>"
         f'<p><a href="{safe_url}/reset-password/{token}">'
         f"Reset password</a></p>"
     )

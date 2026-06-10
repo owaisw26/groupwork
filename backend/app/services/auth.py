@@ -73,7 +73,7 @@ def register_user(
         )
         email_utils.send_email(
             to=email,
-            subject="Verify your GroupWork account",
+            subject="Verify your FairShare account",
             html_body=email_utils.verification_email_body(raw_token),
         )
     else:
@@ -264,7 +264,7 @@ def forgot_password(conn: connection, email: str) -> None:
     )
     email_utils.send_email(
         to=email,
-        subject="Reset your GroupWork password",
+        subject="Reset your FairShare password",
         html_body=email_utils.password_reset_email_body(raw_token),
     )
 

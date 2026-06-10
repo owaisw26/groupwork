@@ -1,6 +1,6 @@
 ---
-name: GroupWork Implementation Plan
-overview: "Detailed implementation plan for GroupWork, organized into 5 product phases, each following a strict 6-step agent workflow: write tests -> push tests -> write implementation -> subagent bug hunt -> builder agent fixes -> review loop -> push code."
+name: FairShare Implementation Plan
+overview: "Detailed implementation plan for FairShare, organized into 5 product phases, each following a strict 6-step agent workflow: write tests -> push tests -> write implementation -> subagent bug hunt -> builder agent fixes -> review loop -> push code."
 todos:
   - id: p1-m1-scaffold
     content: "P1.1: Monorepo scaffolding + Docker Compose + health endpoint"
@@ -77,7 +77,7 @@ todos:
 isProject: false
 ---
 
-# GroupWork -- Detailed Implementation Plan
+# FairShare -- Detailed Implementation Plan
 
 ## Design Debt (Deferred)
 
