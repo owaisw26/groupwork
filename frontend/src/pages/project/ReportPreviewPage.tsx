@@ -12,7 +12,7 @@ import {
   TableRow,
   Typography,
 } from '@mui/material'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   Bar,
@@ -25,6 +25,8 @@ import {
   YAxis,
 } from 'recharts'
 import api from '../../services/api'
+import { useAppDispatch, useAppSelector } from '../../store/hooks'
+import { generateProjectReport } from '../../store/projectsSlice'
 
 interface TaskSummaryItem {
   id: string
@@ -114,20 +116,73 @@ interface ReportPreview {
 
 export default function ReportPreviewPage() {
   const { id: projectId } = useParams<{ id: string }>()
+  const dispatch = useAppDispatch()
+  const user = useAppSelector((state) => state.auth.user)
+  const project = useAppSelector((state) =>
+    state.projects.currentProject?.id === projectId
+      ? state.projects.currentProject
+      : state.projects.items.find((item) => item.id === projectId) ?? null,
+  )
   const [report, setReport] = useState<ReportPreview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+
+  const canGenerateReport = useMemo(
+    () =>
+      Boolean(
+        projectId
+          && project
+          && user?.id === project.owner_id
+          && ['peer_review', 'completed'].includes(project.status),
+      ),
+    [project, projectId, user?.id],
+  )
+
+  const getApiErrorMessage = (err: unknown, fallback: string) => {
+    if (err && typeof err === 'object' && 'response' in err) {
+      const data = (err as { response?: { data?: unknown } }).response?.data
+      if (data && typeof data === 'object' && 'error' in data) {
+        const apiError = (data as { error?: { message?: unknown } }).error
+        if (typeof apiError?.message === 'string') return apiError.message
+      }
+    }
+    return fallback
+  }
+
+  const loadReport = useCallback(async () => {
+    if (!projectId) return
+    try {
+      const response = await api.get(`/projects/${projectId}/report/preview`)
+      setReport(response.data)
+      setError(null)
+    } catch (err) {
+      setReport(null)
+      if (canGenerateReport) {
+        setError('Generate the contribution report to view this project summary.')
+      } else {
+        setError(getApiErrorMessage(err, 'Failed to load contribution report preview'))
+      }
+    }
+  }, [canGenerateReport, projectId])
 
   useEffect(() => {
+    void loadReport()
+  }, [loadReport])
+
+  const handleGenerateReport = async () => {
     if (!projectId) return
-    api
-      .get(`/projects/${projectId}/report/preview`)
-      .then((response) => {
-        setReport(response.data)
-        setError(null)
-      })
-      .catch(() => setError('Failed to load contribution report preview'))
-  }, [projectId])
+    setIsGenerating(true)
+    setError(null)
+    try {
+      await dispatch(generateProjectReport(projectId)).unwrap()
+      await loadReport()
+    } catch (err) {
+      setError(typeof err === 'string' ? err : 'Failed to generate contribution report')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   const handleDownloadPdf = async () => {
     if (!projectId) return
@@ -171,7 +226,14 @@ export default function ReportPreviewPage() {
         </Button>
       </Box>
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && <Alert severity={!report && canGenerateReport ? 'info' : 'error'}>{error}</Alert>}
+      {!report && canGenerateReport && (
+        <Box>
+          <Button variant="contained" onClick={handleGenerateReport} disabled={isGenerating}>
+            {isGenerating ? 'Generating...' : 'Generate Report'}
+          </Button>
+        </Box>
+      )}
       {!report ? null : (
         <>
           <Paper sx={{ p: 2 }}>
@@ -227,6 +289,26 @@ export default function ReportPreviewPage() {
                 </BarChart>
               </ResponsiveContainer>
             </Box>
+            <Table size="small" sx={{ mt: 2 }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Member</TableCell>
+                  <TableCell align="right">Tasks Assigned</TableCell>
+                  <TableCell align="right">Tasks Completed</TableCell>
+                  <TableCell align="right">Hours Logged</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {report.contribution_metrics.items.map((item) => (
+                  <TableRow key={item.user_id}>
+                    <TableCell>{item.user_name}</TableCell>
+                    <TableCell align="right">{item.assigned_tasks}</TableCell>
+                    <TableCell align="right">{item.completed_tasks}</TableCell>
+                    <TableCell align="right">{item.hours.toFixed(2)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </Paper>
 
           <Paper sx={{ p: 2 }}>

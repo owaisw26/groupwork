@@ -132,6 +132,18 @@ export const completeProject = createAsyncThunk(
   },
 )
 
+export const generateProjectReport = createAsyncThunk(
+  'projects/generateProjectReport',
+  async (projectId: string, { rejectWithValue }) => {
+    try {
+      const response = await api.post<Project>(`/projects/${projectId}/generate-report`)
+      return response.data
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error))
+    }
+  },
+)
+
 export const deleteProject = createAsyncThunk(
   'projects/deleteProject',
   async (projectId: string, { rejectWithValue }) => {
@@ -187,6 +199,15 @@ const projectsSlice = createSlice({
         state.currentProject = action.payload
       })
       .addCase(completeProject.fulfilled, (state, action) => {
+        const existing = state.items.findIndex((item) => item.id === action.payload.id)
+        if (existing >= 0) {
+          state.items[existing] = action.payload
+        } else {
+          state.items.push(action.payload)
+        }
+        state.currentProject = action.payload
+      })
+      .addCase(generateProjectReport.fulfilled, (state, action) => {
         const existing = state.items.findIndex((item) => item.id === action.payload.id)
         if (existing >= 0) {
           state.items[existing] = action.payload
